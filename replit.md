@@ -8,17 +8,33 @@ This is an **Accessibility Testing Platform** that automates WCAG 2.2 compliance
 
 ## Recent Changes (Latest)
 
-### Historical Scan Tracking with Version Control (Current)
+### Simplified EqualWeb-Style Scan History UI (Current)
+- **Streamlined Table Design**: Scan history table simplified to show only essential information
+  - 6 core columns: Date, Pages, Status, Scan Score (with progress bar), Errors, Actions
+  - Clean, focused layout matching EqualWeb design principles
+  - Color-coded scan scores (green ≥80%, yellow 60-79%, red <60%)
+  - Visual progress bars for quick score assessment
+  - "Latest" badge on most recent scan
+  
+- **WCAG Score Breakdown Dialog**: New detailed breakdown view shows conformance levels
+  - A-level, AA-level, and AAA-level scores with individual progress bars
+  - Contextual guidance text for each conformance level
+  - Explains priority and recommended focus areas
+  - "View Report" button opens breakdown for completed scans
+  - Download options (Excel/PDF) available directly in dialog
+  
+- **Enhanced User Experience**: Simplified interface for better usability
+  - Removed complex multi-column layouts in favor of essential data
+  - Intuitive action buttons with icon-only design for space efficiency
+  - Download buttons (Excel/PDF) enabled only for completed scans
+  - Error handling with authentication retry logic
+  - Empty state messaging for better guidance
+
+### Historical Scan Tracking with Version Control (Previous)
 - **Complete Scan History Preservation**: All scan data is now permanently preserved with full version control
   - New `scan_runs` table tracks each individual scan execution with timestamps and metrics
   - `a11y_results` linked to specific scan runs via `scanRunId` (nullable for backward compatibility)
   - No scan data is ever deleted - complete historical record maintained
-  
-- **Scan History UI**: New "History" button on completed estates opens a comprehensive scan history dialog
-  - Displays all past scans chronologically with "Latest Scan" label
-  - Shows key metrics for each scan: Total Issues, Pass Rate, Score, Pages Audited
-  - Visual status indicators (✓ completed, ✗ failed, ⏰ running)
-  - Timestamps with "time ago" format for easy reference
   
 - **Export Specific Scans**: Export functionality enhanced to support any historical scan
   - Excel and PDF exports accept optional `scanRunId` query parameter
