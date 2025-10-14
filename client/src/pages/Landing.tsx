@@ -9,11 +9,11 @@ export default function Landing() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <AlertCircle className="h-5 w-5" />
+              <Shield className="h-5 w-5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold">Spec-1 A11y</span>
-              <span className="text-xs text-muted-foreground">Accessibility Testing Platform</span>
+              <span className="text-lg font-bold">TestraAI</span>
+              <span className="text-xs text-muted-foreground">AI-Powered Testing Platform</span>
             </div>
           </div>
           <Button asChild data-testid="button-login">
