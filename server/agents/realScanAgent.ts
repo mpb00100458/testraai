@@ -29,9 +29,10 @@ interface CrawlResult {
 }
 
 export class RealScanAgent {
-  private browser: Browser | null = null;
-
   async runScan(estateId: string): Promise<void> {
+    // Use local browser variable to support concurrent scans
+    let browser: Browser | null = null;
+    
     try {
       // Create a new scan run
       const scanRun = await storage.createScanRun({
@@ -46,15 +47,15 @@ export class RealScanAgent {
       const estate = await storage.getEstate(estateId);
       if (!estate) throw new Error('Estate not found');
 
-      // Launch browser
-      this.browser = await chromium.launch({
+      // Launch browser (local to this scan run)
+      browser = await chromium.launch({
         executablePath: CHROMIUM_PATH,
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
 
       // Crawl and audit pages
-      const crawledPages = await this.crawlWebsite(estate.baseUrl);
+      const crawledPages = await this.crawlWebsite(estate.baseUrl, browser);
       
       await storage.updateEstateStatus(estateId, 'auditing');
 
@@ -167,20 +168,17 @@ export class RealScanAgent {
       await storage.updateEstateStatus(estateId, 'failed');
       throw error;
     } finally {
-      // Always close browser
-      if (this.browser) {
-        await this.browser.close();
-        this.browser = null;
+      // Always close browser (local to this scan run)
+      if (browser) {
+        await browser.close();
       }
     }
   }
 
-  private async crawlWebsite(baseUrl: string): Promise<CrawlResult[]> {
+  private async crawlWebsite(baseUrl: string, browser: Browser): Promise<CrawlResult[]> {
     const results: CrawlResult[] = [];
     const visitedUrls = new Set<string>();
     const urlsToVisit = [baseUrl];
-
-    if (!this.browser) throw new Error('Browser not initialized');
 
     while (urlsToVisit.length > 0 && results.length < MAX_PAGES_PER_ESTATE) {
       const currentUrl = urlsToVisit.shift()!;
@@ -189,7 +187,7 @@ export class RealScanAgent {
       visitedUrls.add(currentUrl);
 
       try {
-        const page = await this.browser.newPage();
+        const page = await browser.newPage();
         
         try {
           // Navigate to page
@@ -219,9 +217,9 @@ export class RealScanAgent {
           });
 
           // Find links on the page (simple crawler)
-          const links = await page.$$eval('a[href]', (anchors, base) => {
+          const links = await page.$$eval('a[href]', (anchors: Element[], base: string) => {
             return anchors
-              .map(a => {
+              .map((a: Element) => {
                 try {
                   const href = a.getAttribute('href');
                   if (!href) return null;
