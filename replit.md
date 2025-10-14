@@ -8,7 +8,32 @@ This is an **Accessibility Testing Platform** that automates WCAG 2.2 compliance
 
 ## Recent Changes (Latest)
 
-### Historical Scan Tracking with Version Control (Current)
+### View Report Feature for Individual Scans (Current)
+- **Scan Detail Page**: New dedicated page to view comprehensive details of any historical scan
+  - Displays full scan overview with all metrics (status, total issues, critical, warning, minor, pass rate, score)
+  - Shows complete list of accessibility issues discovered in that specific scan
+  - Search and filter capabilities (by issue type and severity)
+  - Color-coded metrics matching the existing design system (green ≥80, yellow 60-79, red <60)
+  - Accessible via `/scans/:scanId` route
+  
+- **Enhanced Scan History Table**: Added "View Report" action button
+  - Blue "View" button alongside Excel (green) and PDF (red) download buttons
+  - Eye icon for intuitive visual identification
+  - Disabled for non-completed scans
+  - Table header updated to "Actions" with increased width (300px) to accommodate three buttons
+  
+- **Robust Error Handling**: Comprehensive error states for better user experience
+  - Specific error messages for 401 (session expired - redirects to login), 403 (access denied), 404 (scan not found)
+  - Contextual error UI with "Go Back" button
+  - Toast notifications for all error conditions
+  - Retry disabled to prevent infinite loops
+  
+- **Navigation Flow**: Seamless navigation between scan history and detailed view
+  - Click "View" button in scan history table to navigate to detailed scan report
+  - Back button returns to previous page
+  - Loading skeletons during data fetch
+
+### Historical Scan Tracking with Version Control (Previous)
 - **Complete Scan History Preservation**: All scan data is now permanently preserved with full version control
   - New `scan_runs` table tracks each individual scan execution with timestamps and metrics
   - `a11y_results` linked to specific scan runs via `scanRunId` (nullable for backward compatibility)
