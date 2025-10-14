@@ -1,19 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FileText, Loader2, ChevronRight } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface ScanRun {
   id: string;
@@ -38,8 +32,6 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
   const { toast } = useToast();
   const [downloadingExcel, setDownloadingExcel] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
-  const [selectedScan, setSelectedScan] = useState<ScanRun | null>(null);
-  const [scoreBreakdownOpen, setScoreBreakdownOpen] = useState(false);
 
   const { data: scans, isLoading, error } = useQuery<ScanRun[]>({
     queryKey: ['/api/estates', estateId, 'scans'],
@@ -128,45 +120,25 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   const getStatusBadge = (scan: ScanRun) => {
     if (scan.status === 'completed') {
-      return (
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-green-500"></div>
-          <span className="text-sm">Completed</span>
-        </div>
-      );
+      return <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800" data-testid={`badge-scan-status-${scan.id}`}>✓ Completed</Badge>;
     } else if (scan.status === 'failed') {
-      return (
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-red-500"></div>
-          <span className="text-sm">Failed</span>
-        </div>
-      );
+      return <Badge variant="destructive" data-testid={`badge-scan-status-${scan.id}`}>✗ Failed</Badge>;
     } else {
-      return (
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
-          <span className="text-sm">Running</span>
-        </div>
-      );
+      return <Badge variant="secondary" data-testid={`badge-scan-status-${scan.id}`}>⏰ Running</Badge>;
     }
-  };
-
-  const openScoreBreakdown = (scan: ScanRun) => {
-    setSelectedScan(scan);
-    setScoreBreakdownOpen(true);
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center p-8 space-y-3">
+      <div className="text-center p-12 space-y-3">
         <p className="text-destructive font-medium">
           {error instanceof Error ? error.message : "Failed to load scan history"}
         </p>
@@ -186,8 +158,8 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   if (!scans || scans.length === 0) {
     return (
-      <div className="text-center p-8">
-        <p className="text-muted-foreground">
+      <div className="text-center p-12">
+        <p className="text-muted-foreground text-base">
           No scan history available. Run a scan to see results here.
         </p>
       </div>
@@ -195,176 +167,150 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
   }
 
   return (
-    <>
-      <div className="w-full overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead data-testid="table-header-date" className="w-[140px]">#</TableHead>
-              <TableHead data-testid="table-header-date-col">Date</TableHead>
-              <TableHead data-testid="table-header-pages">Pages</TableHead>
-              <TableHead data-testid="table-header-status">Status</TableHead>
-              <TableHead data-testid="table-header-score">Scan score</TableHead>
-              <TableHead data-testid="table-header-errors">Errors</TableHead>
-              <TableHead data-testid="table-header-actions"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {scans.map((scan, index) => (
-              <TableRow key={scan.id} data-testid={`table-row-scan-${scan.id}`}>
-                <TableCell data-testid={`table-cell-number-${scan.id}`} className="text-center">
-                  <span className="text-sm font-medium">{index + 1}</span>
-                </TableCell>
-                <TableCell data-testid={`table-cell-date-${scan.id}`}>
-                  <div className="space-y-1">
-                    <div className="text-sm">
-                      {new Date(scan.startedAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(scan.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell data-testid={`table-cell-pages-${scan.id}`}>
-                  <span className="font-medium">
-                    {scan.pagesAudited ?? '-'}
+    <div className="w-full overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead data-testid="table-header-date" className="w-[180px]">Date</TableHead>
+            <TableHead data-testid="table-header-status" className="w-[140px]">Status</TableHead>
+            <TableHead data-testid="table-header-score" className="w-[140px]">Score</TableHead>
+            <TableHead data-testid="table-header-issues" className="text-right w-[120px]">Total Issues</TableHead>
+            <TableHead data-testid="table-header-critical" className="text-right w-[100px]">Critical</TableHead>
+            <TableHead data-testid="table-header-pass-rate" className="w-[140px]">Pass Rate</TableHead>
+            <TableHead data-testid="table-header-pages" className="text-right w-[100px]">Pages</TableHead>
+            <TableHead data-testid="table-header-actions" className="text-right w-[140px]">Export</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {scans.map((scan, index) => (
+            <TableRow key={scan.id} data-testid={`table-row-scan-${scan.id}`} className="hover-elevate">
+              <TableCell data-testid={`table-cell-date-${scan.id}`}>
+                <div className="flex flex-col gap-1.5">
+                  <span className="font-medium text-sm">
+                    {formatDistanceToNow(new Date(scan.startedAt), { addSuffix: true })}
                   </span>
-                </TableCell>
-                <TableCell data-testid={`table-cell-status-${scan.id}`}>
-                  {getStatusBadge(scan)}
-                </TableCell>
-                <TableCell data-testid={`table-cell-score-${scan.id}`}>
-                  {scan.averageScore !== null && scan.averageScore !== undefined ? (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Accessibility score</span>
-                        <span className="text-sm font-semibold">{scan.averageScore.toFixed(2)}%</span>
-                      </div>
-                      <Progress value={scan.averageScore} className="h-1.5" />
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">-</span>
+                  {index === 0 && (
+                    <Badge variant="outline" className="w-fit text-xs py-0" data-testid={`badge-latest-scan-${scan.id}`}>
+                      Latest
+                    </Badge>
                   )}
-                </TableCell>
-                <TableCell data-testid={`table-cell-errors-${scan.id}`}>
-                  <span className="font-medium">
-                    {scan.totalIssues ?? '-'}
-                  </span>
-                </TableCell>
-                <TableCell className="text-center" data-testid={`table-cell-actions-${scan.id}`}>
-                  {scan.status === 'completed' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openScoreBreakdown(scan)}
-                      data-testid={`button-view-breakdown-${scan.id}`}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 no-default-hover-elevate"
+                </div>
+              </TableCell>
+              <TableCell data-testid={`table-cell-status-${scan.id}`}>
+                {getStatusBadge(scan)}
+              </TableCell>
+              <TableCell data-testid={`table-cell-score-${scan.id}`}>
+                {scan.averageScore !== null && scan.averageScore !== undefined ? (
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className={`font-semibold text-lg ${
+                        scan.averageScore >= 80 
+                          ? 'text-green-600 dark:text-green-500' 
+                          : scan.averageScore >= 60 
+                          ? 'text-yellow-600 dark:text-yellow-500' 
+                          : 'text-red-600 dark:text-red-500'
+                      }`}
                     >
-                      View report
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <Dialog open={scoreBreakdownOpen} onOpenChange={setScoreBreakdownOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Score Breakdown</DialogTitle>
-            <DialogDescription>
-              Your accessibility score is a measure of how well your site performs against automated WCAG accessibility checks. 
-              Our checks are based on WCAG success criteria categorized by Level A, AA, or AAA conformance levels.
-              Below you can see how well you scored in each category.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedScan && (
-            <div className="space-y-6 mt-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">A-level</h3>
-                    <span className="text-2xl font-bold text-green-600 dark:text-green-500">
-                      {selectedScan.averageScore !== null ? Math.min(Math.round(selectedScan.averageScore * 1.1), 100) : '-'}/100
+                      {scan.averageScore}
                     </span>
+                    <span className="text-xs text-muted-foreground">/100</span>
                   </div>
-                  <Progress 
-                    value={selectedScan.averageScore !== null ? Math.min(selectedScan.averageScore * 1.1, 100) : 0} 
-                    className="h-2" 
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    You have a few Level A errors to fix, but you're on the right track! Then, you can start to focus more on your AA and AAA level errors.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">AA-level</h3>
-                    <span className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
-                      {selectedScan.averageScore !== null ? Math.round(selectedScan.averageScore * 0.95) : '-'}/100
-                    </span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right" data-testid={`table-cell-issues-${scan.id}`}>
+                <span className="font-medium text-base">
+                  {scan.totalIssues ?? '-'}
+                </span>
+              </TableCell>
+              <TableCell className="text-right" data-testid={`table-cell-critical-${scan.id}`}>
+                {scan.criticalIssues != null ? (
+                  <Badge variant={scan.criticalIssues > 0 ? "destructive" : "outline"} className="font-medium">
+                    {scan.criticalIssues}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell data-testid={`table-cell-pass-rate-${scan.id}`}>
+                {scan.passRate != null ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className={`font-semibold text-sm ${
+                          scan.passRate >= 80 
+                            ? 'text-green-600 dark:text-green-500' 
+                            : scan.passRate >= 60 
+                            ? 'text-yellow-600 dark:text-yellow-500' 
+                            : 'text-red-600 dark:text-red-500'
+                        }`}
+                      >
+                        {scan.passRate}%
+                      </span>
+                    </div>
+                    <Progress value={scan.passRate} className="h-1.5" />
                   </div>
-                  <Progress 
-                    value={selectedScan.averageScore !== null ? selectedScan.averageScore * 0.95 : 0} 
-                    className="h-2" 
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    You are well on your way, but you still have some high priority errors to fix. Level AA is the recommended level of compliance. 
-                    Just remember, Level A errors always have the highest priority.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">AAA-level</h3>
-                    <span className="text-2xl font-bold text-red-600 dark:text-red-500">
-                      {selectedScan.averageScore !== null ? Math.round(selectedScan.averageScore * 0.6) : '-'}/100
-                    </span>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right" data-testid={`table-cell-pages-${scan.id}`}>
+                <span className="font-medium text-base">
+                  {scan.pagesAudited ?? '-'}
+                </span>
+              </TableCell>
+              <TableCell className="text-right" data-testid={`table-cell-actions-${scan.id}`}>
+                <TooltipProvider>
+                  <div className="flex gap-1.5 justify-end">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadExcel(scan.id)}
+                          disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
+                          data-testid={`button-download-excel-${scan.id}`}
+                        >
+                          {downloadingExcel === scan.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileSpreadsheet className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download Excel Report</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadPdf(scan.id)}
+                          disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
+                          data-testid={`button-download-pdf-${scan.id}`}
+                        >
+                          {downloadingPdf === scan.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download PDF Report</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
-                  <Progress 
-                    value={selectedScan.averageScore !== null ? selectedScan.averageScore * 0.6 : 0} 
-                    className="h-2" 
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    You have several Level AAA errors on your page. Level AAA is the highest standard of accessibility, but most user needs can be met at Levels A and AA. 
-                    So be sure to prioritize those first before tackling Level AAA.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadExcel(selectedScan.id)}
-                  disabled={downloadingExcel === selectedScan.id}
-                >
-                  {downloadingExcel === selectedScan.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  )}
-                  Download Excel
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadPdf(selectedScan.id)}
-                  disabled={downloadingPdf === selectedScan.id}
-                >
-                  {downloadingPdf === selectedScan.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <FileText className="h-4 w-4 mr-2" />
-                  )}
-                  Download PDF
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+                </TooltipProvider>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
