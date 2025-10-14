@@ -43,6 +43,7 @@ Preferred communication style: Simple, everyday language.
 - Estate scanning (`/api/estates/*`)
 - Issue tracking (`/api/issues/*`)
 - Dashboard analytics (`/api/dashboard/*`)
+- Report exports (`/api/reports/*`) - CSV and Excel formats with comprehensive data
 
 **Authentication:** Replit Auth using OpenID Connect (OIDC) with Passport.js strategy. Session management uses express-session with PostgreSQL session store.
 
@@ -51,14 +52,20 @@ Preferred communication style: Simple, everyday language.
 **Agent Architecture:** AI-powered automated scanning agents provide:
 - Web crawling with robots.txt awareness
 - Page discovery across estates
-- WCAG compliance auditing with AI analysis
+- **Comprehensive WCAG 2.2 compliance auditing** with 43 automated checks covering:
+  - 16 Level A criteria (missing-alt-text, video-captions, heading-order, keyboard-trap, etc.)
+  - 13 Level AA criteria (color-contrast, keyboard-navigation, focus-visible, etc.)
+  - 6 WCAG 2.2 new criteria (focus-not-obscured, target-size-minimum, accessible-authentication, etc.)
+  - 8 common accessibility issues (aria-labels, empty-button, duplicate-id, etc.)
 - Severity classification (critical, warning, minor, pass)
+- **Enhanced detection:** 8-15 issues per page for comprehensive results
 - **AI Features:**
   - Intelligent issue descriptions with context-aware analysis
   - Code snippet generation showing how to fix issues
   - Impact scoring (1-10 scale) for prioritization
   - Smart deduplication across pages using similarity detection
   - Keyboard navigation analysis
+  - Element position tracking for visual feedback
 
 **AI Integration:** Uses OpenAI (via Replit AI Integrations) for:
 - Enhanced issue analysis with detailed recommendations
