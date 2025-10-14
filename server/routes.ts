@@ -6,6 +6,43 @@ import { z } from "zod";
 import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema } from "@shared/schema";
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
+import type { A11yResult } from "@shared/schema";
+
+// Helper function to calculate issue type changes between two scans
+function calculateIssueTypeChanges(issues1: A11yResult[], issues2: A11yResult[]) {
+  const issueTypes1 = new Map<string, number>();
+  const issueTypes2 = new Map<string, number>();
+
+  // Count issues by type in scan 1
+  issues1.forEach(issue => {
+    if (issue.severity !== 'pass') {
+      issueTypes1.set(issue.issueType, (issueTypes1.get(issue.issueType) || 0) + 1);
+    }
+  });
+
+  // Count issues by type in scan 2
+  issues2.forEach(issue => {
+    if (issue.severity !== 'pass') {
+      issueTypes2.set(issue.issueType, (issueTypes2.get(issue.issueType) || 0) + 1);
+    }
+  });
+
+  // Calculate changes for each issue type
+  const allTypes = new Set([...Array.from(issueTypes1.keys()), ...Array.from(issueTypes2.keys())]);
+  const changes: Record<string, { before: number; after: number; change: number }> = {};
+
+  allTypes.forEach(type => {
+    const before = issueTypes1.get(type) || 0;
+    const after = issueTypes2.get(type) || 0;
+    changes[type] = {
+      before,
+      after,
+      change: after - before,
+    };
+  });
+
+  return changes;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -217,6 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { id } = req.params;
+      const { scanRunId } = req.query;
       const estate = await storage.getEstate(id);
       
       if (!estate) {
@@ -234,9 +272,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this estate" });
       }
 
-      // Get all issues for this estate
-      const issues = await storage.getA11yResultsByEstateId(id);
-      const rollup = await storage.getA11yRollupByEstateId(id);
+      // Get issues for specific scan run or latest
+      let issues, rollup, scanRun;
+      if (scanRunId) {
+        scanRun = await storage.getScanRun(scanRunId as string);
+        if (!scanRun || scanRun.estateId !== id) {
+          return res.status(404).json({ message: "Scan run not found" });
+        }
+        issues = await storage.getA11yResultsByScanRunId(scanRunId as string);
+        rollup = {
+          totalIssues: scanRun.totalIssues,
+          criticalIssues: scanRun.criticalIssues,
+          warningIssues: scanRun.warningIssues,
+          minorIssues: scanRun.minorIssues,
+          passRate: scanRun.passRate,
+          averageScore: scanRun.averageScore,
+        };
+      } else {
+        issues = await storage.getA11yResultsByEstateId(id);
+        rollup = await storage.getA11yRollupByEstateId(id);
+      }
       
       // Create PDF document
       doc = new PDFDocument({ margin: 50 });
@@ -389,6 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { id } = req.params;
+      const { scanRunId } = req.query;
       const estate = await storage.getEstate(id);
       
       if (!estate) {
@@ -406,9 +462,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this estate" });
       }
 
-      // Get all issues for this estate
-      const issues = await storage.getA11yResultsByEstateId(id);
-      const rollup = await storage.getA11yRollupByEstateId(id);
+      // Get issues for specific scan run or latest
+      let issues, rollup, scanRun;
+      if (scanRunId) {
+        scanRun = await storage.getScanRun(scanRunId as string);
+        if (!scanRun || scanRun.estateId !== id) {
+          return res.status(404).json({ message: "Scan run not found" });
+        }
+        issues = await storage.getA11yResultsByScanRunId(scanRunId as string);
+        rollup = {
+          totalIssues: scanRun.totalIssues,
+          criticalIssues: scanRun.criticalIssues,
+          warningIssues: scanRun.warningIssues,
+          minorIssues: scanRun.minorIssues,
+          passRate: scanRun.passRate,
+          averageScore: scanRun.averageScore,
+        };
+      } else {
+        issues = await storage.getA11yResultsByEstateId(id);
+        rollup = await storage.getA11yRollupByEstateId(id);
+      }
       
       // Create Excel workbook
       const workbook = new ExcelJS.Workbook();
@@ -601,6 +674,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error starting scan:", error);
       res.status(500).json({ message: "Failed to start scan" });
+    }
+  });
+
+  // Get scan history for an estate
+  app.get('/api/estates/:id/scans', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const estate = await storage.getEstate(id);
+      
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      // Verify user has access
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this estate" });
+      }
+
+      const scans = await storage.getScanRunsByEstateId(id);
+      res.json(scans);
+    } catch (error) {
+      console.error("Error fetching scan history:", error);
+      res.status(500).json({ message: "Failed to fetch scan history" });
+    }
+  });
+
+  // Get specific scan run details
+  app.get('/api/scans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const scanRun = await storage.getScanRun(id);
+      
+      if (!scanRun) {
+        return res.status(404).json({ message: "Scan run not found" });
+      }
+
+      // Verify user has access to the estate's project
+      const estate = await storage.getEstate(scanRun.estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this scan" });
+      }
+
+      // Get issues for this scan run
+      const issues = await storage.getA11yResultsByScanRunId(id);
+
+      res.json({
+        ...scanRun,
+        issues,
+      });
+    } catch (error) {
+      console.error("Error fetching scan details:", error);
+      res.status(500).json({ message: "Failed to fetch scan details" });
+    }
+  });
+
+  // Compare two scan runs
+  app.get('/api/scans/compare/:id1/:id2', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id1, id2 } = req.params;
+
+      // Get both scan runs
+      const [scan1, scan2] = await Promise.all([
+        storage.getScanRun(id1),
+        storage.getScanRun(id2),
+      ]);
+
+      if (!scan1 || !scan2) {
+        return res.status(404).json({ message: "Scan run not found" });
+      }
+
+      // Verify both scans are from the same estate
+      if (scan1.estateId !== scan2.estateId) {
+        return res.status(400).json({ message: "Cannot compare scans from different estates" });
+      }
+
+      // Verify user has access
+      const estate = await storage.getEstate(scan1.estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to these scans" });
+      }
+
+      // Get issues for both scans
+      const [issues1, issues2] = await Promise.all([
+        storage.getA11yResultsByScanRunId(id1),
+        storage.getA11yResultsByScanRunId(id2),
+      ]);
+
+      // Calculate comparison metrics
+      const comparison = {
+        scan1: {
+          ...scan1,
+          issuesCount: issues1.length,
+        },
+        scan2: {
+          ...scan2,
+          issuesCount: issues2.length,
+        },
+        changes: {
+          totalIssues: (scan2.totalIssues || 0) - (scan1.totalIssues || 0),
+          criticalIssues: (scan2.criticalIssues || 0) - (scan1.criticalIssues || 0),
+          warningIssues: (scan2.warningIssues || 0) - (scan1.warningIssues || 0),
+          minorIssues: (scan2.minorIssues || 0) - (scan1.minorIssues || 0),
+          passRate: (scan2.passRate || 0) - (scan1.passRate || 0),
+          averageScore: (scan2.averageScore || 0) - (scan1.averageScore || 0),
+        },
+        // Group issues by type for detailed comparison
+        issueTypeChanges: calculateIssueTypeChanges(issues1, issues2),
+      };
+
+      res.json(comparison);
+    } catch (error) {
+      console.error("Error comparing scans:", error);
+      res.status(500).json({ message: "Failed to compare scans" });
     }
   });
 
