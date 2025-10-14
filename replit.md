@@ -6,6 +6,21 @@ This is an **Accessibility Testing Platform** that automates WCAG 2.2 compliance
 
 **Core Purpose:** Provide teams with automated discovery, auditing, and reporting of accessibility violations to ensure web applications meet WCAG standards.
 
+## Recent Changes (Latest)
+
+### Individual Estate Export Functionality (Current)
+- **Excel Export**: Added individual Excel export for each estate at `/api/estates/:id/report/excel`
+  - Two worksheets: Summary (estate metrics) and All Issues (detailed findings)
+  - Color-coded severity cells for visual clarity
+  - Professional formatting with headers and auto-sized columns
+- **PDF Export**: Enhanced existing PDF export functionality for individual estates
+- **UI Enhancement**: Project Detail page now displays a dropdown menu for each completed estate with:
+  - "Export Excel" option with FileSpreadsheet icon
+  - "Export PDF" option with FileText icon
+  - Disabled states during download operations
+  - Toast notifications for success/error feedback
+- **Comprehensive Reporting**: Each export contains estate-specific data including pass rate, severity breakdown, and detailed issue information with AI-generated suggestions
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
