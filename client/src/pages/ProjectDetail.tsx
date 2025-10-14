@@ -8,18 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe, Plus, Play } from "lucide-react";
+import { ArrowLeft, Globe, Plus, Play, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEstateSchema, type InsertEstate, type Estate, type Project } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
+import { LiveScanModal } from "@/components/LiveScanModal";
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
+  const [liveScanModalOpen, setLiveScanModalOpen] = useState(false);
+  const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -103,9 +106,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const runScanMutation = useMutation({
     mutationFn: async (estateId: string) => {
       await apiRequest("POST", `/api/estates/${estateId}/scan`, {});
+      return estateId;
     },
-    onSuccess: () => {
+    onSuccess: (estateId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estates", projectId] });
+      setSelectedEstateId(estateId);
+      setLiveScanModalOpen(true);
       toast({
         title: "Scan Started",
         description: "The accessibility scan is now running",
@@ -115,6 +121,35 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       toast({
         title: "Error",
         description: error.message || "Failed to start scan",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const downloadReportMutation = useMutation({
+    mutationFn: async (estateId: string) => {
+      const response = await fetch(`/api/estates/${estateId}/report`);
+      if (!response.ok) throw new Error("Failed to download report");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `estate-${estateId}-report.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Report downloaded",
+        description: "The accessibility report has been downloaded.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download report",
         variant: "destructive",
       });
     },
@@ -248,24 +283,41 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
                     <span>{estate.pagesDiscovered || 0} pages • {estate.pagesAudited || 0} audited</span>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      runScanMutation.mutate(estate.id);
-                    }}
-                    disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
-                    data-testid={`button-run-scan-${estate.id}`}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    {estate.status === 'crawling' ? 'Scanning...' :
-                     estate.status === 'auditing' ? 'Testing...' :
-                     'Run Scan'}
-                  </Button>
+                  <div className="flex gap-2">
+                    {estate.status === 'completed' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadReportMutation.mutate(estate.id);
+                        }}
+                        disabled={downloadReportMutation.isPending}
+                        data-testid={`button-download-report-${estate.id}`}
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Report
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        runScanMutation.mutate(estate.id);
+                      }}
+                      disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
+                      data-testid={`button-run-scan-${estate.id}`}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      {estate.status === 'crawling' ? 'Scanning...' :
+                       estate.status === 'auditing' ? 'Testing...' :
+                       'Run Scan'}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -287,6 +339,20 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Live Scan Modal */}
+      {selectedEstateId && (
+        <LiveScanModal
+          estateId={selectedEstateId}
+          open={liveScanModalOpen}
+          onOpenChange={(open) => {
+            setLiveScanModalOpen(open);
+            if (!open) {
+              queryClient.invalidateQueries({ queryKey: ["/api/estates", projectId] });
+            }
+          }}
+        />
       )}
     </div>
   );
