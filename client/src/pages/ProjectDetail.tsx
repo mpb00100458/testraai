@@ -8,8 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe, Plus, Play, History } from "lucide-react";
+import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEstateSchema, type InsertEstate, type Estate, type Project } from "@shared/schema";
@@ -210,75 +217,94 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       </div>
 
       {estatesLoading ? (
-        <div className="grid gap-6 md:grid-cols-2">
-          {[...Array(2)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-48" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-10 w-24" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : estates && estates.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-4">
           {estates.map((estate) => (
             <Card key={estate.id} data-testid={`card-estate-${estate.id}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Globe className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="truncate">{estate.name}</CardTitle>
-                      <CardDescription className="truncate">
-                        {estate.baseUrl}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant={
-                    estate.status === 'completed' ? 'default' :
-                    estate.status === 'failed' ? 'destructive' :
-                    estate.status === 'crawling' || estate.status === 'auditing' ? 'secondary' :
-                    'outline'
-                  }>
-                    {estate.status === 'crawling' ? '🔍 Scanning Pages' :
-                     estate.status === 'auditing' ? '🧪 Testing Accessibility' :
-                     estate.status === 'completed' ? '✓ Completed' :
-                     estate.status === 'failed' ? '✗ Failed' :
-                     'Ready to Scan'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm text-muted-foreground">
-                    <span>{estate.pagesDiscovered || 0} pages • {estate.pagesAudited || 0} audited</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        runScanMutation.mutate(estate.id);
-                      }}
-                      disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
-                      data-testid={`button-run-scan-${estate.id}`}
-                    >
-                      <Play className="h-3 w-3 mr-1" />
-                      {estate.status === 'crawling' ? 'Scanning...' :
-                       estate.status === 'auditing' ? 'Testing...' :
-                       'Run Scan'}
-                    </Button>
-                  </div>
+              <CardContent className="p-0">
+                <div className="w-full overflow-auto rounded-md border-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[300px]">Estate Name</TableHead>
+                        <TableHead className="w-[350px]">Base URL</TableHead>
+                        <TableHead className="w-[150px] text-center">Pages</TableHead>
+                        <TableHead className="w-[180px]">Status</TableHead>
+                        <TableHead className="w-[200px] text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell data-testid={`table-cell-estate-name-${estate.id}`}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary flex-shrink-0">
+                              <Globe className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold truncate">{estate.name}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`table-cell-estate-url-${estate.id}`}>
+                          <a 
+                            href={estate.baseUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm text-primary hover:underline truncate"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="truncate">{estate.baseUrl}</span>
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                          </a>
+                        </TableCell>
+                        <TableCell className="text-center" data-testid={`table-cell-estate-pages-${estate.id}`}>
+                          <div className="space-y-0.5">
+                            <p className="font-medium text-base">
+                              {estate.pagesAudited || 0} / {estate.pagesDiscovered || 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">audited</p>
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`table-cell-estate-status-${estate.id}`}>
+                          <Badge variant={
+                            estate.status === 'completed' ? 'default' :
+                            estate.status === 'failed' ? 'destructive' :
+                            estate.status === 'crawling' || estate.status === 'auditing' ? 'secondary' :
+                            'outline'
+                          }>
+                            {estate.status === 'crawling' ? '🔍 Scanning Pages' :
+                             estate.status === 'auditing' ? '🧪 Testing Accessibility' :
+                             estate.status === 'completed' ? '✓ Completed' :
+                             estate.status === 'failed' ? '✗ Failed' :
+                             'Ready to Scan'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right" data-testid={`table-cell-estate-actions-${estate.id}`}>
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              runScanMutation.mutate(estate.id);
+                            }}
+                            disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
+                            data-testid={`button-run-scan-${estate.id}`}
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            {estate.status === 'crawling' ? 'Scanning...' :
+                             estate.status === 'auditing' ? 'Testing...' :
+                             'Run Scan'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
                 
                 {/* Scan History Table - Show for any estate that might have scans */}
-                <div className="pt-4 border-t">
+                <div className="p-6 pt-4 border-t bg-muted/20">
                   <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                     <History className="h-4 w-4" />
                     Scan History
