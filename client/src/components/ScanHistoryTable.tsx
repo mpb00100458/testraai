@@ -6,6 +6,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 
 interface ScanRun {
   id: string;
@@ -46,8 +48,8 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
       }
       return response.json();
     },
-    refetchInterval: 5000, // Refresh every 5 seconds to show new scans
-    retry: 1, // Only retry once to avoid hammering the server
+    refetchInterval: 5000,
+    retry: 1,
   });
 
   const handleDownloadExcel = async (scanId: string) => {
@@ -118,7 +120,7 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   const getStatusBadge = (scan: ScanRun) => {
     if (scan.status === 'completed') {
-      return <Badge className="bg-green-600 hover:bg-green-700" data-testid={`badge-scan-status-${scan.id}`}>✓ Completed</Badge>;
+      return <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800" data-testid={`badge-scan-status-${scan.id}`}>✓ Completed</Badge>;
     } else if (scan.status === 'failed') {
       return <Badge variant="destructive" data-testid={`badge-scan-status-${scan.id}`}>✗ Failed</Badge>;
     } else {
@@ -128,16 +130,16 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center p-8">
-        <p className="text-destructive mb-2">
+      <div className="text-center p-12 space-y-3">
+        <p className="text-destructive font-medium">
           {error instanceof Error ? error.message : "Failed to load scan history"}
         </p>
         {error instanceof Error && error.message.includes("Unauthorized") && (
@@ -156,36 +158,39 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   if (!scans || scans.length === 0) {
     return (
-      <div className="text-center p-8 text-muted-foreground">
-        No scan history available. Run a scan to see results here.
+      <div className="text-center p-12">
+        <p className="text-muted-foreground text-base">
+          No scan history available. Run a scan to see results here.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="border rounded-md">
+    <div className="w-full overflow-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead data-testid="table-header-date">Date</TableHead>
-            <TableHead data-testid="table-header-status">Status</TableHead>
-            <TableHead data-testid="table-header-issues" className="text-right">Total Issues</TableHead>
-            <TableHead data-testid="table-header-critical" className="text-right">Critical</TableHead>
-            <TableHead data-testid="table-header-pass-rate" className="text-right">Pass Rate</TableHead>
-            <TableHead data-testid="table-header-pages" className="text-right">Pages</TableHead>
-            <TableHead data-testid="table-header-actions" className="text-right">Actions</TableHead>
+            <TableHead data-testid="table-header-date" className="w-[180px]">Date</TableHead>
+            <TableHead data-testid="table-header-status" className="w-[140px]">Status</TableHead>
+            <TableHead data-testid="table-header-score" className="w-[140px]">Score</TableHead>
+            <TableHead data-testid="table-header-issues" className="text-right w-[120px]">Total Issues</TableHead>
+            <TableHead data-testid="table-header-critical" className="text-right w-[100px]">Critical</TableHead>
+            <TableHead data-testid="table-header-pass-rate" className="w-[140px]">Pass Rate</TableHead>
+            <TableHead data-testid="table-header-pages" className="text-right w-[100px]">Pages</TableHead>
+            <TableHead data-testid="table-header-actions" className="text-right w-[140px]">Export</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {scans.map((scan, index) => (
-            <TableRow key={scan.id} data-testid={`table-row-scan-${scan.id}`}>
+            <TableRow key={scan.id} data-testid={`table-row-scan-${scan.id}`} className="hover-elevate">
               <TableCell data-testid={`table-cell-date-${scan.id}`}>
-                <div className="flex flex-col">
-                  <span className="font-medium">
+                <div className="flex flex-col gap-1.5">
+                  <span className="font-medium text-sm">
                     {formatDistanceToNow(new Date(scan.startedAt), { addSuffix: true })}
                   </span>
                   {index === 0 && (
-                    <Badge variant="outline" className="w-fit mt-1" data-testid={`badge-latest-scan-${scan.id}`}>
+                    <Badge variant="outline" className="w-fit text-xs py-0" data-testid={`badge-latest-scan-${scan.id}`}>
                       Latest
                     </Badge>
                   )}
@@ -194,49 +199,113 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
               <TableCell data-testid={`table-cell-status-${scan.id}`}>
                 {getStatusBadge(scan)}
               </TableCell>
-              <TableCell className="text-right" data-testid={`table-cell-issues-${scan.id}`}>
-                {scan.totalIssues ?? '-'}
+              <TableCell data-testid={`table-cell-score-${scan.id}`}>
+                {scan.averageScore !== null && scan.averageScore !== undefined ? (
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className={`font-semibold text-lg ${
+                        scan.averageScore >= 80 
+                          ? 'text-green-600 dark:text-green-500' 
+                          : scan.averageScore >= 60 
+                          ? 'text-yellow-600 dark:text-yellow-500' 
+                          : 'text-red-600 dark:text-red-500'
+                      }`}
+                    >
+                      {scan.averageScore}
+                    </span>
+                    <span className="text-xs text-muted-foreground">/100</span>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </TableCell>
-              <TableCell className="text-right" data-testid={`table-cell-critical-${scan.id}`}>
-                <span className="text-red-600 font-medium">
-                  {scan.criticalIssues ?? '-'}
+              <TableCell className="text-right" data-testid={`table-cell-issues-${scan.id}`}>
+                <span className="font-medium text-base">
+                  {scan.totalIssues ?? '-'}
                 </span>
               </TableCell>
-              <TableCell className="text-right" data-testid={`table-cell-pass-rate-${scan.id}`}>
-                {scan.passRate != null ? `${scan.passRate}%` : '-'}
+              <TableCell className="text-right" data-testid={`table-cell-critical-${scan.id}`}>
+                {scan.criticalIssues != null ? (
+                  <Badge variant={scan.criticalIssues > 0 ? "destructive" : "outline"} className="font-medium">
+                    {scan.criticalIssues}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </TableCell>
+              <TableCell data-testid={`table-cell-pass-rate-${scan.id}`}>
+                {scan.passRate != null ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className={`font-semibold text-sm ${
+                          scan.passRate >= 80 
+                            ? 'text-green-600 dark:text-green-500' 
+                            : scan.passRate >= 60 
+                            ? 'text-yellow-600 dark:text-yellow-500' 
+                            : 'text-red-600 dark:text-red-500'
+                        }`}
+                      >
+                        {scan.passRate}%
+                      </span>
+                    </div>
+                    <Progress value={scan.passRate} className="h-1.5" />
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </TableCell>
               <TableCell className="text-right" data-testid={`table-cell-pages-${scan.id}`}>
-                {scan.pagesAudited ?? '-'}
+                <span className="font-medium text-base">
+                  {scan.pagesAudited ?? '-'}
+                </span>
               </TableCell>
               <TableCell className="text-right" data-testid={`table-cell-actions-${scan.id}`}>
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDownloadExcel(scan.id)}
-                    disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
-                    data-testid={`button-download-excel-${scan.id}`}
-                  >
-                    {downloadingExcel === scan.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileSpreadsheet className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDownloadPdf(scan.id)}
-                    disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
-                    data-testid={`button-download-pdf-${scan.id}`}
-                  >
-                    {downloadingPdf === scan.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                <TooltipProvider>
+                  <div className="flex gap-1.5 justify-end">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadExcel(scan.id)}
+                          disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
+                          data-testid={`button-download-excel-${scan.id}`}
+                        >
+                          {downloadingExcel === scan.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileSpreadsheet className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download Excel Report</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadPdf(scan.id)}
+                          disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
+                          data-testid={`button-download-pdf-${scan.id}`}
+                        >
+                          {downloadingPdf === scan.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download PDF Report</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               </TableCell>
             </TableRow>
           ))}
