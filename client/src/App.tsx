@@ -17,6 +17,7 @@ import Organization from "@/pages/Organization";
 import Settings from "@/pages/Settings";
 import Tools from "@/pages/Tools";
 import ScanComparison from "@/pages/ScanComparison";
+import ScanDetail from "@/pages/ScanDetail";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,6 +40,9 @@ function Router() {
       <Route path="/organization" component={Organization} />
       <Route path="/tools" component={Tools} />
       <Route path="/settings" component={Settings} />
+      <Route path="/scans/:scanId">
+        {(params) => <ScanDetail scanId={params.scanId} />}
+      </Route>
       <Route path="/compare/:scan1Id/:scan2Id">
         {(params) => <ScanComparison scan1Id={params.scan1Id} scan2Id={params.scan2Id} />}
       </Route>

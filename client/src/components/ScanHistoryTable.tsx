@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
+import { Link } from "wouter";
 
 interface ScanRun {
   id: string;
@@ -178,7 +179,7 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
             <TableHead data-testid="table-header-critical" className="text-right w-[100px]">Critical</TableHead>
             <TableHead data-testid="table-header-pass-rate" className="w-[140px]">Pass Rate</TableHead>
             <TableHead data-testid="table-header-pages" className="text-right w-[100px]">Pages</TableHead>
-            <TableHead data-testid="table-header-actions" className="text-right w-[220px]">Download Reports</TableHead>
+            <TableHead data-testid="table-header-actions" className="text-right w-[300px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -262,6 +263,19 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
               </TableCell>
               <TableCell className="text-right" data-testid={`table-cell-actions-${scan.id}`}>
                 <div className="flex gap-2 justify-end">
+                  <Link href={`/scans/${scan.id}`}>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      disabled={scan.status !== 'completed'}
+                      data-testid={`button-view-report-${scan.id}`}
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    >
+                      <Eye className="h-3 w-3 mr-1.5" />
+                      <span className="text-xs font-medium">View</span>
+                    </Button>
+                  </Link>
+                  
                   <Button
                     size="sm"
                     variant="default"
