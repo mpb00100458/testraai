@@ -106,7 +106,8 @@ export default function Issues() {
                   <tr className="border-b border-border">
                     <th className="text-left p-3 text-sm font-medium">Severity</th>
                     <th className="text-left p-3 text-sm font-medium">Issue Type</th>
-                    <th className="text-left p-3 text-sm font-medium hidden md:table-cell">WCAG Criteria</th>
+                    <th className="text-left p-3 text-sm font-medium hidden md:table-cell">WCAG</th>
+                    <th className="text-left p-3 text-sm font-medium hidden lg:table-cell">Impact</th>
                     <th className="text-left p-3 text-sm font-medium">Description</th>
                   </tr>
                 </thead>
@@ -128,10 +129,36 @@ export default function Issues() {
                           {issue.wcagCriteria || "N/A"}
                         </span>
                       </td>
+                      <td className="p-3 hidden lg:table-cell">
+                        {issue.impactScore ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${
+                                  issue.impactScore >= 8 ? 'bg-red-500' :
+                                  issue.impactScore >= 5 ? 'bg-orange-500' :
+                                  'bg-yellow-500'
+                                }`}
+                                style={{ width: `${issue.impactScore * 10}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium">{issue.impactScore}/10</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">-</span>
+                        )}
+                      </td>
                       <td className="p-3">
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {issue.description || "No description available"}
-                        </p>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {issue.description || "No description available"}
+                          </p>
+                          {issue.codeSnippet && (
+                            <p className="text-xs font-mono text-primary bg-primary/5 px-2 py-1 rounded line-clamp-1">
+                              {issue.codeSnippet}
+                            </p>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -166,6 +166,10 @@ export const a11yResults = pgTable("a11y_results", {
   element: text("element"),
   description: text("description"),
   suggestion: text("suggestion"),
+  codeSnippet: text("code_snippet"),
+  impactScore: integer("impact_score"),
+  isDuplicate: integer("is_duplicate").notNull().default(0),
+  duplicateOfId: varchar("duplicate_of_id"),
   evidenceUrl: varchar("evidence_url", { length: 1000 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
