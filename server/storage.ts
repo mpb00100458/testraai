@@ -7,6 +7,7 @@ import {
   pages,
   a11yResults,
   a11yRollups,
+  a11yHistory,
   type User,
   type UpsertUser,
   type Organization,
@@ -23,9 +24,11 @@ import {
   type InsertA11yResult,
   type A11yRollup,
   type InsertA11yRollup,
+  type A11yHistory,
+  type InsertA11yHistory,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -69,6 +72,10 @@ export interface IStorage {
   // A11y Rollup operations
   getA11yRollupByEstateId(estateId: string): Promise<A11yRollup | undefined>;
   upsertA11yRollup(rollup: InsertA11yRollup): Promise<A11yRollup>;
+  
+  // A11y History operations
+  getA11yHistoryByEstateId(estateId: string, limit?: number): Promise<A11yHistory[]>;
+  createA11yHistorySnapshot(snapshot: InsertA11yHistory): Promise<A11yHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -260,6 +267,21 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db.insert(a11yRollups).values(rollup).returning();
       return created;
     }
+  }
+
+  // A11y History operations
+  async getA11yHistoryByEstateId(estateId: string, limit: number = 30): Promise<A11yHistory[]> {
+    return await db
+      .select()
+      .from(a11yHistory)
+      .where(eq(a11yHistory.estateId, estateId))
+      .orderBy(desc(a11yHistory.snapshotDate))
+      .limit(limit);
+  }
+
+  async createA11yHistorySnapshot(snapshot: InsertA11yHistory): Promise<A11yHistory> {
+    const [newSnapshot] = await db.insert(a11yHistory).values(snapshot).returning();
+    return newSnapshot;
   }
 }
 

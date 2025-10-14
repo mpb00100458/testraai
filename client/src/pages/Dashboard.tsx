@@ -4,11 +4,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { StatsCard } from "@/components/StatsCard";
 import { AccessibilityScoreGauge } from "@/components/AccessibilityScoreGauge";
+import { AccessibilityTrendChart } from "@/components/AccessibilityTrendChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, FileText, Globe, TrendingUp, Activity } from "lucide-react";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import type { A11yHistory } from "@shared/schema";
 
 interface DashboardStats {
   totalScans: number;
@@ -43,6 +45,11 @@ export default function Dashboard() {
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: history = [] } = useQuery<A11yHistory[]>({
+    queryKey: ["/api/dashboard/history"],
     enabled: isAuthenticated,
   });
 
@@ -177,6 +184,8 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <AccessibilityTrendChart data={history} />
 
           <Card>
             <CardHeader>

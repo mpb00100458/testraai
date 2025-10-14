@@ -210,6 +210,31 @@ export const insertA11yRollupSchema = createInsertSchema(a11yRollups).omit({
 export type InsertA11yRollup = z.infer<typeof insertA11yRollupSchema>;
 export type A11yRollup = typeof a11yRollups.$inferSelect;
 
+// A11y History table (historical snapshots for trend analysis)
+export const a11yHistory = pgTable("a11y_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
+  totalIssues: integer("total_issues").notNull().default(0),
+  criticalIssues: integer("critical_issues").notNull().default(0),
+  warningIssues: integer("warning_issues").notNull().default(0),
+  minorIssues: integer("minor_issues").notNull().default(0),
+  passRate: integer("pass_rate").notNull().default(0),
+  averageScore: integer("average_score").notNull().default(0),
+  pagesAudited: integer("pages_audited").notNull().default(0),
+  snapshotDate: timestamp("snapshot_date").defaultNow(),
+}, (table) => [
+  index("idx_a11y_history_estate").on(table.estateId),
+  index("idx_a11y_history_date").on(table.snapshotDate),
+]);
+
+export const insertA11yHistorySchema = createInsertSchema(a11yHistory).omit({
+  id: true,
+  snapshotDate: true,
+});
+
+export type InsertA11yHistory = z.infer<typeof insertA11yHistorySchema>;
+export type A11yHistory = typeof a11yHistory.$inferSelect;
+
 // Relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   memberships: many(memberships),

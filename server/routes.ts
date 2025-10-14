@@ -606,6 +606,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Historical trend data route
+  app.get('/api/dashboard/history/:estateId?', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { estateId } = req.params;
+      const orgs = await storage.getOrganizationsByUserId(userId);
+      
+      if (orgs.length === 0) {
+        return res.json([]);
+      }
+
+      // Get all user's estates for authorization
+      const allProjects = await Promise.all(
+        orgs.map(org => storage.getProjectsByOrgId(org.id))
+      );
+      
+      const projects = allProjects.flat();
+      
+      const allEstates = await Promise.all(
+        projects.map(project => storage.getEstatesByProjectId(project.id))
+      );
+      
+      const estates = allEstates.flat();
+      const userEstateIds = estates.map(e => e.id);
+
+      let historyData = [];
+
+      if (estateId) {
+        // Verify the requested estate belongs to the user's organizations
+        if (!userEstateIds.includes(estateId)) {
+          return res.status(403).json({ message: "Unauthorized access to this estate" });
+        }
+        
+        // Get history for the authorized estate
+        historyData = await storage.getA11yHistoryByEstateId(estateId, 30);
+      } else {
+        // Get history for all user's estates
+        const allHistory = await Promise.all(
+          estates.map(estate => storage.getA11yHistoryByEstateId(estate.id, 30))
+        );
+        
+        historyData = allHistory.flat();
+      }
+      
+      res.json(historyData);
+    } catch (error) {
+      console.error("Error fetching historical data:", error);
+      res.status(500).json({ message: "Failed to fetch historical data" });
+    }
+  });
+
   // Report export routes (CSV/PDF placeholder)
   app.get('/api/reports/csv', isAuthenticated, async (req: any, res) => {
     try {
