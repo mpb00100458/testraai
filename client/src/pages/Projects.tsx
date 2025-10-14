@@ -10,12 +10,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderOpen, Plus, Loader2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertProjectSchema, type InsertProject, type Project, type Organization } from "@shared/schema";
+import { insertProjectSchema, type InsertProject, type Project, type Organization, type Estate } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import ProjectDetail from "./ProjectDetail";
 
@@ -47,6 +46,17 @@ export default function Projects() {
     queryKey: ["/api/organizations"],
     enabled: isAuthenticated,
   });
+
+  const { data: estates } = useQuery<Estate[]>({
+    queryKey: ["/api/estates"],
+    enabled: isAuthenticated,
+  });
+
+  // Count estates per project
+  const getEstateCount = (projectId: string) => {
+    if (!estates) return 0;
+    return estates.filter(e => e.projectId === projectId).length;
+  };
 
   const form = useForm<InsertProject>({
     resolver: zodResolver(insertProjectSchema),
@@ -233,7 +243,7 @@ export default function Projects() {
                     </p>
                   </TableCell>
                   <TableCell className="text-center" data-testid={`table-cell-project-estates-${project.id}`}>
-                    <span className="font-medium text-base">0</span>
+                    <span className="font-medium text-base">{getEstateCount(project.id)}</span>
                   </TableCell>
                   <TableCell data-testid={`table-cell-project-created-${project.id}`}>
                     <div className="space-y-0.5">

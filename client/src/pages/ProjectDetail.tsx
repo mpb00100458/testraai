@@ -12,11 +12,6 @@ import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink } from "lu
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEstateSchema, type InsertEstate, type Estate, type Project } from "@shared/schema";
@@ -275,10 +270,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             estate.status === 'crawling' || estate.status === 'auditing' ? 'secondary' :
                             'outline'
                           }>
-                            {estate.status === 'crawling' ? '🔍 Scanning Pages' :
-                             estate.status === 'auditing' ? '🧪 Testing Accessibility' :
-                             estate.status === 'completed' ? '✓ Completed' :
-                             estate.status === 'failed' ? '✗ Failed' :
+                            {estate.status === 'crawling' ? 'Scanning Pages' :
+                             estate.status === 'auditing' ? 'Testing Accessibility' :
+                             estate.status === 'completed' ? 'Completed' :
+                             estate.status === 'failed' ? 'Failed' :
                              'Ready to Scan'}
                           </Badge>
                         </TableCell>
