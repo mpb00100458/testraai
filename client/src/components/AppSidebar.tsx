@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, AlertCircle, FolderOpen, Settings, Building2, Wrench } from "lucide-react";
+import { LayoutDashboard, FileText, AlertCircle, FolderOpen, Settings, Building2, Wrench, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -69,10 +69,10 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <AlertCircle className="h-5 w-5" />
+            <Shield className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">Spec-1 A11y</span>
+            <span className="text-sm font-semibold">TestraAI</span>
             <span className="text-xs text-muted-foreground">Testing Platform</span>
           </div>
         </div>
