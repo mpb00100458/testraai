@@ -657,7 +657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Report export routes (CSV/PDF placeholder)
+  // Report export routes
   app.get('/api/reports/csv', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -688,12 +688,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate CSV
       const csv = [
-        ['Severity', 'Issue Type', 'WCAG Criteria', 'Description'].join(','),
+        ['Severity', 'Issue Type', 'WCAG Criteria', 'Description', 'Element', 'Suggestion', 'Impact Score'].join(','),
         ...issues.map(issue => [
           issue.severity,
           `"${issue.issueType}"`,
           issue.wcagCriteria || 'N/A',
           `"${(issue.description || '').replace(/"/g, '""')}"`,
+          `"${(issue.element || '').replace(/"/g, '""')}"`,
+          `"${(issue.suggestion || '').replace(/"/g, '""')}"`,
+          issue.impactScore || 'N/A',
         ].join(','))
       ].join('\n');
       
@@ -703,6 +706,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating CSV:", error);
       res.status(500).json({ message: "Failed to generate CSV report" });
+    }
+  });
+
+  app.get('/api/reports/excel', isAuthenticated, async (req: any, res) => {
+    try {
+      const ExcelJS = require('exceljs');
+      const userId = req.user.claims.sub;
+      const orgs = await storage.getOrganizationsByUserId(userId);
+      
+      if (orgs.length === 0) {
+        return res.status(400).json({ message: "No data available" });
+      }
+
+      // Get all issues with estate context
+      const allProjects = await Promise.all(
+        orgs.map(org => storage.getProjectsByOrgId(org.id))
+      );
+      
+      const projects = allProjects.flat();
+      
+      const allEstates = await Promise.all(
+        projects.map(project => storage.getEstatesByProjectId(project.id))
+      );
+      
+      const estates = allEstates.flat();
+      
+      const allPages = await Promise.all(
+        estates.map(estate => storage.getPagesByEstateId(estate.id))
+      );
+      
+      const pages = allPages.flat();
+      
+      const allIssues = await Promise.all(
+        estates.map(estate => storage.getA11yResultsByEstateId(estate.id))
+      );
+      
+      const issues = allIssues.flat();
+
+      // Create workbook
+      const workbook = new ExcelJS.Workbook();
+      
+      // Summary sheet
+      const summarySheet = workbook.addWorksheet('Summary');
+      summarySheet.columns = [
+        { header: 'Estate', key: 'estate', width: 40 },
+        { header: 'Total Issues', key: 'totalIssues', width: 15 },
+        { header: 'Critical', key: 'critical', width: 15 },
+        { header: 'Warning', key: 'warning', width: 15 },
+        { header: 'Minor', key: 'minor', width: 15 },
+        { header: 'Pages Scanned', key: 'pages', width: 15 },
+      ];
+
+      estates.forEach(estate => {
+        const estateIssues = issues.filter(i => {
+          const page = pages.find(p => p.id === i.pageId);
+          return page?.estateId === estate.id;
+        });
+        
+        summarySheet.addRow({
+          estate: estate.baseUrl,
+          totalIssues: estateIssues.length,
+          critical: estateIssues.filter(i => i.severity === 'critical').length,
+          warning: estateIssues.filter(i => i.severity === 'warning').length,
+          minor: estateIssues.filter(i => i.severity === 'minor').length,
+          pages: pages.filter(p => p.estateId === estate.id).length,
+        });
+      });
+
+      // Style summary header
+      summarySheet.getRow(1).font = { bold: true };
+      summarySheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4A5568' },
+      };
+      summarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+      // Issues detail sheet
+      const detailSheet = workbook.addWorksheet('All Issues');
+      detailSheet.columns = [
+        { header: 'Estate URL', key: 'estateUrl', width: 40 },
+        { header: 'Page URL', key: 'pageUrl', width: 40 },
+        { header: 'Severity', key: 'severity', width: 12 },
+        { header: 'Issue Type', key: 'issueType', width: 30 },
+        { header: 'WCAG Criteria', key: 'wcagCriteria', width: 15 },
+        { header: 'Impact Score', key: 'impactScore', width: 12 },
+        { header: 'Element', key: 'element', width: 30 },
+        { header: 'Description', key: 'description', width: 50 },
+        { header: 'Suggestion', key: 'suggestion', width: 50 },
+        { header: 'Code Snippet', key: 'codeSnippet', width: 40 },
+      ];
+
+      issues.forEach(issue => {
+        const page = pages.find(p => p.id === issue.pageId);
+        const estate = estates.find(e => e.id === page?.estateId);
+        
+        const row = detailSheet.addRow({
+          estateUrl: estate?.baseUrl || 'N/A',
+          pageUrl: page?.url || 'N/A',
+          severity: issue.severity,
+          issueType: issue.issueType,
+          wcagCriteria: issue.wcagCriteria || 'N/A',
+          impactScore: issue.impactScore || 'N/A',
+          element: issue.element || 'N/A',
+          description: issue.description || 'N/A',
+          suggestion: issue.suggestion || 'N/A',
+          codeSnippet: issue.codeSnippet || 'N/A',
+        });
+
+        // Color code severity
+        const severityColors: Record<string, string> = {
+          critical: 'FFEF4444',
+          warning: 'FFF59E0B',
+          minor: 'FF3B82F6',
+          pass: 'FF10B981',
+        };
+        
+        if (severityColors[issue.severity]) {
+          row.getCell('severity').fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: severityColors[issue.severity] },
+          };
+          row.getCell('severity').font = { color: { argb: 'FFFFFFFF' } };
+        }
+      });
+
+      // Style detail header
+      detailSheet.getRow(1).font = { bold: true };
+      detailSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4A5568' },
+      };
+      detailSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+      // Generate buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=accessibility-report.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      res.status(500).json({ message: "Failed to generate Excel report" });
     }
   });
 

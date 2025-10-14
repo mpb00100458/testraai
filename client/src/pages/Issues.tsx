@@ -92,10 +92,26 @@ export default function Issues() {
               <CardTitle>All Issues</CardTitle>
               <CardDescription>Filter and search accessibility violations</CardDescription>
             </div>
-            <Button variant="outline" size="sm" data-testid="button-export-csv">
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                data-testid="button-export-csv"
+                onClick={() => window.location.href = '/api/reports/csv'}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                data-testid="button-export-excel"
+                onClick={() => window.location.href = '/api/reports/excel'}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export Excel
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
