@@ -27,7 +27,7 @@ export function TopNav() {
     <div className="h-14 bg-primary text-primary-foreground border-b border-primary/20 flex items-center justify-between px-6">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
-          <div className="text-xl font-bold">EQUAL<span className="font-light">WEB</span></div>
+          <div className="text-xl font-bold">Testra<span className="font-light">AI</span></div>
         </div>
       </div>
 
