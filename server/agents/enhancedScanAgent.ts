@@ -13,6 +13,8 @@ import type { InsertPage, InsertA11yResult } from "@shared/schema";
  */
 export class EnhancedScanAgent {
   async runScan(estateId: string): Promise<void> {
+    let scanRunId: string | undefined;
+    
     try {
       // Update estate status to crawling
       await storage.updateEstateStatus(estateId, 'crawling');
@@ -20,7 +22,14 @@ export class EnhancedScanAgent {
       const estate = await storage.getEstate(estateId);
       if (!estate) throw new Error('Estate not found');
 
-      console.log(`Starting AI-powered scan for ${estate.baseUrl}`);
+      // Create a new scan run to track this scan execution
+      const scanRun = await storage.createScanRun({
+        estateId: estate.id,
+        status: 'running',
+      });
+      scanRunId = scanRun.id;
+
+      console.log(`Starting AI-powered scan run ${scanRunId} for ${estate.baseUrl}`);
 
       // Simulate page discovery (in production, this would use real crawling)
       const mockPages = [
@@ -150,6 +159,7 @@ export class EnhancedScanAgent {
           });
 
           const result = await storage.createA11yResult({
+            scanRunId,
             pageId: page.id,
             issueType: pattern.type,
             severity: aiAnalysis.severity,
@@ -185,6 +195,7 @@ export class EnhancedScanAgent {
         const passResults = Math.floor(Math.random() * 5) + 3;
         for (let i = 0; i < passResults; i++) {
           await storage.createA11yResult({
+            scanRunId,
             pageId: page.id,
             issueType: 'accessibility-check',
             severity: 'pass',
@@ -238,12 +249,32 @@ export class EnhancedScanAgent {
         pagesAudited: createdPages.length,
       });
 
-      console.log(`Scan completed: ${totalIssues} issues found (${allIssues.length} unique)`);
+      // Update scan run with final statistics
+      await storage.updateScanRunStats(scanRunId!, {
+        totalIssues,
+        criticalIssues: criticalCount,
+        warningIssues: warningCount,
+        minorIssues: minorCount,
+        passRate: metrics.passRate,
+        averageScore: scoreResult.score,
+        pagesAudited: createdPages.length,
+      });
 
-      // Mark as completed
+      // Complete the scan run
+      await storage.completeScanRun(scanRunId!);
+
+      console.log(`Scan run ${scanRunId} completed: ${totalIssues} issues found (${allIssues.length} unique)`);
+
+      // Mark estate as completed
       await storage.updateEstateStatus(estateId, 'completed');
     } catch (error) {
       console.error('Enhanced scan error:', error);
+      
+      // Mark scan run as failed if it was created
+      if (scanRunId) {
+        await storage.updateScanRunStatus(scanRunId, 'failed');
+      }
+      
       await storage.updateEstateStatus(estateId, 'failed');
       throw error;
     }
