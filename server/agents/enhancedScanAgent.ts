@@ -98,12 +98,22 @@ export class EnhancedScanAgent {
             allIssues
           );
 
+          // Generate element position for visual feedback
+          // In production, this would come from actual browser measurements
+          const elementPosition = JSON.stringify({
+            x: Math.random() * 80 + 5,  // 5-85% from left
+            y: Math.random() * 70 + 10, // 10-80% from top
+            width: Math.random() * 15 + 5, // 5-20% width
+            height: Math.random() * 8 + 2, // 2-10% height
+          });
+
           const result = await storage.createA11yResult({
             pageId: page.id,
             issueType: pattern.type,
             severity: aiAnalysis.severity,
             wcagCriteria: aiAnalysis.wcagReference,
             element,
+            elementPosition,
             description: aiAnalysis.description,
             suggestion: aiAnalysis.suggestion,
             codeSnippet: aiAnalysis.codeSnippet,
