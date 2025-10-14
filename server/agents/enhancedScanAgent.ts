@@ -174,6 +174,18 @@ export class EnhancedScanAgent {
         averageScore: scoreResult.score,
       });
 
+      // Create historical snapshot for trend tracking
+      await storage.createA11yHistorySnapshot({
+        estateId: estate.id,
+        totalIssues,
+        criticalIssues: criticalCount,
+        warningIssues: warningCount,
+        minorIssues: minorCount,
+        passRate: metrics.passRate,
+        averageScore: scoreResult.score,
+        pagesAudited: createdPages.length,
+      });
+
       console.log(`Scan completed: ${totalIssues} issues found (${allIssues.length} unique)`);
 
       // Mark as completed
