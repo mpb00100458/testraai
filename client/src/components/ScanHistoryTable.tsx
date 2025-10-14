@@ -120,11 +120,11 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   const getStatusBadge = (scan: ScanRun) => {
     if (scan.status === 'completed') {
-      return <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800" data-testid={`badge-scan-status-${scan.id}`}>✓ Completed</Badge>;
+      return <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800" data-testid={`badge-scan-status-${scan.id}`}>Completed</Badge>;
     } else if (scan.status === 'failed') {
-      return <Badge variant="destructive" data-testid={`badge-scan-status-${scan.id}`}>✗ Failed</Badge>;
+      return <Badge variant="destructive" data-testid={`badge-scan-status-${scan.id}`}>Failed</Badge>;
     } else {
-      return <Badge variant="secondary" data-testid={`badge-scan-status-${scan.id}`}>⏰ Running</Badge>;
+      return <Badge variant="secondary" data-testid={`badge-scan-status-${scan.id}`}>Running</Badge>;
     }
   };
 
@@ -178,7 +178,7 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
             <TableHead data-testid="table-header-critical" className="text-right w-[100px]">Critical</TableHead>
             <TableHead data-testid="table-header-pass-rate" className="w-[140px]">Pass Rate</TableHead>
             <TableHead data-testid="table-header-pages" className="text-right w-[100px]">Pages</TableHead>
-            <TableHead data-testid="table-header-actions" className="text-right w-[140px]">Export</TableHead>
+            <TableHead data-testid="table-header-actions" className="text-right w-[220px]">Download Reports</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -261,51 +261,49 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                 </span>
               </TableCell>
               <TableCell className="text-right" data-testid={`table-cell-actions-${scan.id}`}>
-                <TooltipProvider>
-                  <div className="flex gap-1.5 justify-end">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadExcel(scan.id)}
-                          disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
-                          data-testid={`button-download-excel-${scan.id}`}
-                        >
-                          {downloadingExcel === scan.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <FileSpreadsheet className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Download Excel Report</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadPdf(scan.id)}
-                          disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
-                          data-testid={`button-download-pdf-${scan.id}`}
-                        >
-                          {downloadingPdf === scan.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <FileText className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Download PDF Report</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TooltipProvider>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleDownloadExcel(scan.id)}
+                    disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
+                    data-testid={`button-download-excel-${scan.id}`}
+                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                  >
+                    {downloadingExcel === scan.id ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                        <span className="text-xs">Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileSpreadsheet className="h-3 w-3 mr-1.5" />
+                        <span className="text-xs font-medium">Excel</span>
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleDownloadPdf(scan.id)}
+                    disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
+                    data-testid={`button-download-pdf-${scan.id}`}
+                    className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                  >
+                    {downloadingPdf === scan.id ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                        <span className="text-xs">Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-3 w-3 mr-1.5" />
+                        <span className="text-xs font-medium">PDF</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
