@@ -128,11 +128,26 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
 
   const getStatusBadge = (scan: ScanRun) => {
     if (scan.status === 'completed') {
-      return <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800" data-testid={`badge-scan-status-${scan.id}`}>Completed</Badge>;
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-green-500"></div>
+          <span className="text-sm">Completed</span>
+        </div>
+      );
     } else if (scan.status === 'failed') {
-      return <Badge variant="destructive" data-testid={`badge-scan-status-${scan.id}`}>Failed</Badge>;
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-red-500"></div>
+          <span className="text-sm">Failed</span>
+        </div>
+      );
     } else {
-      return <Badge variant="secondary" data-testid={`badge-scan-status-${scan.id}`}>Running</Badge>;
+      return (
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
+          <span className="text-sm">Running</span>
+        </div>
+      );
     }
   };
 
@@ -185,27 +200,29 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead data-testid="table-header-date" className="w-[140px]">Date</TableHead>
-              <TableHead data-testid="table-header-pages" className="w-[80px]">Pages</TableHead>
-              <TableHead data-testid="table-header-status" className="w-[120px]">Status</TableHead>
-              <TableHead data-testid="table-header-score" className="w-[200px]">Scan Score</TableHead>
-              <TableHead data-testid="table-header-errors" className="w-[80px]">Errors</TableHead>
-              <TableHead data-testid="table-header-actions" className="text-right w-[160px]">Actions</TableHead>
+              <TableHead data-testid="table-header-date" className="w-[140px]">#</TableHead>
+              <TableHead data-testid="table-header-date-col">Date</TableHead>
+              <TableHead data-testid="table-header-pages">Pages</TableHead>
+              <TableHead data-testid="table-header-status">Status</TableHead>
+              <TableHead data-testid="table-header-score">Scan score</TableHead>
+              <TableHead data-testid="table-header-errors">Errors</TableHead>
+              <TableHead data-testid="table-header-actions"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {scans.map((scan, index) => (
               <TableRow key={scan.id} data-testid={`table-row-scan-${scan.id}`}>
+                <TableCell data-testid={`table-cell-number-${scan.id}`} className="text-center">
+                  <span className="text-sm font-medium">{index + 1}</span>
+                </TableCell>
                 <TableCell data-testid={`table-cell-date-${scan.id}`}>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm">
-                      {formatDistanceToNow(new Date(scan.startedAt), { addSuffix: true })}
-                    </span>
-                    {index === 0 && (
-                      <Badge variant="outline" className="w-fit text-xs" data-testid={`badge-latest-scan-${scan.id}`}>
-                        Latest
-                      </Badge>
-                    )}
+                  <div className="space-y-1">
+                    <div className="text-sm">
+                      {new Date(scan.startedAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(scan.startedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell data-testid={`table-cell-pages-${scan.id}`}>
@@ -218,25 +235,15 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                 </TableCell>
                 <TableCell data-testid={`table-cell-score-${scan.id}`}>
                   {scan.averageScore !== null && scan.averageScore !== undefined ? (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Accessibility score</span>
-                        <span 
-                          className={`font-bold ${
-                            scan.averageScore >= 80 
-                              ? 'text-green-600 dark:text-green-500' 
-                              : scan.averageScore >= 60 
-                              ? 'text-yellow-600 dark:text-yellow-500' 
-                              : 'text-red-600 dark:text-red-500'
-                          }`}
-                        >
-                          {scan.averageScore}%
-                        </span>
+                        <span className="text-xs text-muted-foreground">Accessibility score</span>
+                        <span className="text-sm font-semibold">{scan.averageScore.toFixed(2)}%</span>
                       </div>
                       <Progress value={scan.averageScore} className="h-1.5" />
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">-</span>
+                    <span className="text-muted-foreground text-sm">-</span>
                   )}
                 </TableCell>
                 <TableCell data-testid={`table-cell-errors-${scan.id}`}>
@@ -244,46 +251,18 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                     {scan.totalIssues ?? '-'}
                   </span>
                 </TableCell>
-                <TableCell className="text-right" data-testid={`table-cell-actions-${scan.id}`}>
-                  <div className="flex gap-1 justify-end items-center">
-                    {scan.status === 'completed' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openScoreBreakdown(scan)}
-                        data-testid={`button-view-breakdown-${scan.id}`}
-                      >
-                        View Report
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    )}
+                <TableCell className="text-center" data-testid={`table-cell-actions-${scan.id}`}>
+                  {scan.status === 'completed' && (
                     <Button
+                      variant="ghost"
                       size="sm"
-                      variant="outline"
-                      onClick={() => handleDownloadExcel(scan.id)}
-                      disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
-                      data-testid={`button-download-excel-${scan.id}`}
+                      onClick={() => openScoreBreakdown(scan)}
+                      data-testid={`button-view-breakdown-${scan.id}`}
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 no-default-hover-elevate"
                     >
-                      {downloadingExcel === scan.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileSpreadsheet className="h-4 w-4" />
-                      )}
+                      View report
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDownloadPdf(scan.id)}
-                      disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
-                      data-testid={`button-download-pdf-${scan.id}`}
-                    >
-                      {downloadingPdf === scan.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileText className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
