@@ -128,13 +128,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
 
   const downloadReportMutation = useMutation({
     mutationFn: async (estateId: string) => {
-      const response = await fetch(`/api/estates/${estateId}/report`);
+      const response = await fetch(`/api/estates/${estateId}/report/pdf`);
       if (!response.ok) throw new Error("Failed to download report");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `estate-${estateId}-report.csv`;
+      a.download = `accessibility-report-${estateId}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -142,8 +142,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
     },
     onSuccess: () => {
       toast({
-        title: "Report downloaded",
-        description: "The accessibility report has been downloaded.",
+        title: "PDF report downloaded",
+        description: "The detailed accessibility report has been downloaded as PDF.",
       });
     },
     onError: (error: Error) => {
