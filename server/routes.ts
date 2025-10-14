@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema } from "@shared/schema";
 import PDFDocument from "pdfkit";
+import ExcelJS from "exceljs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -711,7 +712,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports/excel', isAuthenticated, async (req: any, res) => {
     try {
-      const ExcelJS = require('exceljs');
       const userId = req.user.claims.sub;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
