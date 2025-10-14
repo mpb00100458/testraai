@@ -7,15 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { VisualIssueViewer } from "@/components/VisualIssueViewer";
 import { Search, Download, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { A11yResult } from "@shared/schema";
+import type { A11yResult, Page } from "@shared/schema";
 
 export default function Issues() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [selectedIssueId, setSelectedIssueId] = useState<string | undefined>();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -35,6 +37,11 @@ export default function Issues() {
     enabled: isAuthenticated,
   });
 
+  const { data: pages } = useQuery<Page[]>({
+    queryKey: ["/api/pages"],
+    enabled: isAuthenticated,
+  });
+
   if (authLoading || !isAuthenticated) {
     return null;
   }
@@ -47,12 +54,36 @@ export default function Issues() {
     return matchesSearch && matchesSeverity;
   }) || [];
 
+  // Get page screenshot for visual viewer
+  const selectedIssue = filteredIssues.find(i => i.id === selectedIssueId);
+  const selectedPage = selectedIssue && pages?.find(p => p.id === selectedIssue.pageId);
+  
+  // Group issues by page for visual viewer
+  const issuesForVisualViewer = selectedPage 
+    ? filteredIssues
+        .filter(i => i.pageId === selectedPage.id)
+        .map(i => ({
+          ...i,
+          elementPosition: i.elementPosition || undefined,
+          description: i.description || "",
+        }))
+    : [];
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Issues</h1>
         <p className="text-muted-foreground">Accessibility violations discovered across your web estate</p>
       </div>
+
+      {selectedPage && (
+        <VisualIssueViewer
+          screenshotUrl={selectedPage.screenshotUrl || undefined}
+          issues={issuesForVisualViewer}
+          selectedIssueId={selectedIssueId}
+          onIssueClick={setSelectedIssueId}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -115,7 +146,8 @@ export default function Issues() {
                   {filteredIssues.map((issue) => (
                     <tr
                       key={issue.id}
-                      className="border-b border-border last:border-0 hover-elevate"
+                      className="border-b border-border last:border-0 hover-elevate cursor-pointer"
+                      onClick={() => setSelectedIssueId(issue.id)}
                       data-testid={`row-issue-${issue.id}`}
                     >
                       <td className="p-3">

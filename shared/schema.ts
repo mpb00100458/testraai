@@ -164,6 +164,7 @@ export const a11yResults = pgTable("a11y_results", {
   severity: severityEnum('severity').notNull(),
   wcagCriteria: varchar("wcag_criteria", { length: 100 }),
   element: text("element"),
+  elementPosition: text("element_position"),
   description: text("description"),
   suggestion: text("suggestion"),
   codeSnippet: text("code_snippet"),
