@@ -662,12 +662,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this estate" });
       }
 
-      // Import enhanced scan agent with AI capabilities
-      const { enhancedScanAgent } = await import('./agents/enhancedScanAgent');
+      // Import real scan agent with Playwright and axe-core
+      const { realScanAgent } = await import('./agents/realScanAgent');
       
-      // Run AI-powered scan asynchronously
-      enhancedScanAgent.runScan(id).catch(error => {
-        console.error('AI scan failed:', error);
+      // Run real accessibility scan asynchronously
+      realScanAgent.runScan(id).catch(error => {
+        console.error('Real scan failed:', error);
       });
       
       res.json({ message: "Scan started", estateId: id });
