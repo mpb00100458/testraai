@@ -8,17 +8,55 @@ This is an **Accessibility Testing Platform** that automates WCAG 2.2 compliance
 
 ## Recent Changes (Latest)
 
-### Individual Estate Export Functionality (Current)
+### Historical Scan Tracking with Version Control (Current)
+- **Complete Scan History Preservation**: All scan data is now permanently preserved with full version control
+  - New `scan_runs` table tracks each individual scan execution with timestamps and metrics
+  - `a11y_results` linked to specific scan runs via `scanRunId` (nullable for backward compatibility)
+  - No scan data is ever deleted - complete historical record maintained
+  
+- **Scan History UI**: New "History" button on completed estates opens a comprehensive scan history dialog
+  - Displays all past scans chronologically with "Latest Scan" label
+  - Shows key metrics for each scan: Total Issues, Pass Rate, Score, Pages Audited
+  - Visual status indicators (✓ completed, ✗ failed, ⏰ running)
+  - Timestamps with "time ago" format for easy reference
+  
+- **Export Specific Scans**: Export functionality enhanced to support any historical scan
+  - Excel and PDF exports accept optional `scanRunId` query parameter
+  - Export dropdown in scan history dialog allows downloading specific scan results
+  - Maintains backward compatibility - exports latest scan by default if no ID specified
+  
+- **Scan Comparison Feature**: New comparison view shows differences between any two scans
+  - Side-by-side scan overview with metrics for both scans
+  - Changes summary showing delta for all key metrics (issues, pass rate, score)
+  - Issue type breakdown showing specific changes per accessibility issue type
+  - Visual trend indicators (↑ increasing, ↓ decreasing, – no change)
+  - Color-coded improvements (green) vs. regressions (red)
+  - Accessible via "Compare" button in scan history - select two scans to compare
+  
+- **API Enhancements**: New endpoints for historical data access
+  - `GET /api/estates/:id/scans` - Retrieve all scan runs for an estate
+  - `GET /api/scans/:id` - Get detailed results for a specific scan run
+  - `GET /api/scans/compare/:id1/:id2` - Compare two scans with computed deltas
+  - Export endpoints support `?scanRunId=X` parameter for historical exports
+  
+- **Storage Layer Updates**: 8 new methods for scan run management
+  - `getScanRun()`, `getScanRunsByEstateId()`, `getLatestScanRun()`
+  - `createScanRun()`, `updateScanRunStatus()`, `updateScanRunStats()`, `completeScanRun()`
+  - `getA11yResultsByScanRunId()` for fetching issues from specific scans
+  
+- **Agent Integration**: Enhanced scan agent creates scan runs automatically
+  - Every scan creates a new scan run record with 'running' status
+  - All discovered issues linked to the scan run
+  - Scan run updated with final statistics and marked 'completed' or 'failed'
+  - Error handling ensures failed scans are properly tracked
+
+### Individual Estate Export Functionality (Previous)
 - **Excel Export**: Added individual Excel export for each estate at `/api/estates/:id/report/excel`
   - Two worksheets: Summary (estate metrics) and All Issues (detailed findings)
   - Color-coded severity cells for visual clarity
   - Professional formatting with headers and auto-sized columns
 - **PDF Export**: Enhanced existing PDF export functionality for individual estates
-- **UI Enhancement**: Project Detail page now displays a dropdown menu for each completed estate with:
-  - "Export Excel" option with FileSpreadsheet icon
-  - "Export PDF" option with FileText icon
-  - Disabled states during download operations
-  - Toast notifications for success/error feedback
+- **UI Enhancement**: Project Detail page displays a dropdown menu for each completed estate
 - **Comprehensive Reporting**: Each export contains estate-specific data including pass rate, severity breakdown, and detailed issue information with AI-generated suggestions
 
 ## User Preferences

@@ -8,7 +8,6 @@ import { ArrowLeft, TrendingUp, TrendingDown, Minus, CheckCircle, XCircle } from
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
-import { useLocation } from "wouter";
 
 interface ScanComparison {
   scan1: {
@@ -48,10 +47,14 @@ interface ScanComparison {
   issueTypeChanges: Record<string, { before: number; after: number; change: number }>;
 }
 
-export default function ScanComparison({ scan1Id, scan2Id }: { scan1Id: string; scan2Id: string }) {
+interface ScanComparisonProps {
+  scan1Id: string;
+  scan2Id: string;
+}
+
+export default function ScanComparison({ scan1Id, scan2Id }: ScanComparisonProps) {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const [, navigate] = useLocation();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
