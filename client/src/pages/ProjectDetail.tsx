@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe, Plus, Play, Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
+import { ArrowLeft, Globe, Plus, Play, Download, FileSpreadsheet, FileText, ChevronDown, History } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { LiveScanModal } from "@/components/LiveScanModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ScanHistoryDialog } from "@/components/ScanHistoryDialog";
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const { toast } = useToast();
@@ -24,6 +25,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [liveScanModalOpen, setLiveScanModalOpen] = useState(false);
   const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [historyEstateId, setHistoryEstateId] = useState<string | null>(null);
+  const [historyEstateName, setHistoryEstateName] = useState<string>("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -319,44 +323,60 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   </div>
                   <div className="flex gap-2">
                     {estate.status === 'completed' && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={downloadPdfMutation.isPending || downloadExcelMutation.isPending}
-                            data-testid={`button-download-report-${estate.id}`}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Export
-                            <ChevronDown className="h-3 w-3 ml-1" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              downloadExcelMutation.mutate(estate.id);
-                            }}
-                            disabled={downloadExcelMutation.isPending}
-                            data-testid={`menu-item-export-excel-${estate.id}`}
-                          >
-                            <FileSpreadsheet className="h-4 w-4 mr-2" />
-                            Export Excel
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              downloadPdfMutation.mutate(estate.id);
-                            }}
-                            disabled={downloadPdfMutation.isPending}
-                            data-testid={`menu-item-export-pdf-${estate.id}`}
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Export PDF
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setHistoryEstateId(estate.id);
+                            setHistoryEstateName(estate.name);
+                            setHistoryDialogOpen(true);
+                          }}
+                          data-testid={`button-scan-history-${estate.id}`}
+                        >
+                          <History className="h-3 w-3 mr-1" />
+                          History
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={downloadPdfMutation.isPending || downloadExcelMutation.isPending}
+                              data-testid={`button-download-report-${estate.id}`}
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              Export
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadExcelMutation.mutate(estate.id);
+                              }}
+                              disabled={downloadExcelMutation.isPending}
+                              data-testid={`menu-item-export-excel-${estate.id}`}
+                            >
+                              <FileSpreadsheet className="h-4 w-4 mr-2" />
+                              Export Excel
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadPdfMutation.mutate(estate.id);
+                              }}
+                              disabled={downloadPdfMutation.isPending}
+                              data-testid={`menu-item-export-pdf-${estate.id}`}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Export PDF
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
                     )}
                     <Button
                       size="sm"
@@ -407,6 +427,16 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               queryClient.invalidateQueries({ queryKey: ["/api/estates", projectId] });
             }
           }}
+        />
+      )}
+
+      {/* Scan History Dialog */}
+      {historyEstateId && (
+        <ScanHistoryDialog
+          estateId={historyEstateId}
+          estateName={historyEstateName}
+          open={historyDialogOpen}
+          onOpenChange={setHistoryDialogOpen}
         />
       )}
     </div>

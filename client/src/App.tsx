@@ -16,6 +16,7 @@ import Projects from "@/pages/Projects";
 import Organization from "@/pages/Organization";
 import Settings from "@/pages/Settings";
 import Tools from "@/pages/Tools";
+import ScanComparison from "@/pages/ScanComparison";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +39,9 @@ function Router() {
       <Route path="/organization" component={Organization} />
       <Route path="/tools" component={Tools} />
       <Route path="/settings" component={Settings} />
+      <Route path="/compare/:scan1Id/:scan2Id">
+        {(params) => <ScanComparison scan1Id={params.scan1Id} scan2Id={params.scan2Id} />}
+      </Route>
       <Route path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
