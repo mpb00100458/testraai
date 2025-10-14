@@ -179,6 +179,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single estate
+  app.get('/api/estates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const estate = await storage.getEstate(id);
+      
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      // Verify user has access to the estate's project
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this estate" });
+      }
+
+      res.json(estate);
+    } catch (error) {
+      console.error("Error fetching estate:", error);
+      res.status(500).json({ message: "Failed to fetch estate" });
+    }
+  });
+
+  // Download estate report
+  app.get('/api/estates/:id/report', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const estate = await storage.getEstate(id);
+      
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      // Verify user has access to the estate's project
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this estate" });
+      }
+
+      // Get all issues for this estate
+      const issues = await storage.getA11yResultsByEstateId(id);
+      
+      // Helper function to escape CSV fields
+      const escapeCsvField = (field: string | null | undefined): string => {
+        const value = field || '';
+        // Wrap in quotes and escape any existing quotes by doubling them
+        return `"${value.replace(/"/g, '""')}"`;
+      };
+      
+      // Generate CSV with proper escaping
+      const csvRows = [
+        ['Estate', 'Page URL', 'Page Title', 'Issue Type', 'Severity', 'WCAG Criteria', 'Element', 'Description', 'Suggestion'].join(',')
+      ];
+
+      for (const issue of issues) {
+        if (issue.severity === 'pass') continue; // Skip pass results in report
+        
+        const page = await storage.getPage(issue.pageId);
+        if (!page) continue;
+
+        const row = [
+          escapeCsvField(estate.name),
+          escapeCsvField(page.url),
+          escapeCsvField(page.title),
+          escapeCsvField(issue.issueType),
+          escapeCsvField(issue.severity),
+          escapeCsvField(issue.wcagCriteria),
+          escapeCsvField(issue.element),
+          escapeCsvField(issue.description),
+          escapeCsvField(issue.suggestion)
+        ].join(',');
+        
+        csvRows.push(row);
+      }
+
+      const csv = csvRows.join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="estate-${estate.name.replace(/[^a-z0-9]/gi, '-')}-report.csv"`);
+      res.send(csv);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
   // Scan trigger route
   app.post('/api/estates/:id/scan', isAuthenticated, async (req: any, res) => {
     try {
