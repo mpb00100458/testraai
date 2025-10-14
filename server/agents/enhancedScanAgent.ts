@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { aiAnalyzer } from "./aiAnalyzer";
+import { scoreCalculator } from "./scoreCalculator";
 import type { InsertPage, InsertA11yResult } from "@shared/schema";
 
 /**
@@ -147,10 +148,21 @@ export class EnhancedScanAgent {
       // Update estate stats
       await storage.updateEstateStats(estateId, createdPages.length, createdPages.length);
 
-      // Create rollup
-      const total = totalIssues + passCount;
-      const passRate = total > 0 ? Math.round((passCount / total) * 100) : 0;
-      const avgScore = passRate;
+      // Calculate accessibility score (Lighthouse-style 0-100)
+      const scoreResult = scoreCalculator.calculateScore({
+        critical: criticalCount,
+        warning: warningCount,
+        minor: minorCount,
+        pass: passCount,
+      });
+      
+      // Calculate metrics
+      const metrics = scoreCalculator.calculateMetrics({
+        critical: criticalCount,
+        warning: warningCount,
+        minor: minorCount,
+        pass: passCount,
+      });
 
       await storage.upsertA11yRollup({
         estateId: estate.id,
@@ -158,8 +170,8 @@ export class EnhancedScanAgent {
         criticalIssues: criticalCount,
         warningIssues: warningCount,
         minorIssues: minorCount,
-        passRate,
-        averageScore: avgScore,
+        passRate: metrics.passRate,
+        averageScore: scoreResult.score,
       });
 
       console.log(`Scan completed: ${totalIssues} issues found (${allIssues.length} unique)`);

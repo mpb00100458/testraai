@@ -536,6 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalIssues: 0,
           pagesScanned: 0,
           passRate: 0,
+          averageScore: 0,
           severityBreakdown: {
             critical: 0,
             warning: 0,
@@ -582,11 +583,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalResults = issues.length;
       const passRate = totalResults > 0 ? Math.round((severityBreakdown.pass / totalResults) * 100) : 0;
       
+      // Get average accessibility score (weighted Lighthouse-style score from rollups)
+      const allRollups = await Promise.all(
+        estates.map(estate => storage.getA11yRollupByEstateId(estate.id))
+      );
+      const rollups = allRollups.filter(r => r !== null);
+      const averageScore = rollups.length > 0 
+        ? Math.round(rollups.reduce((sum, r) => sum + (r?.averageScore || 0), 0) / rollups.length)
+        : 0;
+      
       res.json({
         totalScans,
         totalIssues,
         pagesScanned,
         passRate,
+        averageScore, // Weighted Lighthouse-style accessibility score
         severityBreakdown,
       });
     } catch (error) {
