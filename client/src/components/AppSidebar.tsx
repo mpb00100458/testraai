@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, AlertCircle, FolderOpen, Settings, Building2 } from "lucide-react";
+import { LayoutDashboard, FileText, AlertCircle, FolderOpen, Settings, Building2, Wrench } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -37,6 +37,11 @@ const navigationItems = [
     title: "Projects",
     url: "/projects",
     icon: FolderOpen,
+  },
+  {
+    title: "Tools",
+    url: "/tools",
+    icon: Wrench,
   },
 ];
 

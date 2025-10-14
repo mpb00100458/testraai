@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { StatsCard } from "@/components/StatsCard";
+import { AccessibilityScoreGauge } from "@/components/AccessibilityScoreGauge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, FileText, Globe, TrendingUp, Activity } from "lucide-react";
 import { SeverityBadge } from "@/components/SeverityBadge";
@@ -14,6 +15,7 @@ interface DashboardStats {
   totalIssues: number;
   pagesScanned: number;
   passRate: number;
+  averageScore: number; // Weighted Lighthouse-style accessibility score
   severityBreakdown: {
     critical: number;
     warning: number;
@@ -114,7 +116,12 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <AccessibilityScoreGauge 
+              score={stats.averageScore} 
+              data-testid="accessibility-score-gauge"
+            />
+            
             <Card>
               <CardHeader>
                 <CardTitle>Issues by Severity</CardTitle>
