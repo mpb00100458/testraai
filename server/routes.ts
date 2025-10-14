@@ -384,6 +384,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download estate Excel report
+  app.get('/api/estates/:id/report/excel', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const estate = await storage.getEstate(id);
+      
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      // Verify user has access to the estate's project
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this estate" });
+      }
+
+      // Get all issues for this estate
+      const issues = await storage.getA11yResultsByEstateId(id);
+      const rollup = await storage.getA11yRollupByEstateId(id);
+      
+      // Create Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      
+      // Summary worksheet
+      const summarySheet = workbook.addWorksheet('Summary');
+      summarySheet.columns = [
+        { header: 'Metric', key: 'metric', width: 30 },
+        { header: 'Value', key: 'value', width: 20 }
+      ];
+
+      // Style header
+      summarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      summarySheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1976D2' } };
+      
+      // Add summary data
+      summarySheet.addRow({ metric: 'Estate Name', value: estate.name });
+      summarySheet.addRow({ metric: 'Base URL', value: estate.baseUrl });
+      summarySheet.addRow({ metric: 'Total Issues', value: rollup?.totalIssues || 0 });
+      summarySheet.addRow({ metric: 'Pass Rate', value: `${rollup?.passRate || 0}%` });
+      summarySheet.addRow({ metric: 'Pages Audited', value: estate.pagesAudited || 0 });
+      summarySheet.addRow({ metric: 'Critical Issues', value: rollup?.criticalIssues || 0 });
+      summarySheet.addRow({ metric: 'Warning Issues', value: rollup?.warningIssues || 0 });
+      summarySheet.addRow({ metric: 'Minor Issues', value: rollup?.minorIssues || 0 });
+
+      // All Issues worksheet
+      const issuesSheet = workbook.addWorksheet('All Issues');
+      issuesSheet.columns = [
+        { header: 'Page URL', key: 'pageUrl', width: 50 },
+        { header: 'Severity', key: 'severity', width: 15 },
+        { header: 'Issue Type', key: 'issueType', width: 30 },
+        { header: 'WCAG Criteria', key: 'wcagCriteria', width: 20 },
+        { header: 'Description', key: 'description', width: 60 },
+        { header: 'Element', key: 'element', width: 40 },
+        { header: 'Suggestion', key: 'suggestion', width: 60 },
+        { header: 'Code Snippet', key: 'codeSnippet', width: 60 },
+        { header: 'Impact Score', key: 'impactScore', width: 15 }
+      ];
+
+      // Style header
+      issuesSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      issuesSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1976D2' } };
+
+      // Add issues data
+      for (const issue of issues) {
+        if (issue.severity === 'pass') continue;
+        
+        const page = await storage.getPage(issue.pageId);
+        const row = issuesSheet.addRow({
+          pageUrl: page?.url || 'Unknown',
+          severity: issue.severity,
+          issueType: issue.issueType,
+          wcagCriteria: issue.wcagCriteria || 'N/A',
+          description: issue.description || '',
+          element: issue.element || '',
+          suggestion: issue.suggestion || '',
+          codeSnippet: issue.codeSnippet || '',
+          impactScore: issue.impactScore || ''
+        });
+
+        // Color-code severity
+        const severityColor = 
+          issue.severity === 'critical' ? 'FFD32F2F' :
+          issue.severity === 'warning' ? 'FFF57C00' :
+          issue.severity === 'minor' ? 'FF2196F3' : 'FF4CAF50';
+        
+        row.getCell('severity').fill = { 
+          type: 'pattern', 
+          pattern: 'solid', 
+          fgColor: { argb: severityColor } 
+        };
+        row.getCell('severity').font = { color: { argb: 'FFFFFFFF' }, bold: true };
+      }
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="accessibility-report-${estate.name.replace(/[^a-z0-9]/gi, '-')}.xlsx"`);
+      
+      // Write to response
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      console.error("Error generating Excel report:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Failed to generate Excel report" });
+      }
+    }
+  });
+
   // Download estate CSV report
   app.get('/api/estates/:id/report', isAuthenticated, async (req: any, res) => {
     try {
