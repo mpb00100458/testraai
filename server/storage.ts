@@ -5,6 +5,7 @@ import {
   projects,
   estates,
   pages,
+  scanRuns,
   a11yResults,
   a11yRollups,
   a11yHistory,
@@ -20,6 +21,8 @@ import {
   type InsertEstate,
   type Page,
   type InsertPage,
+  type ScanRun,
+  type InsertScanRun,
   type A11yResult,
   type InsertA11yResult,
   type A11yRollup,
@@ -64,9 +67,27 @@ export interface IStorage {
   createPage(page: InsertPage): Promise<Page>;
   updatePageAuditStatus(id: string, isAudited: number, screenshotUrl?: string): Promise<Page>;
   
+  // Scan Run operations
+  getScanRun(id: string): Promise<ScanRun | undefined>;
+  getScanRunsByEstateId(estateId: string): Promise<ScanRun[]>;
+  getLatestScanRun(estateId: string): Promise<ScanRun | undefined>;
+  createScanRun(scanRun: InsertScanRun): Promise<ScanRun>;
+  updateScanRunStatus(id: string, status: 'running' | 'completed' | 'failed'): Promise<ScanRun>;
+  updateScanRunStats(id: string, stats: {
+    totalIssues?: number;
+    criticalIssues?: number;
+    warningIssues?: number;
+    minorIssues?: number;
+    passRate?: number;
+    averageScore?: number;
+    pagesAudited?: number;
+  }): Promise<ScanRun>;
+  completeScanRun(id: string): Promise<ScanRun>;
+  
   // A11y Result operations
   getA11yResultsByPageId(pageId: string): Promise<A11yResult[]>;
   getA11yResultsByEstateId(estateId: string): Promise<A11yResult[]>;
+  getA11yResultsByScanRunId(scanRunId: string): Promise<A11yResult[]>;
   createA11yResult(result: InsertA11yResult): Promise<A11yResult>;
   
   // A11y Rollup operations
@@ -230,12 +251,82 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  // Scan Run operations
+  async getScanRun(id: string): Promise<ScanRun | undefined> {
+    const [scanRun] = await db.select().from(scanRuns).where(eq(scanRuns.id, id));
+    return scanRun;
+  }
+
+  async getScanRunsByEstateId(estateId: string): Promise<ScanRun[]> {
+    return await db
+      .select()
+      .from(scanRuns)
+      .where(eq(scanRuns.estateId, estateId))
+      .orderBy(desc(scanRuns.startedAt));
+  }
+
+  async getLatestScanRun(estateId: string): Promise<ScanRun | undefined> {
+    const runs = await this.getScanRunsByEstateId(estateId);
+    return runs[0];
+  }
+
+  async createScanRun(scanRun: InsertScanRun): Promise<ScanRun> {
+    const [newScanRun] = await db.insert(scanRuns).values(scanRun).returning();
+    return newScanRun;
+  }
+
+  async updateScanRunStatus(id: string, status: 'running' | 'completed' | 'failed'): Promise<ScanRun> {
+    const [updated] = await db
+      .update(scanRuns)
+      .set({ status })
+      .where(eq(scanRuns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateScanRunStats(id: string, stats: {
+    totalIssues?: number;
+    criticalIssues?: number;
+    warningIssues?: number;
+    minorIssues?: number;
+    passRate?: number;
+    averageScore?: number;
+    pagesAudited?: number;
+  }): Promise<ScanRun> {
+    const [updated] = await db
+      .update(scanRuns)
+      .set(stats)
+      .where(eq(scanRuns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async completeScanRun(id: string): Promise<ScanRun> {
+    const [updated] = await db
+      .update(scanRuns)
+      .set({ status: 'completed', completedAt: new Date() })
+      .where(eq(scanRuns.id, id))
+      .returning();
+    return updated;
+  }
+
   // A11y Result operations
   async getA11yResultsByPageId(pageId: string): Promise<A11yResult[]> {
     return await db.select().from(a11yResults).where(eq(a11yResults.pageId, pageId));
   }
 
-  async getA11yResultsByEstateId(estateId: string): Promise<A11yResult[]> {
+  async getA11yResultsByScanRunId(scanRunId: string): Promise<A11yResult[]> {
+    return await db.select().from(a11yResults).where(eq(a11yResults.scanRunId, scanRunId));
+  }
+
+  async getA11yResultsByEstateId(estateId: string, latestScanOnly: boolean = true): Promise<A11yResult[]> {
+    if (latestScanOnly) {
+      const latestScan = await this.getLatestScanRun(estateId);
+      if (!latestScan) return [];
+      return await this.getA11yResultsByScanRunId(latestScan.id);
+    }
+    
+    // Get all results across all scans
     const estatePages = await db.select({ id: pages.id }).from(pages).where(eq(pages.estateId, estateId));
     const pageIds = estatePages.map(p => p.id);
     if (pageIds.length === 0) return [];
