@@ -103,6 +103,9 @@ export type Project = typeof projects.$inferSelect;
 // Estate Status Enum
 export const estateStatusEnum = pgEnum('estate_status', ['idle', 'crawling', 'auditing', 'completed', 'failed']);
 
+// Scan Run Status Enum
+export const scanRunStatusEnum = pgEnum('scan_run_status', ['running', 'completed', 'failed']);
+
 // Estates table (test scope)
 export const estates = pgTable("estates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -119,6 +122,25 @@ export const estates = pgTable("estates", {
   index("idx_estates_project").on(table.projectId),
 ]);
 
+// Scan Runs table (tracks individual scan executions)
+export const scanRuns = pgTable("scan_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
+  status: scanRunStatusEnum('status').notNull().default('running'),
+  totalIssues: integer("total_issues").notNull().default(0),
+  criticalIssues: integer("critical_issues").notNull().default(0),
+  warningIssues: integer("warning_issues").notNull().default(0),
+  minorIssues: integer("minor_issues").notNull().default(0),
+  passRate: integer("pass_rate").notNull().default(0),
+  averageScore: integer("average_score").notNull().default(0),
+  pagesAudited: integer("pages_audited").notNull().default(0),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_scan_runs_estate").on(table.estateId),
+  index("idx_scan_runs_started").on(table.startedAt),
+]);
+
 export const insertEstateSchema = createInsertSchema(estates).omit({
   id: true,
   status: true,
@@ -130,6 +152,15 @@ export const insertEstateSchema = createInsertSchema(estates).omit({
 
 export type InsertEstate = z.infer<typeof insertEstateSchema>;
 export type Estate = typeof estates.$inferSelect;
+
+export const insertScanRunSchema = createInsertSchema(scanRuns).omit({
+  id: true,
+  startedAt: true,
+  completedAt: true,
+});
+
+export type InsertScanRun = z.infer<typeof insertScanRunSchema>;
+export type ScanRun = typeof scanRuns.$inferSelect;
 
 // Pages table
 export const pages = pgTable("pages", {
@@ -159,6 +190,7 @@ export const severityEnum = pgEnum('severity', ['critical', 'warning', 'minor', 
 // A11y Results table (accessibility issues)
 export const a11yResults = pgTable("a11y_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scanRunId: varchar("scan_run_id").references(() => scanRuns.id, { onDelete: 'cascade' }),
   pageId: varchar("page_id").notNull().references(() => pages.id, { onDelete: 'cascade' }),
   issueType: varchar("issue_type", { length: 255 }).notNull(),
   severity: severityEnum('severity').notNull(),
@@ -174,6 +206,7 @@ export const a11yResults = pgTable("a11y_results", {
   evidenceUrl: varchar("evidence_url", { length: 1000 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
+  index("idx_a11y_results_scan_run").on(table.scanRunId),
   index("idx_a11y_results_page").on(table.pageId),
   index("idx_a11y_results_severity").on(table.severity),
 ]);
@@ -272,6 +305,15 @@ export const estatesRelations = relations(estates, ({ one, many }) => ({
   }),
   pages: many(pages),
   rollups: many(a11yRollups),
+  scanRuns: many(scanRuns),
+}));
+
+export const scanRunsRelations = relations(scanRuns, ({ one, many }) => ({
+  estate: one(estates, {
+    fields: [scanRuns.estateId],
+    references: [estates.id],
+  }),
+  results: many(a11yResults),
 }));
 
 export const pagesRelations = relations(pages, ({ one, many }) => ({
@@ -283,6 +325,10 @@ export const pagesRelations = relations(pages, ({ one, many }) => ({
 }));
 
 export const a11yResultsRelations = relations(a11yResults, ({ one }) => ({
+  scanRun: one(scanRuns, {
+    fields: [a11yResults.scanRunId],
+    references: [scanRuns.id],
+  }),
   page: one(pages, {
     fields: [a11yResults.pageId],
     references: [pages.id],
