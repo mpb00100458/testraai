@@ -5,6 +5,13 @@ import type { InsertPage, InsertA11yResult } from "@shared/schema";
 export class ScanAgent {
   async runScan(estateId: string): Promise<void> {
     try {
+      // Create a new scan run
+      const scanRun = await storage.createScanRun({
+        estateId,
+        status: 'running',
+        pagesAudited: 0,
+      });
+
       // Update estate status to crawling
       await storage.updateEstateStatus(estateId, 'crawling');
       
@@ -61,6 +68,7 @@ export class ScanAgent {
           
           await storage.createA11yResult({
             pageId: page.id,
+            scanRunId: scanRun.id,
             issueType: issue.type,
             severity: issue.severity,
             wcagCriteria: issue.wcag,
@@ -80,6 +88,7 @@ export class ScanAgent {
         for (let i = 0; i < passResults; i++) {
           await storage.createA11yResult({
             pageId: page.id,
+            scanRunId: scanRun.id,
             issueType: 'accessibility-check',
             severity: 'pass',
             wcagCriteria: '1.1.1',
@@ -109,10 +118,35 @@ export class ScanAgent {
         averageScore: avgScore,
       });
 
+      // Update scan run with final stats
+      await storage.updateScanRunStats(scanRun.id, {
+        totalIssues,
+        criticalIssues: criticalCount,
+        warningIssues: warningCount,
+        minorIssues: minorCount,
+        passRate,
+        averageScore: avgScore,
+        pagesAudited: createdPages.length,
+      });
+
+      // Complete the scan run
+      await storage.completeScanRun(scanRun.id);
+
       // Mark as completed
       await storage.updateEstateStatus(estateId, 'completed');
     } catch (error) {
       console.error('Scan error:', error);
+      
+      // Mark scan run as failed if it exists
+      try {
+        const latestScan = await storage.getLatestScanRun(estateId);
+        if (latestScan && latestScan.status === 'running') {
+          await storage.updateScanRunStatus(latestScan.id, 'failed');
+        }
+      } catch (e) {
+        console.error('Error updating scan run status:', e);
+      }
+      
       await storage.updateEstateStatus(estateId, 'failed');
       throw error;
     }
