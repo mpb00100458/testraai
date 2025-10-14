@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe, Plus, Play, Download, FileSpreadsheet, FileText, ChevronDown, History } from "lucide-react";
+import { ArrowLeft, Globe, Plus, Play, History } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,8 +16,7 @@ import { insertEstateSchema, type InsertEstate, type Estate, type Project } from
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { LiveScanModal } from "@/components/LiveScanModal";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ScanHistoryDialog } from "@/components/ScanHistoryDialog";
+import { ScanHistoryTable } from "@/components/ScanHistoryTable";
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const { toast } = useToast();
@@ -25,9 +24,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [liveScanModalOpen, setLiveScanModalOpen] = useState(false);
   const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
-  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [historyEstateId, setHistoryEstateId] = useState<string | null>(null);
-  const [historyEstateName, setHistoryEstateName] = useState<string>("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -126,64 +122,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       toast({
         title: "Error",
         description: error.message || "Failed to start scan",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const downloadPdfMutation = useMutation({
-    mutationFn: async (estateId: string) => {
-      const response = await fetch(`/api/estates/${estateId}/report/pdf`);
-      if (!response.ok) throw new Error("Failed to download PDF report");
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `accessibility-report-${estateId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    },
-    onSuccess: () => {
-      toast({
-        title: "PDF report downloaded",
-        description: "The detailed accessibility report has been downloaded as PDF.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to download PDF report",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const downloadExcelMutation = useMutation({
-    mutationFn: async (estateId: string) => {
-      const response = await fetch(`/api/estates/${estateId}/report/excel`);
-      if (!response.ok) throw new Error("Failed to download Excel report");
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `accessibility-report-${estateId}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Excel report downloaded",
-        description: "The detailed accessibility report has been downloaded as Excel.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to download Excel report",
         variant: "destructive",
       });
     },
@@ -316,68 +254,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
                     <span>{estate.pagesDiscovered || 0} pages • {estate.pagesAudited || 0} audited</span>
                   </div>
                   <div className="flex gap-2">
-                    {estate.status === 'completed' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setHistoryEstateId(estate.id);
-                            setHistoryEstateName(estate.name);
-                            setHistoryDialogOpen(true);
-                          }}
-                          data-testid={`button-scan-history-${estate.id}`}
-                        >
-                          <History className="h-3 w-3 mr-1" />
-                          History
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={downloadPdfMutation.isPending || downloadExcelMutation.isPending}
-                              data-testid={`button-download-report-${estate.id}`}
-                            >
-                              <Download className="h-3 w-3 mr-1" />
-                              Export
-                              <ChevronDown className="h-3 w-3 ml-1" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                downloadExcelMutation.mutate(estate.id);
-                              }}
-                              disabled={downloadExcelMutation.isPending}
-                              data-testid={`menu-item-export-excel-${estate.id}`}
-                            >
-                              <FileSpreadsheet className="h-4 w-4 mr-2" />
-                              Export Excel
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                downloadPdfMutation.mutate(estate.id);
-                              }}
-                              disabled={downloadPdfMutation.isPending}
-                              data-testid={`menu-item-export-pdf-${estate.id}`}
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Export PDF
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </>
-                    )}
                     <Button
                       size="sm"
                       onClick={(e) => {
@@ -393,6 +275,15 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                        'Run Scan'}
                     </Button>
                   </div>
+                </div>
+                
+                {/* Scan History Table - Show for any estate that might have scans */}
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Scan History
+                  </h3>
+                  <ScanHistoryTable estateId={estate.id} estateName={estate.name} />
                 </div>
               </CardContent>
             </Card>
@@ -427,16 +318,6 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               queryClient.invalidateQueries({ queryKey: ["/api/estates", projectId] });
             }
           }}
-        />
-      )}
-
-      {/* Scan History Dialog */}
-      {historyEstateId && (
-        <ScanHistoryDialog
-          estateId={historyEstateId}
-          estateName={historyEstateName}
-          open={historyDialogOpen}
-          onOpenChange={setHistoryDialogOpen}
         />
       )}
     </div>
