@@ -15,8 +15,14 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProjectSchema, type InsertProject, type Project, type Organization } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import ProjectDetail from "./ProjectDetail";
 
 export default function Projects() {
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  
+  if (selectedProjectId) {
+    return <ProjectDetail projectId={selectedProjectId} />;
+  }
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
@@ -202,7 +208,12 @@ export default function Projects() {
       ) : projects && projects.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="hover-elevate cursor-pointer" data-testid={`card-project-${project.id}`}>
+            <Card 
+              key={project.id} 
+              className="hover-elevate cursor-pointer" 
+              onClick={() => setSelectedProjectId(project.id)}
+              data-testid={`card-project-${project.id}`}
+            >
               <CardHeader>
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
