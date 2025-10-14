@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { z } from "zod";
 import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema } from "@shared/schema";
+import PDFDocument from "pdfkit";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -208,7 +209,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Download estate report
+  // Download estate PDF report
+  app.get('/api/estates/:id/report/pdf', isAuthenticated, async (req: any, res) => {
+    let doc: any = null;
+    
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const estate = await storage.getEstate(id);
+      
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      // Verify user has access to the estate's project
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this estate" });
+      }
+
+      // Get all issues for this estate
+      const issues = await storage.getA11yResultsByEstateId(id);
+      const rollup = await storage.getA11yRollupByEstateId(id);
+      
+      // Create PDF document
+      doc = new PDFDocument({ margin: 50 });
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="accessibility-report-${estate.name.replace(/[^a-z0-9]/gi, '-')}.pdf"`);
+      
+      // Pipe PDF to response
+      doc.pipe(res);
+
+      // Title
+      doc.fontSize(24).fillColor('#1976D2').text('Accessibility Audit Report', { align: 'center' });
+      doc.moveDown(0.5);
+      
+      // Estate info
+      doc.fontSize(14).fillColor('#333333').text(estate.name, { align: 'center' });
+      doc.fontSize(10).fillColor('#666666').text(estate.baseUrl, { align: 'center' });
+      doc.moveDown(1);
+
+      // Summary Section
+      doc.fontSize(16).fillColor('#1976D2').text('Summary', { underline: true });
+      doc.moveDown(0.5);
+      
+      const totalIssues = rollup?.totalIssues || 0;
+      const criticalIssues = rollup?.criticalIssues || 0;
+      const warningIssues = rollup?.warningIssues || 0;
+      const minorIssues = rollup?.minorIssues || 0;
+      const passRate = rollup?.passRate || 0;
+      
+      doc.fontSize(12).fillColor('#333333');
+      doc.text(`Total Issues: ${totalIssues}`);
+      doc.text(`Pass Rate: ${passRate}%`);
+      doc.text(`Pages Audited: ${estate.pagesAudited}`);
+      doc.moveDown(0.5);
+      
+      // Severity breakdown
+      doc.fontSize(12).fillColor('#d32f2f').text(`● Critical: ${criticalIssues}`, { continued: true });
+      doc.fillColor('#f57c00').text(`  ● Warning: ${warningIssues}`, { continued: true });
+      doc.fillColor('#fbc02d').text(`  ● Minor: ${minorIssues}`);
+      doc.moveDown(2);
+
+      // Issues by Page
+      doc.fontSize(16).fillColor('#1976D2').text('Issues by Page', { underline: true });
+      doc.moveDown(0.5);
+
+      // Group issues by page
+      const issuesByPage = new Map<string, any[]>();
+      for (const issue of issues) {
+        if (issue.severity === 'pass') continue;
+        if (!issuesByPage.has(issue.pageId)) {
+          issuesByPage.set(issue.pageId, []);
+        }
+        issuesByPage.get(issue.pageId)!.push(issue);
+      }
+
+      // Render each page's issues
+      for (const [pageId, pageIssues] of Array.from(issuesByPage.entries())) {
+        const page = await storage.getPage(pageId);
+        if (!page) continue;
+
+        // Page header
+        doc.fontSize(14).fillColor('#333333').text(page.title || 'Untitled Page', { underline: false });
+        doc.fontSize(10).fillColor('#666666').text(page.url);
+        doc.moveDown(0.5);
+
+        // Issues for this page
+        for (const issue of pageIssues) {
+          // Severity color
+          const severityColor = 
+            issue.severity === 'critical' ? '#d32f2f' :
+            issue.severity === 'warning' ? '#f57c00' : '#fbc02d';
+          
+          doc.fontSize(11).fillColor(severityColor).text(`● ${issue.severity.toUpperCase()}`, { continued: true });
+          doc.fillColor('#333333').text(` - ${issue.issueType.replace(/-/g, ' ')}`);
+          
+          if (issue.wcagCriteria) {
+            doc.fontSize(9).fillColor('#666666').text(`   WCAG ${issue.wcagCriteria}`);
+          }
+          
+          if (issue.description) {
+            doc.fontSize(9).fillColor('#555555').text(`   ${issue.description}`);
+          }
+          
+          if (issue.element) {
+            doc.fontSize(8).fillColor('#888888').text(`   Element: ${issue.element}`);
+          }
+          
+          if (issue.suggestion) {
+            doc.fontSize(9).fillColor('#1976D2').text(`   Suggestion: ${issue.suggestion}`);
+          }
+          
+          doc.moveDown(0.3);
+        }
+        
+        doc.moveDown(0.5);
+      }
+
+      // Footer - Add page numbers (only if there are multiple pages)
+      const pageCount = doc.bufferedPageRange().count;
+      if (pageCount > 0) {
+        for (let i = 0; i < pageCount; i++) {
+          try {
+            doc.switchToPage(i);
+            doc.fontSize(8).fillColor('#999999').text(
+              `Page ${i + 1} of ${pageCount}`,
+              50,
+              doc.page.height - 50,
+              { align: 'center' }
+            );
+          } catch (e) {
+            // Ignore page switching errors
+          }
+        }
+      }
+
+      // Finalize PDF
+      doc.end();
+    } catch (error) {
+      console.error("Error generating PDF report:", error);
+      
+      // End the PDF stream if it was started
+      if (doc) {
+        try {
+          doc.end();
+        } catch (e) {
+          // Ignore errors when ending the doc
+        }
+      }
+      
+      // Only send error response if headers haven't been sent
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Failed to generate PDF report" });
+      }
+    }
+  });
+
+  // Download estate CSV report
   app.get('/api/estates/:id/report', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
