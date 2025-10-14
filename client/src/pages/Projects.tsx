@@ -13,7 +13,7 @@ import { FolderOpen, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertProjectSchema, type InsertProject, type Project } from "@shared/schema";
+import { insertProjectSchema, type InsertProject, type Project, type Organization } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 
 export default function Projects() {
@@ -101,13 +101,22 @@ export default function Projects() {
           <h1 className="text-3xl font-bold">Projects</h1>
           <p className="text-muted-foreground">Organize your accessibility testing by project</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-project">
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
-          </DialogTrigger>
+        {!organizations || organizations.length === 0 ? (
+          <Button 
+            data-testid="button-create-org-first" 
+            onClick={() => window.location.href = '/organization'}
+            variant="default"
+          >
+            Create Organization First
+          </Button>
+        ) : (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-project">
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Project</DialogTitle>
@@ -156,8 +165,25 @@ export default function Projects() {
               </form>
             </Form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </div>
+
+      {!organizations || organizations.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Organization Found</CardTitle>
+            <CardDescription>
+              You need to create an organization before you can create projects. Organizations help you organize your team and testing activities.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => window.location.href = '/organization'} data-testid="button-go-to-org">
+              Go to Organization Page
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isLoading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
