@@ -18,14 +18,10 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import ProjectDetail from "./ProjectDetail";
 
 export default function Projects() {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  
-  if (selectedProjectId) {
-    return <ProjectDetail projectId={selectedProjectId} />;
-  }
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -98,6 +94,10 @@ export default function Projects() {
 
   if (authLoading || !isAuthenticated) {
     return null;
+  }
+
+  if (selectedProjectId) {
+    return <ProjectDetail projectId={selectedProjectId} />;
   }
 
   return (
