@@ -328,6 +328,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             doc.fontSize(9).fillColor('#1976D2').text(`   Suggestion: ${issue.suggestion}`);
           }
           
+          if (issue.codeSnippet) {
+            doc.fontSize(8).font('Courier').fillColor('#2e7d32').text(`   Code Fix:`);
+            doc.fontSize(8).fillColor('#555555').text(`   ${issue.codeSnippet}`);
+            doc.font('Helvetica');
+          }
+          
+          if (issue.impactScore) {
+            doc.fontSize(8).fillColor('#666666').text(`   Impact Score: ${issue.impactScore}/10`);
+          }
+          
           doc.moveDown(0.3);
         }
         
@@ -464,12 +474,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this estate" });
       }
 
-      // Import scanAgent
-      const { scanAgent } = await import('./agents/scanAgent');
+      // Import enhanced scan agent with AI capabilities
+      const { enhancedScanAgent } = await import('./agents/enhancedScanAgent');
       
-      // Run scan asynchronously
-      scanAgent.runScan(id).catch(error => {
-        console.error('Scan failed:', error);
+      // Run AI-powered scan asynchronously
+      enhancedScanAgent.runScan(id).catch(error => {
+        console.error('AI scan failed:', error);
       });
       
       res.json({ message: "Scan started", estateId: id });
