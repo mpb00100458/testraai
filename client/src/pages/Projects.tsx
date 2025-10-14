@@ -9,8 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderOpen, Plus } from "lucide-react";
+import { FolderOpen, Plus, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDistanceToNow } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProjectSchema, type InsertProject, type Project, type Organization } from "@shared/schema";
@@ -192,49 +194,74 @@ export default function Projects() {
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-48" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : projects && projects.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project) => (
-            <Card 
-              key={project.id} 
-              className="hover-elevate cursor-pointer" 
-              onClick={() => setSelectedProjectId(project.id)}
-              data-testid={`card-project-${project.id}`}
-            >
-              <CardHeader>
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <FolderOpen className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="truncate">{project.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">
+        <div className="w-full overflow-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[300px]">Project Name</TableHead>
+                <TableHead className="w-[400px]">Description</TableHead>
+                <TableHead className="w-[120px] text-center">Estates</TableHead>
+                <TableHead className="w-[180px]">Created</TableHead>
+                <TableHead className="w-[120px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projects.map((project) => (
+                <TableRow 
+                  key={project.id} 
+                  className="cursor-pointer hover-elevate" 
+                  onClick={() => setSelectedProjectId(project.id)}
+                  data-testid={`row-project-${project.id}`}
+                >
+                  <TableCell data-testid={`table-cell-project-name-${project.id}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary flex-shrink-0">
+                        <FolderOpen className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{project.name}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell data-testid={`table-cell-project-description-${project.id}`}>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
                       {project.description || "No description"}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>0 estates</span>
-                  <span>Created {new Date(project.createdAt!).toLocaleDateString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </p>
+                  </TableCell>
+                  <TableCell className="text-center" data-testid={`table-cell-project-estates-${project.id}`}>
+                    <span className="font-medium text-base">0</span>
+                  </TableCell>
+                  <TableCell data-testid={`table-cell-project-created-${project.id}`}>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">
+                        {new Date(project.createdAt!).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(project.createdAt!), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right" data-testid={`table-cell-project-actions-${project.id}`}>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedProjectId(project.id);
+                      }}
+                      data-testid={`button-view-project-${project.id}`}
+                    >
+                      View Details
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       ) : (
         <Card>
