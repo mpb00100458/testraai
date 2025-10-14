@@ -239,7 +239,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                     estate.status === 'crawling' || estate.status === 'auditing' ? 'secondary' :
                     'outline'
                   }>
-                    {estate.status || 'idle'}
+                    {estate.status === 'crawling' ? '🔍 Scanning Pages' :
+                     estate.status === 'auditing' ? '🧪 Testing Accessibility' :
+                     estate.status === 'completed' ? '✓ Completed' :
+                     estate.status === 'failed' ? '✗ Failed' :
+                     'Ready to Scan'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -250,12 +254,17 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   </div>
                   <Button
                     size="sm"
-                    onClick={() => runScanMutation.mutate(estate.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      runScanMutation.mutate(estate.id);
+                    }}
                     disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
                     data-testid={`button-run-scan-${estate.id}`}
                   >
                     <Play className="h-3 w-3 mr-1" />
-                    {estate.status === 'crawling' || estate.status === 'auditing' ? 'Running...' : 'Run Scan'}
+                    {estate.status === 'crawling' ? 'Scanning...' :
+                     estate.status === 'auditing' ? 'Testing...' :
+                     'Run Scan'}
                   </Button>
                 </div>
               </CardContent>
