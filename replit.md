@@ -48,17 +48,30 @@ Preferred communication style: Simple, everyday language.
 
 **Data Validation:** Zod schemas shared between client and server for type-safe request/response validation.
 
-**Agent Architecture:** Automated scanning agents simulate:
+**Agent Architecture:** AI-powered automated scanning agents provide:
 - Web crawling with robots.txt awareness
 - Page discovery across estates
-- WCAG compliance auditing
+- WCAG compliance auditing with AI analysis
 - Severity classification (critical, warning, minor, pass)
+- **AI Features:**
+  - Intelligent issue descriptions with context-aware analysis
+  - Code snippet generation showing how to fix issues
+  - Impact scoring (1-10 scale) for prioritization
+  - Smart deduplication across pages using similarity detection
+  - Keyboard navigation analysis
+
+**AI Integration:** Uses OpenAI (via Replit AI Integrations) for:
+- Enhanced issue analysis with detailed recommendations
+- Automated code fix suggestions
+- Duplicate detection across pages
+- Impact assessment and prioritization
 
 **Key Design Decisions:**
 - Separation of concerns with dedicated storage layer
 - Middleware-based request logging and error handling
 - Type-safe database operations using Drizzle ORM
 - Shared schema definitions between frontend and backend
+- Graceful AI fallbacks for resilient scanning
 
 ### Data Storage
 
@@ -79,7 +92,7 @@ Preferred communication style: Simple, everyday language.
 - `projects` - Project containers within organizations
 - `estates` - Website estates to be scanned
 - `pages` - Discovered pages within estates
-- `a11y_results` - Individual accessibility violations
+- `a11y_results` - Individual accessibility violations with AI insights (code snippets, impact scores, deduplication)
 - `a11y_rollups` - Aggregated statistics per estate
 - `sessions` - Authentication session storage
 
@@ -125,3 +138,9 @@ Preferred communication style: Simple, everyday language.
 ### API & State
 - **TanStack Query:** Server state management with caching and synchronization
 - **Wouter:** Lightweight routing library for React
+
+### AI & Machine Learning
+- **OpenAI:** AI-powered accessibility analysis via Replit AI Integrations
+  - Uses gpt-4o-mini model for cost-effective analysis
+  - No API key required (billed to Replit credits)
+  - Graceful fallbacks for resilient operation
