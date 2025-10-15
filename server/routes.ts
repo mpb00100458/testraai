@@ -753,6 +753,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download scan video
+  app.get('/api/scans/:id/video', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const scanRun = await storage.getScanRun(id);
+      
+      if (!scanRun) {
+        return res.status(404).json({ message: "Scan run not found" });
+      }
+
+      // Verify user has access
+      const estate = await storage.getEstate(scanRun.estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this scan" });
+      }
+
+      if (!scanRun.videoPath) {
+        return res.status(404).json({ message: "Video not found for this scan" });
+      }
+
+      // Send video file
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      if (!fs.existsSync(scanRun.videoPath)) {
+        return res.status(404).json({ message: "Video file not found on disk" });
+      }
+
+      res.setHeader('Content-Type', 'video/webm');
+      res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
+      
+      const fileStream = fs.createReadStream(scanRun.videoPath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Error downloading video:", error);
+      res.status(500).json({ message: "Failed to download video" });
+    }
+  });
+
+  // Download scan Playwright trace
+  app.get('/api/scans/:id/trace', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const scanRun = await storage.getScanRun(id);
+      
+      if (!scanRun) {
+        return res.status(404).json({ message: "Scan run not found" });
+      }
+
+      // Verify user has access
+      const estate = await storage.getEstate(scanRun.estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this scan" });
+      }
+
+      if (!scanRun.tracePath) {
+        return res.status(404).json({ message: "Trace not found for this scan" });
+      }
+
+      // Send trace file
+      const fs = await import('fs');
+      const path = await import('path');
+      
+      if (!fs.existsSync(scanRun.tracePath)) {
+        return res.status(404).json({ message: "Trace file not found on disk" });
+      }
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', `attachment; filename="trace-${id}.zip"`);
+      
+      const fileStream = fs.createReadStream(scanRun.tracePath);
+      fileStream.pipe(res);
+    } catch (error) {
+      console.error("Error downloading trace:", error);
+      res.status(500).json({ message: "Failed to download trace" });
+    }
+  });
+
   // Compare two scan runs
   app.get('/api/scans/compare/:id1/:id2', isAuthenticated, async (req: any, res) => {
     try {
