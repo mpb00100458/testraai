@@ -47,11 +47,15 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
   const { data: scans, isLoading } = useQuery<ScanRun[]>({
     queryKey: ['/api/estates', estateId, 'scans'],
     queryFn: async () => {
-      const response = await fetch(`/api/estates/${estateId}/scans`);
+      // Add cache busting parameter to force fresh data
+      const response = await fetch(`/api/estates/${estateId}/scans?_t=${Date.now()}`);
       if (!response.ok) throw new Error("Failed to fetch scan history");
-      return response.json();
+      const data = await response.json();
+      console.log('Scan history data:', data);
+      return data;
     },
     enabled: open,
+    staleTime: 0, // Always fetch fresh data
   });
 
   const downloadExcelMutation = useMutation({
