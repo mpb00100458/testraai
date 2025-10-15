@@ -71,6 +71,7 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
+      console.log('[WebSocket] Received message:', message);
       
       const logEntry: ActivityLog = {
         id: `${Date.now()}-${Math.random()}`,

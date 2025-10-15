@@ -669,12 +669,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Respond immediately so frontend can connect WebSocket
       res.json({ message: "Scan started", estateId: id });
       
-      // Delay scan start to allow WebSocket connection (500ms buffer)
+      // Delay scan start to allow WebSocket connection (1s buffer for connection + subscription)
+      console.log(`[Scan] Delaying scan start for estate ${id} to allow WebSocket connection`);
       setTimeout(() => {
+        console.log(`[Scan] Starting scan for estate ${id}`);
         realScanAgent.runScan(id).catch(error => {
           console.error('Real scan failed:', error);
         });
-      }, 500);
+      }, 1000);
     } catch (error) {
       console.error("Error starting scan:", error);
       res.status(500).json({ message: "Failed to start scan" });
