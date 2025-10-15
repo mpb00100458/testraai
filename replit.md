@@ -8,7 +8,40 @@ This is an **Accessibility Testing Platform** that automates WCAG 2.2 compliance
 
 ## Recent Changes (Latest)
 
-### View Report Feature for Individual Scans (Current)
+### Real Accessibility Testing with Playwright and axe-core (Current)
+- **Production-Ready Browser Testing**: Replaced mocked testing with real browser-based accessibility audits
+  - Integrated Playwright for actual web crawling and browser automation
+  - Uses official @axe-core/playwright for WCAG 2.0, 2.1, and 2.2 compliance testing
+  - Chromium browser via Nix with all required system dependencies
+  - Crawl budget: 50 pages per estate, 30-second timeout per page
+  
+- **Real Scan Agent** (`server/agents/realScanAgent.ts`):
+  - Actual web crawler with domain-scoped link discovery
+  - Live axe-core accessibility analysis on real DOM
+  - Maps axe-core impact levels (critical/serious/moderate/minor) to severity
+  - Proper scan run creation and multi-tenant data isolation
+  - Concurrency-safe: Each scan has isolated browser instance
+  - Comprehensive error handling and resource cleanup
+  
+- **WCAG 2.2 Coverage**:
+  - Tests against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa tags
+  - Real violation detection with detailed node information
+  - Element HTML, target selectors, and failure descriptions
+  - Authentic WCAG criteria mapping from axe-core tags
+  
+- **Technical Implementation**:
+  - Playwright browser lifecycle managed per scan run (no shared state)
+  - Browser cleanup guaranteed in finally block
+  - Same-domain crawling with URL resolution
+  - Automatic link discovery and queuing
+  - Real accessibility data replaces mock results
+  
+- **Critical Bug Fix**:
+  - Fixed concurrency issue where singleton browser instance caused scan interference
+  - Browser now scoped to individual scan runs for true multi-tenant support
+  - Multiple estates can be scanned simultaneously without conflicts
+
+### View Report Feature for Individual Scans (Previous)
 - **Scan Detail Page**: New dedicated page to view comprehensive details of any historical scan
   - Displays full scan overview with all metrics (status, total issues, critical, warning, minor, pass rate, score)
   - Shows complete list of accessibility issues discovered in that specific scan
