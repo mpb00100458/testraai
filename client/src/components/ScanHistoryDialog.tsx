@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -44,11 +44,16 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
   const [downloadingVideo, setDownloadingVideo] = useState<string | null>(null);
   const [downloadingTrace, setDownloadingTrace] = useState<string | null>(null);
 
-  const { data: scans, isLoading } = useQuery<ScanRun[]>({
+  const { data: scans, isLoading, refetch } = useQuery<ScanRun[]>({
     queryKey: ['/api/estates', estateId, 'scans'],
     queryFn: async () => {
       // Add cache busting parameter to force fresh data
-      const response = await fetch(`/api/estates/${estateId}/scans?_t=${Date.now()}`);
+      const response = await fetch(`/api/estates/${estateId}/scans?_t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!response.ok) throw new Error("Failed to fetch scan history");
       const data = await response.json();
       console.log('Scan history data:', data);
@@ -56,7 +61,16 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
     },
     enabled: open,
     staleTime: 0, // Always fetch fresh data
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: false,
   });
+
+  // Force refetch when dialog opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
 
   const downloadExcelMutation = useMutation({
     mutationFn: async ({ scanRunId }: { scanRunId: string }) => {
