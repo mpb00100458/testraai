@@ -107,54 +107,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // First try to find existing user by id or email
-    const existing = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userData.id))
-      .limit(1);
-    
-    if (existing.length > 0) {
-      // Update existing user by id
+    // Try to upsert by id (primary key)
+    try {
       const [user] = await db
-        .update(users)
-        .set({
-          ...userData,
-          updatedAt: new Date(),
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
+            updatedAt: new Date(),
+          },
         })
-        .where(eq(users.id, userData.id))
         .returning();
       return user;
-    }
-    
-    // Check if email already exists (different user)
-    if (userData.email) {
-      const emailExists = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, userData.email))
-        .limit(1);
-      
-      if (emailExists.length > 0) {
-        // Update existing user by email with new id (OIDC sub changed)
+    } catch (error: any) {
+      // If email conflict (different id, same email), update by email
+      if (error?.code === '23505' && error?.constraint === 'users_email_unique') {
         const [user] = await db
           .update(users)
           .set({
-            ...userData,
+            id: userData.id,
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            profileImageUrl: userData.profileImageUrl,
             updatedAt: new Date(),
           })
-          .where(eq(users.email, userData.email))
+          .where(eq(users.email, userData.email!))
           .returning();
         return user;
       }
+      throw error;
     }
-    
-    // No conflict, insert new user
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .returning();
-    return user;
   }
 
   // Organization operations
