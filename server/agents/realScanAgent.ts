@@ -252,6 +252,7 @@ export class RealScanAgent {
     const results: CrawlResult[] = [];
     const visitedUrls = new Set<string>();
     const urlsToVisit = [baseUrl];
+    let totalDiscovered = 1;
 
     // Create browser context (required by axe-core)
     const context = await browser.newContext();
@@ -266,7 +267,7 @@ export class RealScanAgent {
         // Emit page discovered event
         wsManager.emitPageDiscovered(estateId, {
           url: currentUrl,
-          totalPages: results.length + urlsToVisit.length + 1,
+          totalPages: totalDiscovered,
         });
 
         try {
@@ -277,7 +278,7 @@ export class RealScanAgent {
           wsManager.emitPageTesting(estateId, {
             url: currentUrl,
             pageNumber: results.length + 1,
-            totalPages: results.length + urlsToVisit.length + 1,
+            totalPages: totalDiscovered,
           });
 
           // Navigate to page with fallback wait strategies (PRD: dynamic content)
@@ -357,7 +358,7 @@ export class RealScanAgent {
             url: currentUrl,
             issuesFound: violations.reduce((sum, v) => sum + v.nodes.length, 0),
             pageNumber: results.length,
-            totalPages: results.length + urlsToVisit.length,
+            totalPages: totalDiscovered,
           });
 
           // Find links on the page (simple crawler)
@@ -378,15 +379,16 @@ export class RealScanAgent {
               .filter(Boolean) as string[];
           }, baseUrl);
 
-          // Add internal links to crawl queue
+          // Add internal links to crawl queue and update discovered count
           for (const link of links) {
             try {
               const linkUrl = new URL(link);
               const baseUrlObj = new URL(baseUrl);
               
               // Only crawl same domain
-              if (linkUrl.hostname === baseUrlObj.hostname && !visitedUrls.has(link)) {
+              if (linkUrl.hostname === baseUrlObj.hostname && !visitedUrls.has(link) && !urlsToVisit.includes(link)) {
                 urlsToVisit.push(link);
+                totalDiscovered++;
               }
             } catch {
               // Invalid URL, skip

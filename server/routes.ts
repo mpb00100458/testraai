@@ -666,12 +666,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import real scan agent with Playwright and axe-core
       const { realScanAgent } = await import('./agents/realScanAgent');
       
-      // Run real accessibility scan asynchronously
-      realScanAgent.runScan(id).catch(error => {
-        console.error('Real scan failed:', error);
-      });
-      
+      // Respond immediately so frontend can connect WebSocket
       res.json({ message: "Scan started", estateId: id });
+      
+      // Delay scan start to allow WebSocket connection (500ms buffer)
+      setTimeout(() => {
+        realScanAgent.runScan(id).catch(error => {
+          console.error('Real scan failed:', error);
+        });
+      }, 500);
     } catch (error) {
       console.error("Error starting scan:", error);
       res.status(500).json({ message: "Failed to start scan" });
