@@ -707,10 +707,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const scans = await storage.getScanRunsByEstateId(id);
       
-      // Disable caching to ensure fresh data with new fields
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      // Disable caching to ensure fresh data
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+      res.setHeader('Surrogate-Control', 'no-store');
       
       res.json(scans);
     } catch (error) {
