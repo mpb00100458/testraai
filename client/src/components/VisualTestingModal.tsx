@@ -185,8 +185,8 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh]" data-testid="modal-visual-testing">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden" data-testid="modal-visual-testing">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <TestTube2 className="h-5 w-5" />
             Live Accessibility Testing - {estateName}
@@ -206,7 +206,7 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 pr-2">
           {/* Progress Bar */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
@@ -312,13 +312,13 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
                         key={log.id}
                         className="flex items-start gap-2 py-1 hover-elevate rounded px-2 -mx-2"
                       >
-                        <span className={getSeverityColor(log.severity)}>
+                        <span className={`flex-shrink-0 ${getSeverityColor(log.severity)}`}>
                           {getSeverityIcon(log.severity)}
                         </span>
-                        <span className="text-muted-foreground">
+                        <span className="text-muted-foreground flex-shrink-0">
                           {new Date(log.timestamp).toLocaleTimeString()}
                         </span>
-                        <span className={`flex-1 ${getSeverityColor(log.severity)}`}>
+                        <span className={`flex-1 min-w-0 break-words ${getSeverityColor(log.severity)}`}>
                           {log.message}
                         </span>
                       </div>
