@@ -166,10 +166,10 @@ export type ScanRun = typeof scanRuns.$inferSelect;
 export const pages = pgTable("pages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
-  url: varchar("url", { length: 1000 }).notNull(),
+  url: varchar("url", { length: 3000 }).notNull(),
   title: varchar("title", { length: 500 }),
   isAudited: integer("is_audited").notNull().default(0),
-  screenshotUrl: varchar("screenshot_url", { length: 1000 }),
+  screenshotUrl: varchar("screenshot_url", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_pages_estate").on(table.estateId),
