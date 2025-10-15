@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEstateSchema, type InsertEstate, type Estate, type Project } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
-import { LiveScanModal } from "@/components/LiveScanModal";
+import { VisualTestingModal } from "@/components/VisualTestingModal";
 import { ScanHistoryTable } from "@/components/ScanHistoryTable";
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
@@ -26,6 +26,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [liveScanModalOpen, setLiveScanModalOpen] = useState(false);
   const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
+  const [selectedEstateName, setSelectedEstateName] = useState<string>("");
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -107,13 +108,14 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   });
 
   const runScanMutation = useMutation({
-    mutationFn: async (estateId: string) => {
+    mutationFn: async ({ estateId, estateName }: { estateId: string; estateName: string }) => {
       await apiRequest("POST", `/api/estates/${estateId}/scan`, {});
-      return estateId;
+      return { estateId, estateName };
     },
-    onSuccess: (estateId) => {
+    onSuccess: ({ estateId, estateName }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/estates", projectId] });
       setSelectedEstateId(estateId);
+      setSelectedEstateName(estateName);
       setLiveScanModalOpen(true);
       toast({
         title: "Scan Started",
@@ -282,7 +284,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              runScanMutation.mutate(estate.id);
+                              runScanMutation.mutate({ estateId: estate.id, estateName: estate.name });
                             }}
                             disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
                             data-testid={`button-run-scan-${estate.id}`}
@@ -328,10 +330,11 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </Card>
       )}
 
-      {/* Live Scan Modal */}
+      {/* Visual Testing Modal */}
       {selectedEstateId && (
-        <LiveScanModal
+        <VisualTestingModal
           estateId={selectedEstateId}
+          estateName={selectedEstateName}
           open={liveScanModalOpen}
           onOpenChange={(open) => {
             setLiveScanModalOpen(open);

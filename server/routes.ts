@@ -7,6 +7,7 @@ import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema } fro
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
 import type { A11yResult } from "@shared/schema";
+import { wsManager } from "./websocket";
 
 // Helper function to calculate issue type changes between two scans
 function calculateIssueTypeChanges(issues1: A11yResult[], issues2: A11yResult[]) {
@@ -1184,6 +1185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+
+  // Initialize WebSocket server
+  wsManager.initialize(httpServer);
 
   return httpServer;
 }

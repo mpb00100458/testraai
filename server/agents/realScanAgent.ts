@@ -2,6 +2,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
 import { storage } from "../storage";
 import type { InsertPage, InsertA11yResult } from "@shared/schema";
+import { wsManager } from "../websocket";
 
 const CHROMIUM_PATH = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
 const MAX_PAGES_PER_ESTATE = 50; // Crawl budget
@@ -47,6 +48,13 @@ export class RealScanAgent {
       const estate = await storage.getEstate(estateId);
       if (!estate) throw new Error('Estate not found');
 
+      // Emit scan start event
+      wsManager.emitScanStart(estateId, {
+        scanRunId: scanRun.id,
+        baseUrl: estate.baseUrl,
+        timestamp: new Date().toISOString(),
+      });
+
       // Launch browser (local to this scan run)
       browser = await chromium.launch({
         executablePath: CHROMIUM_PATH,
@@ -54,8 +62,8 @@ export class RealScanAgent {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
 
-      // Crawl and audit pages
-      const crawledPages = await this.crawlWebsite(estate.baseUrl, browser);
+      // Crawl and audit pages (now with WebSocket progress)
+      const crawledPages = await this.crawlWebsite(estate.baseUrl, browser, estateId);
       
       await storage.updateEstateStatus(estateId, 'auditing');
 
@@ -152,8 +160,26 @@ export class RealScanAgent {
 
       // Mark as completed
       await storage.updateEstateStatus(estateId, 'completed');
+
+      // Emit scan complete event
+      wsManager.emitScanComplete(estateId, {
+        scanRunId: scanRun.id,
+        totalPages: crawledPages.length,
+        totalIssues,
+        criticalIssues: criticalCount,
+        warningIssues: warningCount,
+        minorIssues: minorCount,
+        passRate,
+        averageScore: avgScore,
+        timestamp: new Date().toISOString(),
+      });
     } catch (error) {
       console.error('Real scan error:', error);
+      
+      // Emit scan error event
+      wsManager.emitScanError(estateId, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       
       // Mark scan run as failed
       try {
@@ -175,7 +201,7 @@ export class RealScanAgent {
     }
   }
 
-  private async crawlWebsite(baseUrl: string, browser: Browser): Promise<CrawlResult[]> {
+  private async crawlWebsite(baseUrl: string, browser: Browser, estateId: string): Promise<CrawlResult[]> {
     const results: CrawlResult[] = [];
     const visitedUrls = new Set<string>();
     const urlsToVisit = [baseUrl];
@@ -186,10 +212,23 @@ export class RealScanAgent {
       if (visitedUrls.has(currentUrl)) continue;
       visitedUrls.add(currentUrl);
 
+      // Emit page discovered event
+      wsManager.emitPageDiscovered(estateId, {
+        url: currentUrl,
+        totalPages: results.length + urlsToVisit.length + 1,
+      });
+
       try {
         const page = await browser.newPage();
         
         try {
+          // Emit page testing event
+          wsManager.emitPageTesting(estateId, {
+            url: currentUrl,
+            pageNumber: results.length + 1,
+            totalPages: results.length + urlsToVisit.length + 1,
+          });
+
           // Navigate to page
           await page.goto(currentUrl, { 
             timeout: PAGE_TIMEOUT,
@@ -214,6 +253,27 @@ export class RealScanAgent {
             url: currentUrl,
             title: title || currentUrl,
             violations: violations as AxeViolation[],
+          });
+
+          // Emit issues found for this page
+          for (const violation of violations) {
+            wsManager.emitIssueFound(estateId, {
+              url: currentUrl,
+              issue: {
+                type: violation.id,
+                severity: this.mapImpactToSeverity(violation.impact),
+                description: violation.description,
+                nodesCount: violation.nodes.length,
+              },
+            });
+          }
+
+          // Emit page complete event
+          wsManager.emitPageComplete(estateId, {
+            url: currentUrl,
+            issuesFound: violations.reduce((sum, v) => sum + v.nodes.length, 0),
+            pageNumber: results.length,
+            totalPages: results.length + urlsToVisit.length,
           });
 
           // Find links on the page (simple crawler)
