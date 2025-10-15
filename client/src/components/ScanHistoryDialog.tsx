@@ -305,13 +305,6 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
                               variant="outline"
                               disabled={downloadingExcel === scan.id || downloadingPdf === scan.id}
                               data-testid={`button-export-scan-${scan.id}`}
-                              onClick={() => {
-                                console.log('🔍 CLIENT SIDE - Scan object:', JSON.stringify(scan, null, 2));
-                                console.log('🔍 videoPath:', scan.videoPath);
-                                console.log('🔍 tracePath:', scan.tracePath);
-                                console.log('🔍 Has videoPath?', !!scan.videoPath);
-                                console.log('🔍 Has tracePath?', !!scan.tracePath);
-                              }}
                             >
                               <Download className="h-3 w-3 mr-1" />
                               Export
@@ -334,26 +327,22 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
                               <FileText className="h-4 w-4 mr-2" />
                               Export PDF
                             </DropdownMenuItem>
-                            {scan.videoPath && (
-                              <DropdownMenuItem
-                                onClick={() => downloadVideoMutation.mutate({ scanRunId: scan.id })}
-                                disabled={downloadingVideo === scan.id}
-                                data-testid={`menu-item-download-video-scan-${scan.id}`}
-                              >
-                                <Video className="h-4 w-4 mr-2" />
-                                Download Video
-                              </DropdownMenuItem>
-                            )}
-                            {scan.tracePath && (
-                              <DropdownMenuItem
-                                onClick={() => downloadTraceMutation.mutate({ scanRunId: scan.id })}
-                                disabled={downloadingTrace === scan.id}
-                                data-testid={`menu-item-download-trace-scan-${scan.id}`}
-                              >
-                                <FileCode className="h-4 w-4 mr-2" />
-                                Download Trace
-                              </DropdownMenuItem>
-                            )}
+                            <DropdownMenuItem
+                              onClick={() => downloadVideoMutation.mutate({ scanRunId: scan.id })}
+                              disabled={downloadingVideo === scan.id}
+                              data-testid={`menu-item-download-video-scan-${scan.id}`}
+                            >
+                              <Video className="h-4 w-4 mr-2" />
+                              Download Video
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => downloadTraceMutation.mutate({ scanRunId: scan.id })}
+                              disabled={downloadingTrace === scan.id}
+                              data-testid={`menu-item-download-trace-scan-${scan.id}`}
+                            >
+                              <FileCode className="h-4 w-4 mr-2" />
+                              Download Trace
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
 
