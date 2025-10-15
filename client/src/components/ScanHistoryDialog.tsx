@@ -305,6 +305,13 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
                               variant="outline"
                               disabled={downloadingExcel === scan.id || downloadingPdf === scan.id}
                               data-testid={`button-export-scan-${scan.id}`}
+                              onClick={() => {
+                                console.log('🔍 CLIENT SIDE - Scan object:', JSON.stringify(scan, null, 2));
+                                console.log('🔍 videoPath:', scan.videoPath);
+                                console.log('🔍 tracePath:', scan.tracePath);
+                                console.log('🔍 Has videoPath?', !!scan.videoPath);
+                                console.log('🔍 Has tracePath?', !!scan.tracePath);
+                              }}
                             >
                               <Download className="h-3 w-3 mr-1" />
                               Export
