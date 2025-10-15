@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FileText, Loader2, Eye } from "lucide-react";
+import { FileSpreadsheet, FileText, Loader2, Eye, Video, FileCode } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,8 @@ interface ScanRun {
   passRate: number | null;
   averageScore: number | null;
   pagesAudited: number | null;
+  videoPath: string | null;
+  tracePath: string | null;
 }
 
 interface ScanHistoryTableProps {
@@ -33,6 +35,8 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
   const { toast } = useToast();
   const [downloadingExcel, setDownloadingExcel] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+  const [downloadingVideo, setDownloadingVideo] = useState<string | null>(null);
+  const [downloadingTrace, setDownloadingTrace] = useState<string | null>(null);
 
   const { data: scans, isLoading, error } = useQuery<ScanRun[]>({
     queryKey: ['/api/estates', estateId, 'scans'],
@@ -116,6 +120,72 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
       });
     } finally {
       setDownloadingPdf(null);
+    }
+  };
+
+  const handleDownloadVideo = async (scanId: string) => {
+    setDownloadingVideo(scanId);
+    try {
+      const response = await fetch(`/api/scans/${scanId}/video`);
+      if (!response.ok) {
+        throw new Error("Failed to download video");
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${estateName.replace(/\s+/g, '_')}_scan_${scanId.substring(0, 8)}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Success",
+        description: "Video downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to download video",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingVideo(null);
+    }
+  };
+
+  const handleDownloadTrace = async (scanId: string) => {
+    setDownloadingTrace(scanId);
+    try {
+      const response = await fetch(`/api/scans/${scanId}/trace`);
+      if (!response.ok) {
+        throw new Error("Failed to download trace");
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${estateName.replace(/\s+/g, '_')}_scan_${scanId.substring(0, 8)}_trace.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Success",
+        description: "Trace downloaded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to download trace",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingTrace(null);
     }
   };
 
@@ -314,6 +384,48 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                       <>
                         <FileText className="h-3 w-3 mr-1.5" />
                         <span className="text-xs font-medium">PDF</span>
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleDownloadVideo(scan.id)}
+                    disabled={downloadingVideo === scan.id || scan.status !== 'completed'}
+                    data-testid={`button-download-video-${scan.id}`}
+                    className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800"
+                  >
+                    {downloadingVideo === scan.id ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                        <span className="text-xs">Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Video className="h-3 w-3 mr-1.5" />
+                        <span className="text-xs font-medium">Video</span>
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleDownloadTrace(scan.id)}
+                    disabled={downloadingTrace === scan.id || scan.status !== 'completed'}
+                    data-testid={`button-download-trace-${scan.id}`}
+                    className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
+                  >
+                    {downloadingTrace === scan.id ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                        <span className="text-xs">Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileCode className="h-3 w-3 mr-1.5" />
+                        <span className="text-xs font-medium">Trace</span>
                       </>
                     )}
                   </Button>
