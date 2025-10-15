@@ -134,6 +134,8 @@ export const scanRuns = pgTable("scan_runs", {
   passRate: integer("pass_rate").notNull().default(0),
   averageScore: integer("average_score").notNull().default(0),
   pagesAudited: integer("pages_audited").notNull().default(0),
+  videoPath: varchar("video_path", { length: 500 }),
+  tracePath: varchar("trace_path", { length: 500 }),
   startedAt: timestamp("started_at").defaultNow(),
   completedAt: timestamp("completed_at"),
 }, (table) => [

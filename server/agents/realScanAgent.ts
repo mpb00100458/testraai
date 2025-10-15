@@ -86,8 +86,8 @@ export class RealScanAgent {
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
       });
 
-      // Crawl and audit pages (now with WebSocket progress)
-      const crawledPages = await this.crawlWebsite(estate.baseUrl, browser, estateId);
+      // Crawl and audit pages (now with WebSocket progress, video & traces)
+      const { pages: crawledPages, videoPath, tracePath } = await this.crawlWebsite(estate.baseUrl, browser, estateId, scanRun.id);
       
       await storage.updateEstateStatus(estateId, 'auditing');
 
@@ -189,6 +189,17 @@ export class RealScanAgent {
         pagesAudited: crawledPages.length,
       });
 
+      // Update scan run with video and trace paths
+      const { db } = await import('../db');
+      const { scanRuns } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      await db.update(scanRuns)
+        .set({ 
+          videoPath: videoPath || null, 
+          tracePath: tracePath || null 
+        })
+        .where(eq(scanRuns.id, scanRun.id));
+
       // Complete the scan run
       await storage.completeScanRun(scanRun.id);
 
@@ -262,11 +273,12 @@ export class RealScanAgent {
     }
   }
 
-  private async crawlWebsite(baseUrl: string, browser: Browser, estateId: string): Promise<CrawlResult[]> {
+  private async crawlWebsite(baseUrl: string, browser: Browser, estateId: string, scanRunId: string): Promise<{ pages: CrawlResult[], videoPath: string, tracePath: string }> {
     const results: CrawlResult[] = [];
     const visitedUrls = new Set<string>();
     const urlsToVisit = [baseUrl];
     let totalDiscovered = 1;
+    let finalVideoPath = '';
 
     // Ensure reports directory exists
     if (!fs.existsSync(REPORTS_DIR)) {
@@ -274,13 +286,13 @@ export class RealScanAgent {
     }
 
     const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const videoPath = path.join(REPORTS_DIR, `${estateId}_${timestamp}_video`);
-    const tracePath = path.join(REPORTS_DIR, `${estateId}_${timestamp}_trace.zip`);
+    const videoDir = path.join(REPORTS_DIR, `${scanRunId}_video`);
+    const tracePath = path.join(REPORTS_DIR, `${scanRunId}_trace.zip`);
 
     // Create browser context with video recording
     const context = await browser.newContext({
       recordVideo: {
-        dir: videoPath,
+        dir: videoDir,
         size: { width: 1280, height: 720 }
       }
     });
@@ -447,7 +459,6 @@ export class RealScanAgent {
       }
     }
 
-    return results;
     } finally {
       // Stop tracing and save trace file
       await context.tracing.stop({ path: tracePath });
@@ -460,12 +471,14 @@ export class RealScanAgent {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Find the video file (Playwright saves it with a unique name)
-      const videoFiles = fs.readdirSync(videoPath);
+      const videoFiles = fs.readdirSync(videoDir);
       if (videoFiles.length > 0) {
-        const videoFile = path.join(videoPath, videoFiles[0]);
-        console.log(`Video recording saved: ${videoFile}`);
+        finalVideoPath = path.join(videoDir, videoFiles[0]);
+        console.log(`Video recording saved: ${finalVideoPath}`);
       }
     }
+
+    return { pages: results, videoPath: finalVideoPath, tracePath };
   }
 
   private mapImpactToSeverity(impact?: string): 'critical' | 'warning' | 'minor' | 'pass' {
