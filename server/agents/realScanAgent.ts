@@ -8,7 +8,7 @@ import * as path from 'path';
 
 const CHROMIUM_PATH = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
 const MAX_PAGES_PER_ESTATE = 50; // Crawl budget per PRD requirements
-const PAGE_TIMEOUT = 10000; // 10s per page per PRD performance requirements
+const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s)
 const REPORTS_DIR = '/tmp/accessibility-reports';
 
 interface AxeViolation {
@@ -280,11 +280,20 @@ export class RealScanAgent {
             totalPages: results.length + urlsToVisit.length + 1,
           });
 
-          // Navigate to page with network idle wait (PRD: dynamic content)
-          await page.goto(currentUrl, { 
-            timeout: PAGE_TIMEOUT,
-            waitUntil: 'networkidle' 
-          });
+          // Navigate to page with fallback wait strategies (PRD: dynamic content)
+          try {
+            await page.goto(currentUrl, { 
+              timeout: PAGE_TIMEOUT,
+              waitUntil: 'networkidle' 
+            });
+          } catch (timeoutError) {
+            // Fallback: try with domcontentloaded if networkidle times out
+            console.log(`NetworkIdle timeout for ${currentUrl}, trying domcontentloaded...`);
+            await page.goto(currentUrl, { 
+              timeout: PAGE_TIMEOUT,
+              waitUntil: 'domcontentloaded' 
+            });
+          }
 
           // Wait for dynamic content to load (PRD requirement)
           await page.waitForTimeout(1000);
