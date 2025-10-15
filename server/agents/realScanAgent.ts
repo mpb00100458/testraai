@@ -119,7 +119,11 @@ export class RealScanAgent {
               severity,
               wcagCriteria: violation.tags
                 .filter((tag: string) => tag.startsWith('wcag'))
-                .map((tag: string) => tag.replace('wcag', '').replace(/(\d)(\d+)/g, '$1.$2'))
+                .map((tag: string) => {
+                  const clean = tag.replace('wcag', '');
+                  // Format criterion numbers (3+ digits) as X.Y.Z (e.g., 244 → 2.4.4)
+                  return clean.replace(/^(\d)(\d)(\d+)$/, '$1.$2.$3');
+                })
                 .join(', ') || 'N/A',
               element: node.html,
               description: violation.description,
@@ -143,7 +147,11 @@ export class RealScanAgent {
             severity: 'pass',
             wcagCriteria: pass.tags
               .filter((tag: string) => tag.startsWith('wcag'))
-              .map((tag: string) => tag.replace('wcag', '').replace(/(\d)(\d+)/g, '$1.$2'))
+              .map((tag: string) => {
+                const clean = tag.replace('wcag', '');
+                // Format criterion numbers (3+ digits) as X.Y.Z (e.g., 244 → 2.4.4)
+                return clean.replace(/^(\d)(\d)(\d+)$/, '$1.$2.$3');
+              })
               .join(', ') || 'N/A',
             description: pass.description,
           });
