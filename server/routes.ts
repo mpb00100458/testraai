@@ -706,6 +706,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const scans = await storage.getScanRunsByEstateId(id);
+      
+      // Disable caching to ensure fresh data with new fields
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       res.json(scans);
     } catch (error) {
       console.error("Error fetching scan history:", error);
