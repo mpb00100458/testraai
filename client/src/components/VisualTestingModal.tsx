@@ -13,7 +13,8 @@ import {
   XCircle,
   Loader2,
   Terminal,
-  AlertCircle
+  AlertCircle,
+  WifiOff
 } from "lucide-react";
 
 interface ActivityLog {
@@ -41,11 +42,85 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
   const [issuesFound, setIssuesFound] = useState({ critical: 0, warning: 0, minor: 0 });
   const [currentPage, setCurrentPage] = useState<string>("");
   const [progress, setProgress] = useState(0);
+  const [connectionLost, setConnectionLost] = useState(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const maxTotalPagesRef = useRef<number>(0);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Poll for scan status when WebSocket is disconnected
+  useEffect(() => {
+    if (!open || !estateId) return;
+
+    // Start polling when connection is lost and scan not complete
+    if (connectionLost && !scanComplete) {
+      const addLog = (message: string, severity: 'info' | 'warning' | 'error' | 'success' = 'info') => {
+        setLogs(prev => [...prev, {
+          id: `${Date.now()}-${Math.random()}`,
+          type: 'page_testing',
+          timestamp: new Date().toISOString(),
+          message,
+          severity,
+        }]);
+      };
+
+      addLog('Connection lost. Polling for scan status...', 'warning');
+
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/estates/${estateId}/scans`);
+          if (response.ok) {
+            const scans = await response.json();
+            const latestScan = scans[0];
+            
+            if (latestScan && latestScan.status === 'completed') {
+              setScanComplete(true);
+              setProgress(100);
+              addLog(`Scan completed! Found ${latestScan.totalIssues || 0} issues`, 'success');
+              
+              // Update stats from completed scan
+              if (latestScan.totalIssues !== undefined) {
+                setIssuesFound({
+                  critical: latestScan.criticalIssues || 0,
+                  warning: latestScan.warningIssues || 0,
+                  minor: latestScan.minorIssues || 0,
+                });
+              }
+              
+              // Clear polling
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+            } else if (latestScan && latestScan.status === 'failed') {
+              setScanComplete(true);
+              addLog('Scan failed', 'error');
+              
+              // Clear polling
+              if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Polling error:', error);
+        }
+      }, 5000); // Poll every 5 seconds
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [open, estateId, connectionLost, scanComplete]);
+
+  // WebSocket connection with reconnection
   useEffect(() => {
     if (!open || !estateId) return;
 
@@ -57,103 +132,148 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
     setIssuesFound({ critical: 0, warning: 0, minor: 0 });
     setCurrentPage("");
     setProgress(0);
+    setConnectionLost(false);
     maxTotalPagesRef.current = 0;
+    reconnectAttemptsRef.current = 0;
 
-    // Connect to WebSocket
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-    wsRef.current = ws;
+    const connectWebSocket = () => {
+      // Connect to WebSocket
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-      // Subscribe to estate updates
-      ws.send(JSON.stringify({ type: 'subscribe', estateId }));
-    };
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        setIsConnected(true);
+        setConnectionLost(false);
+        reconnectAttemptsRef.current = 0;
+        
+        // Subscribe to estate updates
+        ws.send(JSON.stringify({ type: 'subscribe', estateId }));
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('[WebSocket] Received message:', message);
-      
-      const logEntry: ActivityLog = {
-        id: `${Date.now()}-${Math.random()}`,
-        type: message.type,
-        timestamp: new Date().toISOString(),
-        message: '',
-        data: message.data,
-        severity: 'info',
+        // Add reconnection log if this was a reconnection
+        if (logs.length > 0) {
+          setLogs(prev => [...prev, {
+            id: `${Date.now()}-${Math.random()}`,
+            type: 'scan_start',
+            timestamp: new Date().toISOString(),
+            message: 'Reconnected to live updates',
+            severity: 'success',
+          }]);
+        }
       };
 
-      switch (message.type) {
-        case 'scan_start':
-          logEntry.message = `Starting scan for ${message.data?.baseUrl}`;
-          logEntry.severity = 'info';
-          break;
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('[WebSocket] Received message:', message);
         
-        case 'page_discovered':
-          setPagesDiscovered(message.data?.totalPages || 0);
-          logEntry.message = `Discovered: ${message.data?.url}`;
-          logEntry.severity = 'info';
-          break;
-        
-        case 'page_testing':
-          setCurrentPage(message.data?.url || '');
-          setPagesTested(message.data?.pageNumber || 0);
-          // Use maximum totalPages seen to ensure monotonic progress
-          const currentTotal = message.data?.totalPages || 1;
-          const maxTotal = Math.max(maxTotalPagesRef.current, currentTotal);
-          maxTotalPagesRef.current = maxTotal;
-          setPagesDiscovered(maxTotal);
-          setProgress(((message.data?.pageNumber || 0) / maxTotal) * 100);
-          logEntry.message = `Testing [${message.data?.pageNumber}/${maxTotal}]: ${message.data?.url}`;
-          logEntry.severity = 'info';
-          break;
-        
-        case 'page_complete':
-          logEntry.message = `Completed: ${message.data?.url} (${message.data?.issuesFound || 0} issues)`;
-          logEntry.severity = message.data?.issuesFound > 0 ? 'warning' : 'success';
-          break;
-        
-        case 'issue_found':
-          const severity = message.data?.issue?.severity || 'minor';
-          setIssuesFound(prev => ({
-            ...prev,
-            [severity]: (prev[severity as keyof typeof prev] || 0) + 1,
-          }));
-          logEntry.message = `${severity.toUpperCase()}: ${message.data?.issue?.description} (${message.data?.url})`;
-          logEntry.severity = severity === 'critical' ? 'error' : 'warning';
-          break;
-        
-        case 'scan_complete':
-          setScanComplete(true);
-          setProgress(100);
-          logEntry.message = `Scan complete! Found ${message.data?.totalIssues || 0} issues across ${message.data?.totalPages || 0} pages`;
-          logEntry.severity = 'success';
-          break;
-        
-        case 'scan_error':
-          setScanComplete(true);
-          logEntry.message = `Scan failed: ${message.data?.error}`;
-          logEntry.severity = 'error';
-          break;
-      }
+        const logEntry: ActivityLog = {
+          id: `${Date.now()}-${Math.random()}`,
+          type: message.type,
+          timestamp: new Date().toISOString(),
+          message: '',
+          data: message.data,
+          severity: 'info',
+        };
 
-      setLogs(prev => [...prev, logEntry]);
+        switch (message.type) {
+          case 'scan_start':
+            logEntry.message = `Starting scan for ${message.data?.baseUrl}`;
+            logEntry.severity = 'info';
+            break;
+          
+          case 'page_discovered':
+            setPagesDiscovered(message.data?.totalPages || 0);
+            logEntry.message = `Discovered: ${message.data?.url}`;
+            logEntry.severity = 'info';
+            break;
+          
+          case 'page_testing':
+            setCurrentPage(message.data?.url || '');
+            setPagesTested(message.data?.pageNumber || 0);
+            // Use maximum totalPages seen to ensure monotonic progress
+            const currentTotal = message.data?.totalPages || 1;
+            const maxTotal = Math.max(maxTotalPagesRef.current, currentTotal);
+            maxTotalPagesRef.current = maxTotal;
+            setPagesDiscovered(maxTotal);
+            setProgress(((message.data?.pageNumber || 0) / maxTotal) * 100);
+            logEntry.message = `Testing [${message.data?.pageNumber}/${maxTotal}]: ${message.data?.url}`;
+            logEntry.severity = 'info';
+            break;
+          
+          case 'page_complete':
+            logEntry.message = `Completed: ${message.data?.url} (${message.data?.issuesFound || 0} issues)`;
+            logEntry.severity = message.data?.issuesFound > 0 ? 'warning' : 'success';
+            break;
+          
+          case 'issue_found':
+            const severity = message.data?.issue?.severity || 'minor';
+            setIssuesFound(prev => ({
+              ...prev,
+              [severity]: (prev[severity as keyof typeof prev] || 0) + 1,
+            }));
+            logEntry.message = `${severity.toUpperCase()}: ${message.data?.issue?.description} (${message.data?.url})`;
+            logEntry.severity = severity === 'critical' ? 'error' : 'warning';
+            break;
+          
+          case 'scan_complete':
+            setScanComplete(true);
+            setProgress(100);
+            logEntry.message = `Scan complete! Found ${message.data?.totalIssues || 0} issues across ${message.data?.totalPages || 0} pages`;
+            logEntry.severity = 'success';
+            break;
+          
+          case 'scan_error':
+            setScanComplete(true);
+            logEntry.message = `Scan failed: ${message.data?.error}`;
+            logEntry.severity = 'error';
+            break;
+        }
+
+        setLogs(prev => [...prev, logEntry]);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setIsConnected(false);
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        setIsConnected(false);
+        
+        // Only attempt reconnection if modal is still open and scan not complete
+        if (open && !scanComplete && reconnectAttemptsRef.current < 3) {
+          setConnectionLost(true);
+          reconnectAttemptsRef.current += 1;
+          
+          // Exponential backoff: 2s, 4s, 8s
+          const delay = Math.min(2000 * Math.pow(2, reconnectAttemptsRef.current - 1), 8000);
+          console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current}/3)`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (open && !scanComplete) {
+              connectWebSocket();
+            }
+          }, delay);
+        } else if (!scanComplete) {
+          // Max reconnection attempts reached
+          setConnectionLost(true);
+        }
+      };
     };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setIsConnected(false);
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-    };
+    connectWebSocket();
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
+      }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
   }, [open, estateId]);
@@ -197,6 +317,11 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                 <span>Connected • Real-time updates</span>
               </>
+            ) : connectionLost ? (
+              <>
+                <WifiOff className="h-3 w-3 text-yellow-500" />
+                <span className="text-yellow-500">Connection lost • Polling for updates...</span>
+              </>
             ) : (
               <>
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -225,6 +350,23 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">Currently Testing</p>
                     <p className="text-xs text-muted-foreground truncate">{currentPage}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Connection Lost Warning */}
+          {connectionLost && !scanComplete && (
+            <Card className="border-yellow-500/50 bg-yellow-500/5">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2">
+                  <WifiOff className="h-4 w-4 text-yellow-500" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-500">Live updates unavailable</p>
+                    <p className="text-xs text-muted-foreground">
+                      Scan is still running in the background. Checking status every 5 seconds...
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -330,13 +472,17 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
           </Card>
 
           {/* Action Buttons */}
-          {scanComplete && (
-            <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2">
+            {scanComplete ? (
               <Button onClick={() => onOpenChange(false)} data-testid="button-close-visual-testing">
                 Close
               </Button>
-            </div>
-          )}
+            ) : connectionLost ? (
+              <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-close-visual-testing">
+                Close (scan continues in background)
+              </Button>
+            ) : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
