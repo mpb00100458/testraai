@@ -44,6 +44,7 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
   
   const wsRef = useRef<WebSocket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const maxTotalPagesRef = useRef<number>(0);
 
   useEffect(() => {
     if (!open || !estateId) return;
@@ -56,6 +57,7 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
     setIssuesFound({ critical: 0, warning: 0, minor: 0 });
     setCurrentPage("");
     setProgress(0);
+    maxTotalPagesRef.current = 0;
 
     // Connect to WebSocket
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -97,9 +99,13 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
         case 'page_testing':
           setCurrentPage(message.data?.url || '');
           setPagesTested(message.data?.pageNumber || 0);
-          const totalPages = message.data?.totalPages || 1;
-          setProgress(((message.data?.pageNumber || 0) / totalPages) * 100);
-          logEntry.message = `Testing [${message.data?.pageNumber}/${totalPages}]: ${message.data?.url}`;
+          // Use maximum totalPages seen to ensure monotonic progress
+          const currentTotal = message.data?.totalPages || 1;
+          const maxTotal = Math.max(maxTotalPagesRef.current, currentTotal);
+          maxTotalPagesRef.current = maxTotal;
+          setPagesDiscovered(maxTotal);
+          setProgress(((message.data?.pageNumber || 0) / maxTotal) * 100);
+          logEntry.message = `Testing [${message.data?.pageNumber}/${maxTotal}]: ${message.data?.url}`;
           logEntry.severity = 'info';
           break;
         
