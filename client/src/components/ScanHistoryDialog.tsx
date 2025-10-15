@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, FileSpreadsheet, FileText, GitCompare, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, GitCompare, Clock, CheckCircle, XCircle, Video, FileCode } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,6 +25,8 @@ interface ScanRun {
   passRate: number | null;
   averageScore: number | null;
   pagesAudited: number | null;
+  videoPath: string | null;
+  tracePath: string | null;
 }
 
 interface ScanHistoryDialogProps {
@@ -39,6 +41,8 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
   const [selectedScanForCompare, setSelectedScanForCompare] = useState<string | null>(null);
   const [downloadingExcel, setDownloadingExcel] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+  const [downloadingVideo, setDownloadingVideo] = useState<string | null>(null);
+  const [downloadingTrace, setDownloadingTrace] = useState<string | null>(null);
 
   const { data: scans, isLoading } = useQuery<ScanRun[]>({
     queryKey: ['/api/estates', estateId, 'scans'],
@@ -115,6 +119,74 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
     },
     onSettled: () => {
       setDownloadingPdf(null);
+    },
+  });
+
+  const downloadVideoMutation = useMutation({
+    mutationFn: async ({ scanRunId }: { scanRunId: string }) => {
+      setDownloadingVideo(scanRunId);
+      const response = await fetch(`/api/scans/${scanRunId}/video`);
+      if (!response.ok) throw new Error("Failed to download video");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scan-${scanRunId}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Video downloaded successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download video",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setDownloadingVideo(null);
+    },
+  });
+
+  const downloadTraceMutation = useMutation({
+    mutationFn: async ({ scanRunId }: { scanRunId: string }) => {
+      setDownloadingTrace(scanRunId);
+      const response = await fetch(`/api/scans/${scanRunId}/trace`);
+      if (!response.ok) throw new Error("Failed to download trace");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trace-${scanRunId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Playwright trace downloaded successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download trace",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setDownloadingTrace(null);
     },
   });
 
@@ -235,6 +307,26 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
                               <FileText className="h-4 w-4 mr-2" />
                               Export PDF
                             </DropdownMenuItem>
+                            {scan.videoPath && (
+                              <DropdownMenuItem
+                                onClick={() => downloadVideoMutation.mutate({ scanRunId: scan.id })}
+                                disabled={downloadingVideo === scan.id}
+                                data-testid={`menu-item-download-video-scan-${scan.id}`}
+                              >
+                                <Video className="h-4 w-4 mr-2" />
+                                Download Video
+                              </DropdownMenuItem>
+                            )}
+                            {scan.tracePath && (
+                              <DropdownMenuItem
+                                onClick={() => downloadTraceMutation.mutate({ scanRunId: scan.id })}
+                                disabled={downloadingTrace === scan.id}
+                                data-testid={`menu-item-download-trace-scan-${scan.id}`}
+                              >
+                                <FileCode className="h-4 w-4 mr-2" />
+                                Download Trace
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
 

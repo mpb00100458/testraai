@@ -26,6 +26,11 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **JSON/HTML export capabilities** generating detailed accessibility reports stored in `/tmp/accessibility-reports`.
 - Severity classification (critical, warning, minor, pass) with impact-based mapping.
 - **Real-time progress streaming** via WebSocket events (scan_start, page_discovered, page_testing, page_complete, issue_found, scan_complete, scan_error) for live visual testing interface.
+- **Video recording** of entire scan sessions (1280x720 resolution) saved to `/tmp/accessibility-reports/{scanRunId}_video/`.
+- **Playwright trace capture** with full action logging, screenshots, network, and console data saved to `/tmp/accessibility-reports/{scanRunId}_trace.zip`.
+- **Live screenshot streaming** via WebSocket - captures and broadcasts page screenshots during active scans for real-time visual feedback.
+- **Enhanced visual testing modal** displaying live screenshots of pages being tested with real-time progress indicators.
+- **Download capabilities** for scan videos (WebM format) and Playwright traces (ZIP format) via dedicated API endpoints.
 
 ### Data Storage
 **PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with organization-based role access control and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations`, `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, and `sessions`. Drizzle Kit is used for schema migrations.
