@@ -52,10 +52,14 @@ class WebSocketManager {
           const data = JSON.parse(message.toString());
           
           if (data.type === 'subscribe' && data.estateId) {
+            console.log(`[WS] Subscribe request: userId=${ws.userId}, estateId=${data.estateId}`);
+            
             // Verify user has access to this estate
             const hasAccess = await this.verifyEstateAccess(ws.userId!, data.estateId);
+            console.log(`[WS] Access check result: ${hasAccess}`);
+            
             if (!hasAccess) {
-              console.log(`Access denied to estate ${data.estateId} for user ${ws.userId}`);
+              console.log(`[WS] Access denied to estate ${data.estateId} for user ${ws.userId}`);
               ws.send(JSON.stringify({ type: 'error', message: 'Access denied to this estate' }));
               return;
             }
@@ -65,7 +69,10 @@ class WebSocketManager {
               this.clients.set(data.estateId, new Set());
             }
             this.clients.get(data.estateId)!.add(ws);
-            console.log(`Client subscribed to estate: ${data.estateId}`);
+            console.log(`[WS] Client subscribed successfully! Estate: ${data.estateId}, Total clients: ${this.clients.get(data.estateId)!.size}`);
+            
+            // Send confirmation
+            ws.send(JSON.stringify({ type: 'subscribed', estateId: data.estateId }));
           }
         } catch (error) {
           console.error('WebSocket message error:', error);
@@ -88,6 +95,7 @@ class WebSocketManager {
 
   sendToEstate(estateId: string, message: ScanProgressMessage) {
     const clients = this.clients.get(estateId);
+    console.log(`[WS] Emit ${message.type} to estate ${estateId}, clients: ${clients?.size || 0}`);
     if (!clients || clients.size === 0) return;
 
     const messageStr = JSON.stringify(message);
