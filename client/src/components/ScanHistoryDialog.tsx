@@ -56,7 +56,18 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
         }
       });
       if (!response.ok) throw new Error("Failed to fetch scan history");
-      return response.json();
+      const data = await response.json();
+      
+      // Debug: Log received data
+      if (data.length > 0) {
+        console.log('=== CLIENT RECEIVED SCAN DATA ===');
+        console.log('First scan:', data[0]);
+        console.log('videoPath:', data[0].videoPath);
+        console.log('tracePath:', data[0].tracePath);
+        console.log('===================================');
+      }
+      
+      return data;
     },
     enabled: open,
     staleTime: 0,
