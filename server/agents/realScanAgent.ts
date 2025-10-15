@@ -206,20 +206,24 @@ export class RealScanAgent {
     const visitedUrls = new Set<string>();
     const urlsToVisit = [baseUrl];
 
-    while (urlsToVisit.length > 0 && results.length < MAX_PAGES_PER_ESTATE) {
-      const currentUrl = urlsToVisit.shift()!;
-      
-      if (visitedUrls.has(currentUrl)) continue;
-      visitedUrls.add(currentUrl);
+    // Create browser context (required by axe-core)
+    const context = await browser.newContext();
 
-      // Emit page discovered event
-      wsManager.emitPageDiscovered(estateId, {
-        url: currentUrl,
-        totalPages: results.length + urlsToVisit.length + 1,
-      });
+    try {
+      while (urlsToVisit.length > 0 && results.length < MAX_PAGES_PER_ESTATE) {
+        const currentUrl = urlsToVisit.shift()!;
+        
+        if (visitedUrls.has(currentUrl)) continue;
+        visitedUrls.add(currentUrl);
 
-      try {
-        const page = await browser.newPage();
+        // Emit page discovered event
+        wsManager.emitPageDiscovered(estateId, {
+          url: currentUrl,
+          totalPages: results.length + urlsToVisit.length + 1,
+        });
+
+        try {
+          const page = await context.newPage();
         
         try {
           // Emit page testing event
@@ -318,6 +322,9 @@ export class RealScanAgent {
     }
 
     return results;
+    } finally {
+      await context.close();
+    }
   }
 
   private mapImpactToSeverity(impact?: string): 'critical' | 'warning' | 'minor' | 'pass' {
