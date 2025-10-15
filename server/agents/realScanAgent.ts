@@ -9,8 +9,8 @@ import * as path from 'path';
 const CHROMIUM_PATH = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
 const MAX_PAGES_PER_ESTATE = 50; // Crawl budget per PRD requirements
 const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s)
-// Use object storage for persistent file storage instead of /tmp
-const REPORTS_DIR = process.env.PRIVATE_OBJECT_DIR || '/tmp/accessibility-reports';
+// Use home directory for persistent file storage (survives restarts)
+const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility-reports');
 
 interface AxeViolation {
   id: string;
