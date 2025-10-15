@@ -18,9 +18,13 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 
 **Agent Architecture:** AI-powered automated scanning agents perform:
 - Web crawling with robots.txt awareness and page discovery.
-- Comprehensive **WCAG 2.2 compliance auditing** using **Playwright and axe-core**, covering 43 automated checks across Level A, AA, and WCAG 2.2 new criteria.
-- Severity classification (critical, warning, minor, pass).
-- Enhanced detection (8-15 issues per page) with intelligent issue descriptions, code snippet generation, impact scoring, smart deduplication, keyboard navigation analysis, and element position tracking, powered by **OpenAI (gpt-4o-mini)** for analysis, recommendations, and fix suggestions.
+- Comprehensive **WCAG 2.1 A/AA compliance auditing** using **Playwright and axe-core**, covering automated checks across Level A and AA criteria.
+- **Dynamic content handling** with network idle wait and timeout mechanisms for JavaScript-heavy applications.
+- **Detailed violation reporting** including rule ID, WCAG reference, severity classification, element selectors, and remediation suggestions.
+- **Pass/fail tracking** with comprehensive reporting of passed checks, violations, and incomplete tests.
+- **Performance optimized** for 50+ pages per scan with 10-second timeout per page.
+- **JSON/HTML export capabilities** generating detailed accessibility reports stored in `/tmp/accessibility-reports`.
+- Severity classification (critical, warning, minor, pass) with impact-based mapping.
 - **Real-time progress streaming** via WebSocket events (scan_start, page_discovered, page_testing, page_complete, issue_found, scan_complete, scan_error) for live visual testing interface.
 
 ### Data Storage
