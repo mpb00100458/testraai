@@ -119,7 +119,7 @@ class WebSocketManager {
     this.sendToEstate(estateId, { type: 'page_testing', estateId, data });
   }
 
-  emitPageComplete(estateId: string, data: { url: string; issuesFound: number; pageNumber: number; totalPages: number }) {
+  emitPageComplete(estateId: string, data: { url: string; issuesFound: number; pageNumber: number; totalPages: number; screenshot?: string }) {
     this.sendToEstate(estateId, { type: 'page_complete', estateId, data });
   }
 
