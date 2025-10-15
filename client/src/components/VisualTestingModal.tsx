@@ -43,6 +43,7 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
   const [currentPage, setCurrentPage] = useState<string>("");
   const [progress, setProgress] = useState(0);
   const [connectionLost, setConnectionLost] = useState(false);
+  const [currentScreenshot, setCurrentScreenshot] = useState<string>("");
   
   const wsRef = useRef<WebSocket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -202,6 +203,10 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
             break;
           
           case 'page_complete':
+            // Update screenshot if available
+            if (message.data?.screenshot) {
+              setCurrentScreenshot(message.data.screenshot);
+            }
             logEntry.message = `Completed: ${message.data?.url} (${message.data?.issuesFound || 0} issues)`;
             logEntry.severity = message.data?.issuesFound > 0 ? 'warning' : 'success';
             break;
@@ -368,6 +373,30 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
                       Scan is still running in the background. Checking status every 5 seconds...
                     </p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Live Screenshot */}
+          {currentScreenshot && !scanComplete && (
+            <Card>
+              <CardContent className="p-0">
+                <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/50">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-sm font-medium">Live Browser View</span>
+                  <Badge variant="secondary" className="ml-auto">Real-time</Badge>
+                </div>
+                <div className="p-4">
+                  <div className="relative rounded-lg overflow-hidden border bg-muted/50">
+                    <img 
+                      src={`data:image/jpeg;base64,${currentScreenshot}`} 
+                      alt="Current page screenshot"
+                      className="w-full h-auto"
+                      data-testid="img-live-screenshot"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2 truncate">{currentPage}</p>
                 </div>
               </CardContent>
             </Card>
