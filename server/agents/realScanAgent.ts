@@ -238,8 +238,14 @@ export class RealScanAgent {
         console.error('Error updating scan run status:', e);
       }
       
-      await storage.updateEstateStatus(estateId, 'failed');
-      throw error;
+      try {
+        await storage.updateEstateStatus(estateId, 'failed');
+      } catch (e) {
+        console.error('Error updating estate status:', e);
+      }
+      
+      // Don't throw - error already handled, scan marked as failed
+      // Throwing here can crash the entire server process
     } finally {
       // Always close browser (local to this scan run)
       if (browser) {
