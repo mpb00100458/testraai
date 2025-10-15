@@ -268,8 +268,29 @@ export class RealScanAgent {
     const urlsToVisit = [baseUrl];
     let totalDiscovered = 1;
 
-    // Create browser context (required by axe-core)
-    const context = await browser.newContext();
+    // Ensure reports directory exists
+    if (!fs.existsSync(REPORTS_DIR)) {
+      fs.mkdirSync(REPORTS_DIR, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const videoPath = path.join(REPORTS_DIR, `${estateId}_${timestamp}_video`);
+    const tracePath = path.join(REPORTS_DIR, `${estateId}_${timestamp}_trace.zip`);
+
+    // Create browser context with video recording
+    const context = await browser.newContext({
+      recordVideo: {
+        dir: videoPath,
+        size: { width: 1280, height: 720 }
+      }
+    });
+
+    // Start Playwright tracing
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true
+    });
 
     try {
       while (urlsToVisit.length > 0 && results.length < MAX_PAGES_PER_ESTATE) {
@@ -344,6 +365,14 @@ export class RealScanAgent {
           // Get page title
           const title = await page.title();
 
+          // Capture screenshot for live view
+          const screenshot = await page.screenshot({ 
+            type: 'jpeg', 
+            quality: 60,
+            fullPage: false 
+          });
+          const screenshotBase64 = screenshot.toString('base64');
+
           // Store comprehensive result (PRD: detailed reporting)
           results.push({
             url: currentUrl,
@@ -367,12 +396,13 @@ export class RealScanAgent {
             });
           }
 
-          // Emit page complete event
+          // Emit page complete event with screenshot
           wsManager.emitPageComplete(estateId, {
             url: currentUrl,
             issuesFound: violations.reduce((sum, v) => sum + v.nodes.length, 0),
             pageNumber: results.length,
             totalPages: totalDiscovered,
+            screenshot: screenshotBase64,
           });
 
           // Find links on the page (simple crawler)
@@ -419,7 +449,22 @@ export class RealScanAgent {
 
     return results;
     } finally {
+      // Stop tracing and save trace file
+      await context.tracing.stop({ path: tracePath });
+      console.log(`Playwright trace saved: ${tracePath}`);
+      
+      // Close context (this will finalize video recording)
       await context.close();
+      
+      // Wait for video to be saved
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Find the video file (Playwright saves it with a unique name)
+      const videoFiles = fs.readdirSync(videoPath);
+      if (videoFiles.length > 0) {
+        const videoFile = path.join(videoPath, videoFiles[0]);
+        console.log(`Video recording saved: ${videoFile}`);
+      }
     }
   }
 
