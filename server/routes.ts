@@ -707,13 +707,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const scans = await storage.getScanRunsByEstateId(id);
       
+      // Ensure proper camelCase mapping (Drizzle should do this automatically, but being explicit)
+      const scansWithProperCasing = scans.map(scan => ({
+        ...scan,
+        // Explicitly ensure videoPath and tracePath exist
+        videoPath: scan.videoPath || (scan as any).video_path || null,
+        tracePath: scan.tracePath || (scan as any).trace_path || null,
+      }));
+      
       // Disable caching to ensure fresh data
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.setHeader('Surrogate-Control', 'no-store');
       
-      res.json(scans);
+      res.json(scansWithProperCasing);
     } catch (error) {
       console.error("Error fetching scan history:", error);
       res.status(500).json({ message: "Failed to fetch scan history" });
