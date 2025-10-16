@@ -189,7 +189,7 @@ export default function Projects() {
       </div>
 
       {!organizations || organizations.length === 0 ? (
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <CardTitle>No Organization Found</CardTitle>
             <CardDescription>
@@ -275,7 +275,7 @@ export default function Projects() {
           </Table>
         </div>
       ) : (
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardContent className="py-16">
             <div className="flex flex-col items-center justify-center text-center">
               <FolderOpen className="h-16 w-16 text-muted-foreground mb-4" />
