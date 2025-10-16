@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Download, AlertCircle, CheckSquare, UserPlus, Tag, MessageSquare, Sparkles, Filter, Group } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GradientButton } from "@/components/GradientButton";
 import type { A11yResult, Page, User, IssueComment } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 
@@ -435,15 +436,27 @@ export default function Issues() {
                                 </p>
                               </td>
                               <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => aiSuggestionMutation.mutate(issue.id)}
-                                  disabled={aiSuggestionMutation.isPending || !!issue.aiSuggestion}
-                                  data-testid={`button-ai-${issue.id}`}
-                                >
-                                  <Sparkles className={`h-4 w-4 ${issue.aiSuggestion ? 'text-primary' : ''}`} />
-                                </Button>
+                                {!issue.aiSuggestion ? (
+                                  <GradientButton
+                                    size="sm"
+                                    onClick={() => aiSuggestionMutation.mutate(issue.id)}
+                                    disabled={aiSuggestionMutation.isPending}
+                                    data-testid={`button-ai-${issue.id}`}
+                                    showIcon={true}
+                                    className="text-xs"
+                                  >
+                                    AI Fix
+                                  </GradientButton>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled
+                                    className="cursor-default"
+                                  >
+                                    <Sparkles className="h-4 w-4 text-primary" />
+                                  </Button>
+                                )}
                               </td>
                             </tr>
                           );
