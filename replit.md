@@ -17,7 +17,16 @@ Preferred communication style: Simple, everyday language.
 The frontend is built with **React and TypeScript**, using Vite for development. It leverages **Shadcn/ui** with Radix UI primitives and **Tailwind CSS** for a professional SaaS dashboard aesthetic, emphasizing data clarity and accessibility. **TanStack Query** manages server state with optimistic updates and caching. Wouter handles client-side routing. Key design decisions include a component-driven architecture, type-safe forms with React Hook Form and Zod, responsive design, and built-in WCAG 2.2 AA accessibility.
 
 ### Backend Architecture
-The backend is a **Node.js Express.js** application written in **TypeScript**. It provides a **RESTful API** with JSON payloads. **Replit Auth using OpenID Connect (OIDC) with Passport.js** handles authentication and session management via express-session and a PostgreSQL store. **Zod schemas** ensure type-safe request/response validation across client and server.
+The backend is a **Node.js Express.js** application written in **TypeScript**. It provides a **RESTful API** with JSON payloads. **Email/password authentication using Passport.js local strategy** handles user authentication with scrypt-based password hashing and PostgreSQL session storage. **Zod schemas** ensure type-safe request/response validation across client and server.
+
+**AI Agent System:** Interactive chatbot for accessibility testing powered by **OpenAI GPT-4o-mini** (via Replit AI Integrations):
+- **Natural language interface** for accessibility questions and scan requests
+- **Automatic scan triggering** when URLs are detected in user messages
+- **Conversation persistence** with chat history stored in PostgreSQL
+- **Smart project creation** - auto-creates "AI Agent Scans" workspace and project for AI-triggered scans
+- **Seamless integration** - scans triggered by AI appear in existing Projects/Estates structure
+- **Context-aware responses** using conversation history for better assistance
+- **WCAG guidance** - explains accessibility requirements and provides actionable recommendations
 
 **Real-time Communication:** WebSocket server (ws library) provides authenticated real-time scan progress streaming. Session-based authentication verifies connections, and estate-level authorization ensures multi-tenant data isolation. Events are broadcast to subscribed clients for live visual testing feedback.
 
@@ -38,7 +47,7 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **Download capabilities** for scan videos (WebM format) and Playwright traces (ZIP format) via dedicated API endpoints.
 
 ### Data Storage
-**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, and `sessions`. Drizzle Kit is used for schema migrations.
+**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, `chat_conversations`, `chat_messages`, and `sessions`. Drizzle Kit is used for schema migrations.
 
 **Workspace Management Features:**
 - Create/edit/delete workspaces with name and URL slug
