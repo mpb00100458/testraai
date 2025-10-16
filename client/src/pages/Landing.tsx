@@ -36,8 +36,8 @@ export default function Landing() {
     defaultValues: {
       email: "",
       password: "",
-      firstName: "" as any,
-      lastName: "" as any,
+      firstName: "",
+      lastName: "",
     },
   });
 
@@ -242,6 +242,7 @@ export default function Landing() {
                             <Input 
                               {...field} 
                               type="email" 
+                              autoComplete="email"
                               placeholder="you@example.com"
                               data-testid="input-register-email"
                             />
