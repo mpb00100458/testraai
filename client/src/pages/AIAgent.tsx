@@ -67,23 +67,28 @@ export default function AIAgent() {
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
+    ws.onopen = () => {
+      console.log('[AI Agent] WebSocket connected');
+    };
+
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('[AI Agent] WebSocket message:', data);
         
         // Handle scan events
         if (data.type === 'scan_start' || data.type === 'page_complete' || data.type === 'scan_complete' || data.type === 'scan_error') {
-          const { scanRunId, estateId } = data;
+          const scanRunId = data.data?.scanRunId;
           
           setScanProgress(prev => ({
             ...prev,
             [scanRunId]: {
               scanRunId,
               status: data.type === 'scan_complete' ? 'completed' : data.type === 'scan_error' ? 'failed' : 'running',
-              pagesDiscovered: data.pagesDiscovered || prev[scanRunId]?.pagesDiscovered || 0,
-              pagesAudited: data.pagesAudited || prev[scanRunId]?.pagesAudited || 0,
-              currentPage: data.currentPage || prev[scanRunId]?.currentPage,
-              issuesFound: data.totalIssues || prev[scanRunId]?.issuesFound || 0,
+              pagesDiscovered: data.data?.totalPages || prev[scanRunId]?.pagesDiscovered || 0,
+              pagesAudited: data.data?.pageNumber || prev[scanRunId]?.pagesAudited || 0,
+              currentPage: data.data?.url || prev[scanRunId]?.currentPage,
+              issuesFound: data.data?.totalIssues || prev[scanRunId]?.issuesFound || 0,
             }
           }));
 
@@ -97,10 +102,31 @@ export default function AIAgent() {
       }
     };
 
+    ws.onerror = (error) => {
+      console.error('[AI Agent] WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('[AI Agent] WebSocket disconnected');
+    };
+
     return () => {
       ws.close();
     };
   }, [conversationId]);
+
+  // Subscribe to estates when messages contain scan metadata
+  useEffect(() => {
+    if (!messages || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+
+    messages.forEach(msg => {
+      if (msg.metadata && typeof msg.metadata === 'object' && 'estateId' in msg.metadata) {
+        const estateId = (msg.metadata as any).estateId;
+        console.log('[AI Agent] Subscribing to estate:', estateId);
+        wsRef.current?.send(JSON.stringify({ type: 'subscribe', estateId }));
+      }
+    });
+  }, [messages]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
