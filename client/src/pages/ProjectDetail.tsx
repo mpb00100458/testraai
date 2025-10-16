@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GradientButton } from "@/components/GradientButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -158,10 +159,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-estate">
+            <GradientButton data-testid="button-create-estate" showIcon={false}>
               <Plus className="h-4 w-4 mr-2" />
               Add Estate
-            </Button>
+            </GradientButton>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -203,9 +204,9 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={createEstateMutation.isPending} data-testid="button-submit-estate">
+                  <GradientButton type="submit" disabled={createEstateMutation.isPending} data-testid="button-submit-estate" showIcon={false}>
                     {createEstateMutation.isPending ? "Creating..." : "Create Estate"}
-                  </Button>
+                  </GradientButton>
                 </DialogFooter>
               </form>
             </Form>
@@ -281,7 +282,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                         </TableCell>
                         <TableCell className="text-right" data-testid={`table-cell-estate-actions-${estate.id}`}>
                           <div className="flex items-center justify-end gap-2">
-                            <Button
+                            <GradientButton
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -289,12 +290,13 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                               }}
                               disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
                               data-testid={`button-run-scan-${estate.id}`}
+                              showIcon={false}
                             >
                               <Play className="h-3 w-3 mr-1" />
                               {estate.status === 'crawling' ? 'Scanning...' :
                                estate.status === 'auditing' ? 'Testing...' :
                                'Run Scan'}
-                            </Button>
+                            </GradientButton>
                             
                             {/* Live button - only visible during active scan */}
                             {(estate.status === 'crawling' || estate.status === 'auditing') && (
@@ -341,10 +343,10 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <p className="text-muted-foreground max-w-md mb-4">
                 Add your first website estate to start accessibility testing
               </p>
-              <Button onClick={() => setOpen(true)} data-testid="button-create-first-estate">
+              <GradientButton onClick={() => setOpen(true)} data-testid="button-create-first-estate" showIcon={false}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Estate
-              </Button>
+              </GradientButton>
             </div>
           </CardContent>
         </Card>
