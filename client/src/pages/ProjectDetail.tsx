@@ -221,7 +221,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       ) : estates && estates.length > 0 ? (
         <div className="space-y-4">
           {estates.map((estate) => (
-            <Card key={estate.id} data-testid={`card-estate-${estate.id}`}>
+            <Card key={estate.id} data-testid={`card-estate-${estate.id}`} className="!shadow-md hover:!shadow-xl transition-all duration-200">
               <CardContent className="p-0">
                 <div className="w-full overflow-auto rounded-md border-0">
                   <Table>
@@ -335,7 +335,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           ))}
         </div>
       ) : (
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardContent className="py-16">
             <div className="flex flex-col items-center justify-center text-center">
               <Globe className="h-16 w-16 text-muted-foreground mb-4" />
