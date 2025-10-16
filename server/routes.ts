@@ -1045,6 +1045,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export scan results as JSON
+  app.get('/api/scans/:id/export/json', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+      const scanRun = await storage.getScanRun(id);
+      
+      if (!scanRun) {
+        return res.status(404).json({ message: "Scan run not found" });
+      }
+
+      // Verify user has access
+      const estate = await storage.getEstate(scanRun.estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied to this scan" });
+      }
+
+      // Get issues for this scan
+      const issues = await storage.getA11yResultsByScanRunId(id);
+
+      // Create export data
+      const exportData = {
+        scan: scanRun,
+        estate: {
+          id: estate.id,
+          name: estate.name,
+          url: estate.url
+        },
+        issues: issues,
+        exportedAt: new Date().toISOString()
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.json"`);
+      res.json(exportData);
+    } catch (error) {
+      console.error("Error exporting JSON:", error);
+      res.status(500).json({ message: "Failed to export JSON" });
+    }
+  });
+
   // Compare two scan runs
   app.get('/api/scans/compare/:id1/:id2', isAuthenticated, async (req: any, res) => {
     try {

@@ -406,7 +406,7 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${scanRunId}/download/video`, '_blank')}
+                                    onClick={() => window.open(`/api/scans/${scanRunId}/video`, '_blank')}
                                     className="gap-2"
                                     data-testid={`button-download-video-${scanRunId}`}
                                   >
@@ -416,7 +416,11 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${scanRunId}/export/excel`, '_blank')}
+                                    onClick={() => {
+                                      if (progress?.estateId) {
+                                        window.open(`/api/estates/${progress.estateId}/report/excel?scanRunId=${scanRunId}`, '_blank');
+                                      }
+                                    }}
                                     className="gap-2"
                                     data-testid={`button-download-excel-${scanRunId}`}
                                   >
