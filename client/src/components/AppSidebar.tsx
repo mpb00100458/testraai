@@ -1,4 +1,4 @@
-import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles } from "lucide-react";
+import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -22,6 +22,11 @@ const navigationItems = [
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "AI Agent",
+    url: "/ai-agent",
+    icon: Bot,
   },
   {
     title: "Projects",
