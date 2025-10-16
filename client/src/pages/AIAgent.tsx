@@ -1,0 +1,218 @@
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, Send, Loader2, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Link } from "wouter";
+import type { ChatMessage, ChatConversation } from "@shared/schema";
+
+export default function AIAgent() {
+  const [message, setMessage] = useState("");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Get or create conversation
+  const { data: conversation } = useQuery<ChatConversation>({
+    queryKey: ['/api/ai-agent/conversation'],
+    enabled: true,
+  });
+
+  useEffect(() => {
+    if (conversation) {
+      setConversationId(conversation.id);
+    }
+  }, [conversation]);
+
+  // Get messages for current conversation
+  const { data: messages = [] } = useQuery<ChatMessage[]>({
+    queryKey: ['/api/ai-agent/messages', conversationId],
+    enabled: !!conversationId,
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest(`/api/ai-agent/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          conversationId,
+          message: content 
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-agent/messages', conversationId] });
+      setMessage("");
+    },
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = () => {
+    if (!message.trim() || sendMessageMutation.isPending) return;
+    sendMessageMutation.mutate(message);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+              <Sparkles className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">AI Accessibility Agent</h1>
+              <p className="text-sm text-muted-foreground">
+                Ask me to scan URLs and analyze accessibility
+              </p>
+            </div>
+          </div>
+          <Badge variant="secondary" className="gap-1">
+            <Sparkles className="h-3 w-3" />
+            Powered by GPT-5
+          </Badge>
+        </div>
+      </div>
+
+      {/* Chat Messages */}
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="max-w-4xl mx-auto space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center py-12 space-y-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600/10 to-purple-600/10 mx-auto">
+                <Sparkles className="h-8 w-8 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Welcome to AI Agent</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  I can help you scan websites for accessibility issues. Just tell me what you need!
+                </p>
+              </div>
+              <div className="grid gap-2 max-w-md mx-auto mt-6">
+                <Button
+                  variant="outline"
+                  className="justify-start text-left h-auto py-3"
+                  onClick={() => setMessage("Scan https://example.com for accessibility issues")}
+                  data-testid="button-example-scan"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2 shrink-0" />
+                  Scan a website for WCAG compliance
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start text-left h-auto py-3"
+                  onClick={() => setMessage("What accessibility issues should I prioritize?")}
+                  data-testid="button-example-prioritize"
+                >
+                  <AlertCircle className="h-4 w-4 mr-2 shrink-0" />
+                  Get help prioritizing fixes
+                </Button>
+              </div>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                    msg.role === 'user'
+                      ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white'
+                      : 'bg-muted'
+                  }`}
+                  data-testid={`message-${msg.role}-${msg.id}`}
+                >
+                  {msg.role === 'assistant' && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-medium text-muted-foreground">AI Agent</span>
+                    </div>
+                  )}
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  
+                  {/* Show scan link if metadata contains scan info */}
+                  {msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata && (
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <Link
+                        href={`/estates/${msg.metadata.estateId}/scans/${msg.metadata.scanRunId}`}
+                        className="inline-flex items-center gap-2 text-sm hover-elevate active-elevate-2 px-3 py-2 rounded-md bg-background/20"
+                        data-testid={`link-scan-${msg.metadata.scanRunId}`}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        View Full Scan Results
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          
+          {sendMessageMutation.isPending && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">AI is thinking...</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Input Area */}
+      <div className="border-t bg-card/50 backdrop-blur-sm p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex gap-2">
+            <Textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Ask me to scan a URL or analyze accessibility issues..."
+              className="min-h-[60px] max-h-[200px]"
+              disabled={sendMessageMutation.isPending}
+              data-testid="input-chat-message"
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!message.trim() || sendMessageMutation.isPending}
+              size="icon"
+              className="h-[60px] w-[60px] shrink-0"
+              data-testid="button-send-message"
+            >
+              {sendMessageMutation.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Press Enter to send, Shift+Enter for new line
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
