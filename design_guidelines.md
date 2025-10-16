@@ -1,48 +1,43 @@
 # Design Guidelines: TestraAI - Premium Accessibility Testing Platform
 
-## Design Approach: Modern Developer SaaS System
-**Selected Approach:** Design System (Linear + Vercel inspired refinements)
-**Justification:** Professional B2B productivity tool demanding data clarity with premium aesthetic. Dark-first design establishes modern developer tool credibility while glassmorphic elements add depth without sacrificing information density.
+## Design Approach: Modern Clean SaaS System
+**Selected Approach:** Clean Light Design (Aikido/Linear inspired)
+**Justification:** Professional B2B productivity tool demanding data clarity with clean aesthetic. Light-first design establishes modern, accessible tool credibility while gradient accents add premium visual interest without sacrificing information density.
 
 **Core Principles:**
-- **Dark-First Premium:** Sophisticated dark UI with strategic light accents
-- **Data Clarity with Depth:** Glassmorphic layers enhance hierarchy without distraction
-- **Enterprise Polish:** Every pixel communicates professional authority
-- **Intelligent Density:** Dense data presentation with breathing room
+- **Light-First Clean:** Sophisticated white UI with colorful gradient accents
+- **Data Clarity:** Clean table layouts enhance hierarchy and readability
+- **Modern Polish:** Every pixel communicates professional simplicity
+- **Smart Use of Color:** Gradient colors for branding and interactive elements
 
 ---
 
 ## Color Palette
 
-### Dark Mode (Primary)
-- **Background Base:** 245 15% 8% (deep indigo-tinted charcoal)
-- **Background Elevated:** 245 12% 12% (raised surfaces)
-- **Glass Surface:** 245 10% 16% with 40% opacity (glassmorphic cards)
-- **Border Subtle:** 245 8% 20% (soft separators)
-- **Border Accent:** 245 60% 40% at 30% opacity (glass edges)
-- **Text Primary:** 0 0% 98% (crisp white)
-- **Text Secondary:** 245 5% 65% (muted gray)
-- **Text Tertiary:** 245 4% 50% (deemphasized)
+### Light Mode (Primary)
+- **Background Base:** 0 0% 100% (pure white)
+- **Background Elevated:** 240 5% 98% (subtle gray for cards)
+- **Surface:** 0 0% 99% (card backgrounds)
+- **Border Subtle:** 240 6% 90% (soft separators)
+- **Border Accent:** 240 5% 84% (defined borders)
+- **Text Primary:** 240 10% 10% (almost black)
+- **Text Secondary:** 240 4% 46% (muted gray)
+- **Text Tertiary:** 240 3% 62% (deemphasized)
 
-**Brand & Status Colors:**
+**Brand & Interactive Colors (Gradient-based):**
 - **Primary (Purple):** 258 90% 66% (vivid purple for actions)
-- **Primary Glow:** 258 90% 66% at 20% opacity (button halos)
+- **Primary Light:** 258 90% 95% (light purple backgrounds)
 - **Secondary (Indigo):** 243 75% 59% (supporting accent)
 - **Success:** 142 71% 45% (passes/resolved)
 - **Warning:** 38 90% 60% (moderate issues)
 - **Critical:** 0 72% 65% (violations/errors)
 - **AI Accent:** 280 85% 70% (AI-powered features)
 
-### Light Mode (Secondary)
-- **Background:** 0 0% 99%
-- **Surface:** 245 30% 96%
-- **Text Primary:** 245 15% 15%
-- **Primary:** 258 85% 58% (adjusted purple)
-
-**Gradient System:**
-- **Hero Gradient:** `from-[245_15%_8%] via-[258_40%_12%] to-[245_15%_8%]`
-- **Card Glow:** Radial gradient `from-primary/10 to-transparent` on hover
+**Gradient System (Keep for Logo & Buttons):**
+- **Logo Gradient:** `from-purple-600 via-indigo-500 to-purple-600`
+- **Button Gradient:** `from-purple-600 to-indigo-600` (purple-to-pink gradient)
 - **Border Gradient:** `from-primary/50 via-secondary/30 to-transparent`
+- **Glow Effect:** `shadow-lg shadow-primary/25` on hover
 
 ---
 
@@ -77,40 +72,40 @@
 - **Main Layout:** Sidebar (w-64) + Content (flex-1) + Inspector Panel (w-96 slide-over)
 - **Dashboard Grid:** grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6
 - **Data Tables:** Full width with horizontal scroll, sticky headers
-- **Card Radius:** rounded-xl (12px) for premium feel
+- **Card Radius:** rounded-lg (8px) for clean modern feel
 
 ---
 
 ## Component Library
 
-### Glassmorphic Cards
+### Clean Cards
 **Base Style:**
 ```
-bg-glass (245 10% 16% / 40%)
-backdrop-blur-xl
+bg-white
 border border-border-subtle
-shadow-2xl shadow-black/20
-rounded-xl
+shadow-sm
+rounded-lg
+hover:shadow-md transition-shadow
 ```
 **Variants:**
-- **Dashboard Stats:** p-6, gradient border top, large metric display, trend indicator
-- **Data Cards:** p-4, hover glow effect (ring-1 ring-primary/20), smooth transition
-- **Glass Panel:** Floating panels with `bg-elevated/60 backdrop-blur-2xl`
+- **Dashboard Stats:** p-6, gradient button for actions, large metric display, trend indicator
+- **Data Cards:** p-4, hover elevation, smooth transition
+- **Table Cards:** White background, bordered rows, clean spacing
 
 ### Navigation
 - **Sidebar:** Fixed, collapsible, active state: `bg-primary/10 border-l-2 border-primary`
-- **Top Bar:** h-16, glass effect, logo left, global search center, user avatar right
+- **Top Bar:** h-16, white background, logo left (with gradient), global search center, user avatar right
 - **Tabs:** Underline style with `border-b-2 border-primary` active state
 
 ### Data Visualization
 **Dashboard Cards:**
 - **Metric Display:** Icon (lucide) + Label (text-sm) + Value (text-5xl font-bold) + Trend
 - **Mini Charts:** Recharts area with gradient fill (`fill-primary/20 stroke-primary`)
-- **Severity Badges:** Pill shape, semantic colors, icons included (never color alone)
+- **Severity Badges:** Purple pill badges with percentages (100%, 79%, 49%)
 
 **Issues Table:**
-- **Header:** Sticky, glass surface, sortable columns with arrow indicators
-- **Rows:** Striped (`odd:bg-white/5`), hover: `bg-primary/5`, expandable for details
+- **Header:** Sticky, white background, sortable columns with arrow indicators
+- **Rows:** Clean white background, hover: `bg-gray-50`, expandable for details
 - **Columns:** Severity Badge | Issue Type | Element (mono font) | Page | Count | Actions
 - **Bulk Actions:** Top toolbar with checkboxes, export/assign/resolve buttons
 
@@ -118,7 +113,7 @@ rounded-xl
 **Input Fields:**
 ```
 h-11 px-4
-bg-elevated/50 backdrop-blur
+bg-white
 border border-border-subtle
 focus:border-primary focus:ring-2 focus:ring-primary/20
 rounded-lg
@@ -126,29 +121,31 @@ text-primary placeholder:text-tertiary
 ```
 
 **Buttons:**
-- **Primary:** `bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 h-11 px-6 rounded-lg font-medium`
-- **Secondary:** `border border-border-accent bg-elevated/50 backdrop-blur hover:bg-elevated`
-- **Ghost:** `hover:bg-white/5 text-secondary hover:text-primary`
-- **AI Button:** `bg-gradient-to-r from-primary to-ai-accent` with sparkle icon
+- **Primary (Gradient):** `bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white shadow-lg shadow-primary/25 h-11 px-6 rounded-lg font-medium`
+- **Secondary:** `border border-border-accent bg-white hover:bg-gray-50`
+- **Ghost:** `hover:bg-gray-100 text-secondary hover:text-primary`
+- **AI Button:** `bg-gradient-to-r from-purple-600 to-indigo-600` with sparkle icon
+- **Badge Pills:** `bg-primary text-white rounded-full px-3 py-1` for percentages
 
 ### Overlays
-- **Modals:** Center, max-w-2xl, glass panel with `backdrop-blur-xl bg-black/50` backdrop
-- **Slide-overs:** Right panel w-96, glass surface, slide-in animation (300ms ease)
-- **Toasts:** Top-right, glass cards with status icon, auto-dismiss 4s
+- **Modals:** Center, max-w-2xl, white card with shadow-xl
+- **Slide-overs:** Right panel w-96, white surface, slide-in animation (300ms ease)
+- **Toasts:** Top-right, white cards with status icon, auto-dismiss 4s
 
 ---
 
 ## Visual Effects
 
-**Glassmorphism Implementation:**
-- Cards: `backdrop-blur-xl` + `bg-surface/40` + subtle border
-- Panels: `backdrop-blur-2xl` + `bg-elevated/60` for floating elements
-- Hover states: Add `ring-1 ring-primary/20` glow effect
+**Clean Design Implementation:**
+- Cards: `bg-white` + `shadow-sm` + subtle border
+- Panels: White backgrounds with clean borders
+- Hover states: Add `shadow-md` elevation effect
 
-**Gradient Accents:**
-- **Background:** Subtle radial gradient `from-primary/5 via-transparent to-secondary/5` on page backgrounds
-- **Borders:** Linear gradient borders on premium cards using `border-image` or pseudo-elements
-- **Button Glow:** `shadow-lg shadow-primary/25` on primary buttons
+**Gradient Accents (Strategic Use):**
+- **Logo:** Always uses gradient colors (purple to indigo)
+- **Primary Buttons:** Gradient background with glow effect
+- **AI Features:** Gradient buttons with sparkle icon
+- **Status Badges:** Purple gradient pills for percentages
 
 **Animations (Minimal):**
 - **Loading:** Skeleton screens with shimmer gradient animation
@@ -163,33 +160,36 @@ text-primary placeholder:text-tertiary
 ### Dashboard (Home)
 **Hero Stats Grid (4-col):**
 - Total Issues Scanned | Pass Rate % | Critical Issues | AI Suggestions
-- Each: Glass card, large metric (text-5xl), trend arrow, mini sparkline chart
+- Each: White card, large metric (text-5xl), trend arrow, mini sparkline chart
+
+**Category Table (Like Screenshot):**
+- Left column: Colorful icon + category name (Code, Build, Artifacts, Cloud)
+- Middle columns: Tools/stats with icons
+- Right columns: Purple percentage badges (100%, 79%, 49%)
+- Clean white rows with subtle borders
 
 **Real-Time Activity Feed:**
 - Left column (w-2/3): Live scan results with WebSocket updates, animated new entries
 - Right column (w-1/3): Team activity, recent fixes, collaboration updates
 
-**Severity Distribution Chart:**
-- Stacked area chart showing critical/warning/minor over time
-- Gradient fills with transparency, interactive tooltips
-
-**AI Insights Panel:**
-- Glass card with gradient border, AI icon, suggested fixes ranked by impact
-- "Apply Fix" buttons with shimmer effect
+**Statistics Panels:**
+- Three sections: PREVENTED | DETECTED | REMEDIATED
+- Large numbers with colored progress bars below
+- Clean white backgrounds with subtle shadows
 
 ### Issues Explorer
-**Filter Bar:** Glass panel, sticky top, multi-select dropdowns (severity, page, element type), search with ⌘K
-**Table:** Full-width, virtualized scroll (react-window), expandable rows show:
+**Filter Bar:** White panel, sticky top, multi-select dropdowns (severity, page, element type), search with ⌘K
+**Table:** Full-width, clean white background, bordered rows show:
 - Screenshot thumbnail
-- Code snippet (syntax highlighted with prism.js)
-- AI-generated fix suggestion with "Copy" button
+- Code snippet (syntax highlighted)
+- AI-generated fix suggestion with gradient "AI Fix" button
 - Resolution history timeline
 
 ### Reports & Analytics
-**Report Grid:** 3-column masonry layout, glass cards with:
+**Report Grid:** 3-column masonry layout, white cards with:
 - Report preview (mini chart visualization)
 - Date range, scope, compliance score badge
-- Download/Share/Schedule buttons
+- Download/Share/Schedule gradient buttons
 
 **Compliance Dashboard:**
 - WCAG 2.2 level overview (A, AA, AAA) with circular progress indicators
@@ -198,7 +198,7 @@ text-primary placeholder:text-tertiary
 
 ### Team & Settings
 **Member Management:**
-- Avatar grid with glass cards, role badges, status indicators (online/offline)
+- Avatar grid with white cards, role badges, status indicators (online/offline)
 - Invite modal with role selector, permission matrix
 
 **Integrations:**
@@ -211,7 +211,7 @@ text-primary placeholder:text-tertiary
 
 **Strategy:** Minimal, strategic imagery for empty states and onboarding only.
 
-**No Hero Image:** Dashboard-first approach - users land directly in data interface post-auth.
+**Logo:** Always uses gradient colors (purple to indigo gradient text or graphic)
 
 **Empty State Illustrations:**
 - **First Scan:** Abstract line art of accessibility tree (purple/indigo gradient)
@@ -225,4 +225,4 @@ text-primary placeholder:text-tertiary
 
 ---
 
-**Technical Implementation:** Build with Radix UI primitives, Tailwind custom config for glass utilities, Recharts for visualization, Framer Motion for micro-interactions. Ensure WCAG 2.2 AA compliance - all glass effects maintain 4.5:1 text contrast minimum.
+**Technical Implementation:** Build with Radix UI primitives, Tailwind custom config for gradient utilities, Recharts for visualization, Framer Motion for micro-interactions. Ensure WCAG 2.2 AA compliance - all effects maintain 4.5:1 text contrast minimum.
