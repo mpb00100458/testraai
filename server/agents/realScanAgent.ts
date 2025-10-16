@@ -204,8 +204,8 @@ export class RealScanAgent {
       // Complete the scan run
       await storage.completeScanRun(scanRun.id);
 
-      // Mark as completed
-      await storage.updateEstateStatus(estateId, 'completed');
+      // Reset estate status back to idle (ready for next scan)
+      await storage.updateEstateStatus(estateId, 'idle');
 
       // Generate comprehensive report (PRD requirement)
       const report: ScanReport = {
@@ -477,11 +477,18 @@ export class RealScanAgent {
       // Wait for video to be saved
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Find the video file (Playwright saves it with a unique name)
+      // Find the LARGEST video file (the full scan recording, not individual page videos)
       const videoFiles = fs.readdirSync(videoDir);
       if (videoFiles.length > 0) {
-        finalVideoPath = path.join(videoDir, videoFiles[0]);
-        console.log(`Video recording saved: ${finalVideoPath}`);
+        // Sort by file size descending to get the largest video
+        const videoFilesWithSize = videoFiles.map(file => {
+          const filePath = path.join(videoDir, file);
+          const stats = fs.statSync(filePath);
+          return { file, size: stats.size, path: filePath };
+        }).sort((a, b) => b.size - a.size);
+        
+        finalVideoPath = videoFilesWithSize[0].path;
+        console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
       }
     }
 
