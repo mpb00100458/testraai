@@ -272,7 +272,7 @@ export default function Landing() {
       </div>
 
       {/* Right Column - Hero Features */}
-      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-12">
+      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-violet-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-12">
         <div className="max-w-lg space-y-8">
           <div className="space-y-4">
             <h2 className="text-4xl font-bold leading-tight">
