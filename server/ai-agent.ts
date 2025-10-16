@@ -127,9 +127,10 @@ Keep responses concise and helpful.`
         });
 
         // Trigger the actual scan asynchronously (don't wait for it)
-        import('./agents/accessibility-agent').then(async ({ runAccessibilityAgent }) => {
+        import('./agents/realScanAgent').then(async ({ RealScanAgent }) => {
           try {
-            await runAccessibilityAgent(estate.id, scanRun.id);
+            const agent = new RealScanAgent();
+            await agent.runScan(estate.id);
           } catch (error) {
             console.error('Error running accessibility scan:', error);
             await storage.updateScanRunStatus(scanRun.id, 'failed');
