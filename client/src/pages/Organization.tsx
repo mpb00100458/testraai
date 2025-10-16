@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Building2, Users, UserPlus, Pencil, Trash2, MoreVertical } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { GradientButton } from "@/components/GradientButton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -273,10 +274,10 @@ export default function OrganizationPage() {
           <h1 className="text-4xl font-bold tracking-tight">Workspace</h1>
           <p className="text-lg text-muted-foreground">Manage your workspace and team collaboration</p>
         </div>
-        <Button onClick={() => setCreateOrgOpen(true)} data-testid="button-create-organization">
+        <GradientButton onClick={() => setCreateOrgOpen(true)} data-testid="button-create-organization" showIcon={false}>
           <Building2 className="h-4 w-4 mr-2" />
           New Workspace
-        </Button>
+        </GradientButton>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -474,9 +475,9 @@ export default function OrganizationPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={createOrgMutation.isPending} data-testid="button-submit-organization">
+                <GradientButton type="submit" disabled={createOrgMutation.isPending} data-testid="button-submit-organization" showIcon={false}>
                   {createOrgMutation.isPending ? "Creating..." : "Create Workspace"}
-                </Button>
+                </GradientButton>
               </DialogFooter>
             </form>
           </Form>
@@ -525,9 +526,9 @@ export default function OrganizationPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={updateOrgMutation.isPending} data-testid="button-submit-edit-organization">
+                <GradientButton type="submit" disabled={updateOrgMutation.isPending} data-testid="button-submit-edit-organization" showIcon={false}>
                   {updateOrgMutation.isPending ? "Updating..." : "Update Workspace"}
-                </Button>
+                </GradientButton>
               </DialogFooter>
             </form>
           </Form>
@@ -582,9 +583,9 @@ export default function OrganizationPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit" disabled={inviteMemberMutation.isPending} data-testid="button-submit-invite">
+                <GradientButton type="submit" disabled={inviteMemberMutation.isPending} data-testid="button-submit-invite" showIcon={false}>
                   {inviteMemberMutation.isPending ? "Adding..." : "Add Member"}
-                </Button>
+                </GradientButton>
               </DialogFooter>
             </form>
           </Form>
