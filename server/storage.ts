@@ -9,6 +9,7 @@ import {
   a11yResults,
   a11yRollups,
   a11yHistory,
+  issueComments,
   type User,
   type UpsertUser,
   type Organization,
@@ -29,6 +30,7 @@ import {
   type InsertA11yRollup,
   type A11yHistory,
   type InsertA11yHistory,
+  type IssueComment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc } from "drizzle-orm";
@@ -37,6 +39,7 @@ export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getUsersByOrgId(orgId: string): Promise<User[]>;
   
   // Organization operations
   getOrganization(id: string): Promise<Organization | undefined>;
@@ -85,10 +88,18 @@ export interface IStorage {
   completeScanRun(id: string): Promise<ScanRun>;
   
   // A11y Result operations
+  getA11yResult(id: string): Promise<A11yResult | undefined>;
   getA11yResultsByPageId(pageId: string): Promise<A11yResult[]>;
   getA11yResultsByEstateId(estateId: string): Promise<A11yResult[]>;
   getA11yResultsByScanRunId(scanRunId: string): Promise<A11yResult[]>;
   createA11yResult(result: InsertA11yResult): Promise<A11yResult>;
+  updateIssuesStatus(issueIds: string[], status: string): Promise<void>;
+  assignIssues(issueIds: string[], userId: string): Promise<void>;
+  updateIssueAISuggestion(issueId: string, suggestion: string): Promise<void>;
+  
+  // Issue Comments operations
+  getIssueComments(issueId: string): Promise<any[]>;
+  createIssueComment(comment: { issueId: string; userId: string; comment: string }): Promise<any>;
   
   // A11y Rollup operations
   getA11yRollupByEstateId(estateId: string): Promise<A11yRollup | undefined>;
@@ -397,6 +408,60 @@ export class DatabaseStorage implements IStorage {
   async createA11yHistorySnapshot(snapshot: InsertA11yHistory): Promise<A11yHistory> {
     const [newSnapshot] = await db.insert(a11yHistory).values(snapshot).returning();
     return newSnapshot;
+  }
+
+  // User operations (additional)
+  async getUsersByOrgId(orgId: string): Promise<User[]> {
+    const orgMemberships = await db
+      .select()
+      .from(memberships)
+      .where(eq(memberships.organizationId, orgId));
+    
+    if (orgMemberships.length === 0) return [];
+    
+    const userIds = orgMemberships.map(m => m.userId);
+    return await db.select().from(users).where(inArray(users.id, userIds));
+  }
+
+  // A11y Result operations (additional)
+  async getA11yResult(id: string): Promise<A11yResult | undefined> {
+    const [result] = await db.select().from(a11yResults).where(eq(a11yResults.id, id));
+    return result;
+  }
+
+  async updateIssuesStatus(issueIds: string[], status: string): Promise<void> {
+    await db
+      .update(a11yResults)
+      .set({ status: status as any, updatedAt: new Date() })
+      .where(inArray(a11yResults.id, issueIds));
+  }
+
+  async assignIssues(issueIds: string[], userId: string): Promise<void> {
+    await db
+      .update(a11yResults)
+      .set({ assignedTo: userId, updatedAt: new Date() })
+      .where(inArray(a11yResults.id, issueIds));
+  }
+
+  async updateIssueAISuggestion(issueId: string, suggestion: string): Promise<void> {
+    await db
+      .update(a11yResults)
+      .set({ aiSuggestion: suggestion, updatedAt: new Date() })
+      .where(eq(a11yResults.id, issueId));
+  }
+
+  // Issue Comments operations
+  async getIssueComments(issueId: string): Promise<IssueComment[]> {
+    return await db
+      .select()
+      .from(issueComments)
+      .where(eq(issueComments.issueId, issueId))
+      .orderBy(desc(issueComments.createdAt));
+  }
+
+  async createIssueComment(comment: { issueId: string; userId: string; comment: string }): Promise<IssueComment> {
+    const [newComment] = await db.insert(issueComments).values(comment).returning();
+    return newComment;
   }
 }
 
