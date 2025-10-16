@@ -39,6 +39,7 @@ export default function OrganizationPage() {
   const [editOrgOpen, setEditOrgOpen] = useState(false);
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [selectedWorkspaceForMembers, setSelectedWorkspaceForMembers] = useState<string | null>(null);
   const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null);
   const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
 
@@ -60,9 +61,25 @@ export default function OrganizationPage() {
     enabled: isAuthenticated,
   });
 
+  // Auto-select first workspace when organizations load
+  useEffect(() => {
+    if (organizations && organizations.length > 0 && !selectedWorkspaceForMembers) {
+      setSelectedWorkspaceForMembers(organizations[0].id);
+    }
+  }, [organizations, selectedWorkspaceForMembers]);
+
   const { data: members, isLoading: membersLoading } = useQuery<MembershipWithUser[]>({
-    queryKey: ["/api/organizations/members"],
-    enabled: isAuthenticated,
+    queryKey: ["/api/organizations", selectedWorkspaceForMembers, "members"],
+    queryFn: selectedWorkspaceForMembers 
+      ? async () => {
+          const response = await fetch(`/api/organizations/${selectedWorkspaceForMembers}/members`, {
+            credentials: 'include'
+          });
+          if (!response.ok) throw new Error('Failed to fetch members');
+          return response.json();
+        }
+      : undefined,
+    enabled: isAuthenticated && !!selectedWorkspaceForMembers,
   });
 
   const orgForm = useForm<InsertOrganization>({
@@ -167,14 +184,14 @@ export default function OrganizationPage() {
 
   const inviteMemberMutation = useMutation({
     mutationFn: async (data: InviteMemberForm) => {
-      if (!organizations || organizations.length === 0) return;
-      await apiRequest("POST", `/api/organizations/${organizations[0].id}/members`, data);
+      if (!selectedWorkspaceForMembers) return;
+      await apiRequest("POST", `/api/organizations/${selectedWorkspaceForMembers}/members`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organizations/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations", selectedWorkspaceForMembers, "members"] });
       toast({
         title: "Success",
-        description: "Member invited successfully",
+        description: "Member added successfully",
       });
       setInviteMemberOpen(false);
       inviteForm.reset();
@@ -193,7 +210,7 @@ export default function OrganizationPage() {
       await apiRequest("PATCH", `/api/memberships/${id}/role`, { role });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organizations/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations", selectedWorkspaceForMembers, "members"] });
       toast({
         title: "Success",
         description: "Role updated successfully",
@@ -213,7 +230,7 @@ export default function OrganizationPage() {
       await apiRequest("DELETE", `/api/memberships/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organizations/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations", selectedWorkspaceForMembers, "members"] });
       toast({
         title: "Success",
         description: "Member removed successfully",
@@ -329,12 +346,29 @@ export default function OrganizationPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
                 <CardTitle>Team Members</CardTitle>
-                <CardDescription>Assign users to workspace</CardDescription>
+                <CardDescription>Manage members for workspace</CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setInviteMemberOpen(true)} data-testid="button-invite-member">
+              {organizations && organizations.length > 1 && (
+                <Select
+                  value={selectedWorkspaceForMembers || ''}
+                  onValueChange={setSelectedWorkspaceForMembers}
+                >
+                  <SelectTrigger className="w-48" data-testid="select-workspace-for-members">
+                    <SelectValue placeholder="Select workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setInviteMemberOpen(true)} data-testid="button-invite-member" disabled={!selectedWorkspaceForMembers}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add Member
               </Button>

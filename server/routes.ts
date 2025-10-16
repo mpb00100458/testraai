@@ -160,6 +160,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get members for a specific organization
+  app.get('/api/organizations/:orgId/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { orgId } = req.params;
+      
+      // Verify user has access to this organization
+      const membership = await storage.getMembership(userId, orgId);
+      if (!membership) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get memberships for this org
+      const memberships = await storage.getMembershipsByOrgId(orgId);
+      
+      // Enrich with user data
+      const enrichedMemberships = await Promise.all(
+        memberships.map(async (membership) => {
+          const user = await storage.getUser(membership.userId);
+          return { ...membership, user };
+        })
+      );
+      
+      res.json(enrichedMemberships);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+      res.status(500).json({ message: "Failed to fetch members" });
+    }
+  });
+
   // Add member to organization
   app.post('/api/organizations/:orgId/members', isAuthenticated, async (req: any, res) => {
     try {
