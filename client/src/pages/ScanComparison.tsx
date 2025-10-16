@@ -147,7 +147,7 @@ export default function ScanComparison({ scan1Id, scan2Id }: ScanComparisonProps
 
       {/* Scan Overview Cards */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Earlier Scan
@@ -179,7 +179,7 @@ export default function ScanComparison({ scan1Id, scan2Id }: ScanComparisonProps
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Later Scan
@@ -213,7 +213,7 @@ export default function ScanComparison({ scan1Id, scan2Id }: ScanComparisonProps
       </div>
 
       {/* Changes Summary */}
-      <Card>
+      <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-primary" />
@@ -270,7 +270,7 @@ export default function ScanComparison({ scan1Id, scan2Id }: ScanComparisonProps
 
       {/* Issue Type Changes */}
       {Object.keys(comparison.issueTypeChanges).length > 0 && (
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <CardTitle>Issue Type Breakdown</CardTitle>
             <CardDescription>

@@ -34,7 +34,7 @@ export default function Settings() {
         <p className="text-lg text-muted-foreground">Manage your account and preferences</p>
       </div>
 
-      <Card>
+      <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
           <CardDescription>Your personal details</CardDescription>
@@ -74,7 +74,7 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
         <CardHeader>
           <CardTitle>Preferences</CardTitle>
           <CardDescription>Customize your experience</CardDescription>
