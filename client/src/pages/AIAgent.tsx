@@ -45,6 +45,43 @@ export default function AIAgent() {
     enabled: !!conversationId,
   });
 
+  // Fetch scan statuses for all messages with scanRunId to initialize progress state
+  useEffect(() => {
+    if (!messages || messages.length === 0) return;
+
+    const fetchScanStatuses = async () => {
+      for (const msg of messages) {
+        if (msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata) {
+          const scanRunId = (msg.metadata as any).scanRunId;
+          
+          // Skip if we already have status for this scan
+          if (scanProgress[scanRunId]) continue;
+
+          try {
+            const response = await fetch(`/api/scans/${scanRunId}`);
+            if (!response.ok) continue;
+            
+            const scan: any = await response.json();
+            setScanProgress(prev => ({
+              ...prev,
+              [scanRunId]: {
+                scanRunId,
+                status: scan.status,
+                pagesDiscovered: scan.pagesAudited || 0,
+                pagesAudited: scan.pagesAudited || 0,
+                issuesFound: scan.totalIssues || 0,
+              }
+            }));
+          } catch (error) {
+            console.error('Error fetching scan status:', error);
+          }
+        }
+      }
+    };
+
+    fetchScanStatuses();
+  }, [messages]);
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -242,8 +279,8 @@ export default function AIAgent() {
                       {(() => {
                         const metadata = msg.metadata as any;
                         const progress = scanProgress[metadata.scanRunId];
-                        const isRunning = !progress || progress?.status === 'running';
-                        const isCompleted = progress?.status === 'completed';
+                        const isRunning = progress?.status === 'running';
+                        const isCompleted = !progress || progress?.status === 'completed';
                         const isFailed = progress?.status === 'failed';
 
                         return (
