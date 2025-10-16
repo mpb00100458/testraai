@@ -51,6 +51,9 @@ export interface IStorage {
   getMembershipsByOrgId(orgId: string): Promise<Membership[]>;
   createMembership(membership: InsertMembership): Promise<Membership>;
   updateMembershipRole(id: string, role: 'OWNER' | 'ADMIN' | 'DEV' | 'VIEWER'): Promise<Membership>;
+  deleteMembership(id: string): Promise<void>;
+  updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization>;
+  deleteOrganization(id: string): Promise<void>;
   
   // Project operations
   getProject(id: string): Promise<Project | undefined>;
@@ -221,6 +224,23 @@ export class DatabaseStorage implements IStorage {
       .where(eq(memberships.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteMembership(id: string): Promise<void> {
+    await db.delete(memberships).where(eq(memberships.id, id));
+  }
+
+  async updateOrganization(id: string, org: Partial<InsertOrganization>): Promise<Organization> {
+    const [updated] = await db
+      .update(organizations)
+      .set(org)
+      .where(eq(organizations.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteOrganization(id: string): Promise<void> {
+    await db.delete(organizations).where(eq(organizations.id, id));
   }
 
   // Project operations
