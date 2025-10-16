@@ -1731,6 +1731,17 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
     }
   });
 
+  app.delete('/api/ai-agent/conversations/:conversationId/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const conversationId = req.params.conversationId;
+      await storage.deleteChatMessages(conversationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting messages:", error);
+      res.status(500).json({ message: "Failed to delete messages" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize WebSocket server
