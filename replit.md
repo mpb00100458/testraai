@@ -6,6 +6,11 @@ This **Accessibility Testing Platform** automates WCAG 2.2 compliance auditing f
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+### UI Terminology
+- The application uses "Workspace" terminology in the UI for simpler, more intuitive user experience
+- Database tables remain named "organizations" and "memberships" (no schema changes)
+- Team member management includes invite by email, role assignment (OWNER/ADMIN/DEV/VIEWER), and workspace access control
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -33,7 +38,14 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **Download capabilities** for scan videos (WebM format) and Playwright traces (ZIP format) via dedicated API endpoints.
 
 ### Data Storage
-**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with organization-based role access control and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations`, `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, and `sessions`. Drizzle Kit is used for schema migrations.
+**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, and `sessions`. Drizzle Kit is used for schema migrations.
+
+**Workspace Management Features:**
+- Create/edit/delete workspaces with name and URL slug
+- Invite members by email with role assignment (OWNER, ADMIN, DEV, VIEWER)
+- Change member roles (requires OWNER or ADMIN permission)
+- Remove members from workspace
+- Role-based access control (RBAC) with color-coded badges
 
 ## External Dependencies
 
