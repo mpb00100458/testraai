@@ -395,7 +395,7 @@ export default function AIAgent() {
                   {/* Show scan progress and results */}
                   {msg.metadata && typeof msg.metadata === 'object' && ('scanRunId' in msg.metadata || 'estateId' in msg.metadata) && (
                     <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-                      {(() => {
+                      {((): React.ReactNode => {
                         const metadata = msg.metadata as any;
                         
                         // Find the scan: either by scanRunId (legacy) or by estateId (new approach)
@@ -526,11 +526,13 @@ export default function AIAgent() {
           )}
           
           {sendMessageMutation.isPending && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm text-muted-foreground">AI is thinking...</span>
+            <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="max-w-[85%] rounded-xl shadow-sm bg-white border border-border px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-purple-600 to-indigo-600">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground">AI is analyzing your request...</span>
                 </div>
               </div>
             </div>
@@ -539,15 +541,15 @@ export default function AIAgent() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t bg-card/50 backdrop-blur-sm p-4">
+      <div className="border-t bg-white shadow-lg p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Ask me to scan a URL or analyze accessibility issues..."
-              className="min-h-[60px] max-h-[200px]"
+              placeholder="Ask me to scan a URL, get WCAG guidance, or analyze accessibility..."
+              className="min-h-[80px] max-h-[200px] text-[15px] leading-relaxed resize-none border-2 focus:border-primary"
               disabled={sendMessageMutation.isPending}
               data-testid="input-chat-message"
             />
@@ -555,18 +557,23 @@ export default function AIAgent() {
               onClick={handleSend}
               disabled={!message.trim() || sendMessageMutation.isPending}
               size="icon"
-              className="h-[60px] w-[60px] shrink-0"
+              className="h-[80px] w-[80px] shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 shadow-lg shadow-primary/25"
               data-testid="button-send-message"
             >
               {sendMessageMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-6 w-6 animate-spin" />
               ) : (
-                <Send className="h-5 w-5" />
+                <Send className="h-6 w-6" />
               )}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Press Enter to send, Shift+Enter for new line
+          <p className="text-xs text-muted-foreground mt-3 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted">
+              <kbd className="text-[10px] font-mono">Enter</kbd> to send
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-muted">
+              <kbd className="text-[10px] font-mono">Shift</kbd>+<kbd className="text-[10px] font-mono">Enter</kbd> for new line
+            </span>
           </p>
         </div>
       </div>

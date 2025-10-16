@@ -125,6 +125,7 @@ export interface IStorage {
   createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
   getChatMessages(conversationId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  deleteChatMessages(conversationId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -544,6 +545,10 @@ export class DatabaseStorage implements IStorage {
   async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
     const [newMessage] = await db.insert(chatMessages).values(message).returning();
     return newMessage;
+  }
+
+  async deleteChatMessages(conversationId: string): Promise<void> {
+    await db.delete(chatMessages).where(eq(chatMessages.conversationId, conversationId));
   }
 }
 
