@@ -53,7 +53,13 @@ export default function AIAgent() {
         message: content 
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // If the response includes an estateId, subscribe to it immediately
+      if (data.estateId && wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log('[AI Agent] Subscribing to estate from API response:', data.estateId);
+        wsRef.current.send(JSON.stringify({ type: 'subscribe', estateId: data.estateId }));
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['/api/ai-agent/messages', conversationId] });
       setMessage("");
     },
@@ -115,17 +121,20 @@ export default function AIAgent() {
     };
   }, [conversationId]);
 
-  // Subscribe to estates when messages contain scan metadata
+  // Subscribe to latest estate with scan metadata
   useEffect(() => {
     if (!messages || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
-    messages.forEach(msg => {
-      if (msg.metadata && typeof msg.metadata === 'object' && 'estateId' in msg.metadata) {
-        const estateId = (msg.metadata as any).estateId;
-        console.log('[AI Agent] Subscribing to estate:', estateId);
-        wsRef.current?.send(JSON.stringify({ type: 'subscribe', estateId }));
-      }
-    });
+    // Find the most recent message with scan metadata
+    const latestScanMessage = [...messages]
+      .reverse()
+      .find(msg => msg.metadata && typeof msg.metadata === 'object' && 'estateId' in msg.metadata);
+
+    if (latestScanMessage) {
+      const estateId = (latestScanMessage.metadata as any).estateId;
+      console.log('[AI Agent] Subscribing to latest estate:', estateId);
+      wsRef.current?.send(JSON.stringify({ type: 'subscribe', estateId }));
+    }
   }, [messages]);
 
   // Auto-scroll to bottom when new messages arrive
