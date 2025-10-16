@@ -34,7 +34,7 @@ export default function Reports() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -57,7 +57,7 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-critical/10 text-critical">
@@ -81,7 +81,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
         <CardHeader>
           <CardTitle>Report History</CardTitle>
           <CardDescription>Previously generated reports</CardDescription>

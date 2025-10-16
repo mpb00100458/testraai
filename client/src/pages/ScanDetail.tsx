@@ -170,7 +170,7 @@ export default function ScanDetail({ scanId }: ScanDetailProps) {
           <Skeleton className="h-96 w-full" />
         </div>
       ) : error ? (
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardContent className="py-16">
             <div className="flex flex-col items-center justify-center text-center">
               <AlertCircle className="h-16 w-16 text-destructive mb-4" />
@@ -200,7 +200,7 @@ export default function ScanDetail({ scanId }: ScanDetailProps) {
         </Card>
       ) : scanData ? (
         <>
-          <Card>
+          <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
             <CardHeader>
               <CardTitle>Scan Overview</CardTitle>
               <CardDescription>
@@ -269,7 +269,7 @@ export default function ScanDetail({ scanId }: ScanDetailProps) {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -386,7 +386,7 @@ export default function ScanDetail({ scanId }: ScanDetailProps) {
           </Card>
         </>
       ) : (
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardContent className="py-16">
             <div className="flex flex-col items-center justify-center text-center">
               <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />
