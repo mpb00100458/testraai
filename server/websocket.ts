@@ -161,7 +161,13 @@ class WebSocketManager {
       if (!sessionQuery.rows.length) return null;
 
       const sessionData = sessionQuery.rows[0].sess as any;
-      const userId = sessionData?.passport?.user?.claims?.sub;
+      // With Passport.js local strategy, user ID is stored directly in passport.user
+      const userId = sessionData?.passport?.user;
+      
+      console.log('[WS] Session data check:', { 
+        hasPassport: !!sessionData?.passport, 
+        userId: userId 
+      });
       
       return userId || null;
     } catch (error) {
