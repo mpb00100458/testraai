@@ -138,7 +138,10 @@ class WebSocketManager {
   private async extractUserFromSession(req: IncomingMessage): Promise<string | null> {
     try {
       const cookie = req.headers.cookie;
-      if (!cookie) return null;
+      if (!cookie) {
+        console.log('[WS] No cookie in request');
+        return null;
+      }
 
       // Parse session cookie
       const cookies = cookie.split(';').reduce((acc, c) => {
@@ -148,30 +151,36 @@ class WebSocketManager {
       }, {} as Record<string, string>);
 
       const sessionId = cookies['connect.sid'];
-      if (!sessionId) return null;
+      if (!sessionId) {
+        console.log('[WS] No connect.sid cookie found');
+        return null;
+      }
 
       // Decode session ID (remove 's:' prefix and signature)
       const decodedSessionId = decodeURIComponent(sessionId).split('.')[0].replace('s:', '');
+      console.log('[WS] Decoded session ID:', decodedSessionId);
       
       // Query session store (PostgreSQL)
       const sessionQuery = await db.execute(
         sql`SELECT sess FROM sessions WHERE sid = ${decodedSessionId}`
       );
 
-      if (!sessionQuery.rows.length) return null;
+      if (!sessionQuery.rows.length) {
+        console.log('[WS] No session found in database for SID:', decodedSessionId);
+        return null;
+      }
 
       const sessionData = sessionQuery.rows[0].sess as any;
+      console.log('[WS] Session data structure:', JSON.stringify(sessionData, null, 2));
+      
       // With Passport.js local strategy, user ID is stored directly in passport.user
       const userId = sessionData?.passport?.user;
       
-      console.log('[WS] Session data check:', { 
-        hasPassport: !!sessionData?.passport, 
-        userId: userId 
-      });
+      console.log('[WS] User ID extracted:', userId);
       
       return userId || null;
     } catch (error) {
-      console.error('Error extracting user from session:', error);
+      console.error('[WS] Error extracting user from session:', error);
       return null;
     }
   }
