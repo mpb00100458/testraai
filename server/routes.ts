@@ -88,6 +88,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update organization
+  app.patch('/api/organizations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Verify user has admin access
+      const membership = await storage.getMembership(userId, id);
+      if (!membership || (membership.role !== 'OWNER' && membership.role !== 'ADMIN')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const validatedData = insertOrganizationSchema.partial().parse(req.body);
+      const organization = await storage.updateOrganization(id, validatedData);
+      res.json(organization);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Error updating organization:", error);
+      res.status(500).json({ message: "Failed to update organization" });
+    }
+  });
+
+  // Delete organization
+  app.delete('/api/organizations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Verify user is owner
+      const membership = await storage.getMembership(userId, id);
+      if (!membership || membership.role !== 'OWNER') {
+        return res.status(403).json({ message: "Only owners can delete organizations" });
+      }
+      
+      await storage.deleteOrganization(id);
+      res.json({ message: "Organization deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting organization:", error);
+      res.status(500).json({ message: "Failed to delete organization" });
+    }
+  });
+
   // Membership routes
   app.get('/api/organizations/members', isAuthenticated, async (req: any, res) => {
     try {
@@ -113,6 +157,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching members:", error);
       res.status(500).json({ message: "Failed to fetch members" });
+    }
+  });
+
+  // Add member to organization
+  app.post('/api/organizations/:orgId/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { orgId } = req.params;
+      const { email, role } = req.body;
+      
+      // Verify user has admin access
+      const requesterMembership = await storage.getMembership(userId, orgId);
+      if (!requesterMembership || (requesterMembership.role !== 'OWNER' && requesterMembership.role !== 'ADMIN')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Find user by email
+      const users = await storage.getUsersByOrgId(orgId);
+      const targetUser = users.find(u => u.email === email);
+      
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found with that email" });
+      }
+      
+      // Check if already a member
+      const existingMembership = await storage.getMembership(targetUser.id, orgId);
+      if (existingMembership) {
+        return res.status(400).json({ message: "User is already a member" });
+      }
+      
+      const membership = await storage.createMembership({
+        userId: targetUser.id,
+        organizationId: orgId,
+        role: role || 'VIEWER',
+      });
+      
+      res.json(membership);
+    } catch (error) {
+      console.error("Error adding member:", error);
+      res.status(500).json({ message: "Failed to add member" });
+    }
+  });
+
+  // Update member role
+  app.patch('/api/memberships/:id/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const { role } = req.body;
+      
+      // Get the membership to find orgId
+      const targetMembership = await storage.getMembershipsByOrgId('');
+      const membership = targetMembership.find(m => m.id === id);
+      
+      if (!membership) {
+        return res.status(404).json({ message: "Membership not found" });
+      }
+      
+      // Verify requester has admin access
+      const requesterMembership = await storage.getMembership(userId, membership.organizationId);
+      if (!requesterMembership || (requesterMembership.role !== 'OWNER' && requesterMembership.role !== 'ADMIN')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updated = await storage.updateMembershipRole(id, role);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating role:", error);
+      res.status(500).json({ message: "Failed to update role" });
+    }
+  });
+
+  // Remove member
+  app.delete('/api/memberships/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      // Get the membership to find orgId
+      const targetMembership = await storage.getMembershipsByOrgId('');
+      const membership = targetMembership.find(m => m.id === id);
+      
+      if (!membership) {
+        return res.status(404).json({ message: "Membership not found" });
+      }
+      
+      // Verify requester has admin access or is removing themselves
+      const requesterMembership = await storage.getMembership(userId, membership.organizationId);
+      if (!requesterMembership) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const canRemove = requesterMembership.role === 'OWNER' || 
+                       requesterMembership.role === 'ADMIN' || 
+                       membership.userId === userId;
+      
+      if (!canRemove) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteMembership(id);
+      res.json({ message: "Member removed successfully" });
+    } catch (error) {
+      console.error("Error removing member:", error);
+      res.status(500).json({ message: "Failed to remove member" });
     }
   });
 
