@@ -97,7 +97,7 @@ export default function OrganizationPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
       toast({
         title: "Success",
-        description: "Organization created successfully",
+        description: "Workspace created successfully",
       });
       setCreateOrgOpen(false);
       orgForm.reset();
@@ -116,7 +116,7 @@ export default function OrganizationPage() {
       }
       toast({
         title: "Error",
-        description: "Failed to create organization",
+        description: "Failed to create workspace",
         variant: "destructive",
       });
     },
@@ -130,7 +130,7 @@ export default function OrganizationPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
       toast({
         title: "Success",
-        description: "Organization updated successfully",
+        description: "Workspace updated successfully",
       });
       setEditOrgOpen(false);
       setSelectedOrg(null);
@@ -138,7 +138,7 @@ export default function OrganizationPage() {
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update organization",
+        description: error.message || "Failed to update workspace",
         variant: "destructive",
       });
     },
@@ -152,14 +152,14 @@ export default function OrganizationPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
       toast({
         title: "Success",
-        description: "Organization deleted successfully",
+        description: "Workspace deleted successfully",
       });
       setDeleteOrgId(null);
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete organization",
+        description: error.message || "Failed to delete workspace",
         variant: "destructive",
       });
     },
@@ -253,12 +253,12 @@ export default function OrganizationPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Organization</h1>
-          <p className="text-muted-foreground">Manage your organization and team members</p>
+          <h1 className="text-3xl font-bold">Workspace</h1>
+          <p className="text-muted-foreground">Manage your workspace and team members</p>
         </div>
         <Button onClick={() => setCreateOrgOpen(true)} data-testid="button-create-organization">
           <Building2 className="h-4 w-4 mr-2" />
-          New Organization
+          New Workspace
         </Button>
       </div>
 
@@ -267,8 +267,8 @@ export default function OrganizationPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Organizations</CardTitle>
-                <CardDescription>Your organizations</CardDescription>
+                <CardTitle>Your Workspaces</CardTitle>
+                <CardDescription>Workspaces you belong to</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -321,7 +321,7 @@ export default function OrganizationPage() {
             ) : (
               <div className="text-center py-8">
                 <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No organizations</p>
+                <p className="text-muted-foreground">No workspaces yet</p>
               </div>
             )}
           </CardContent>
@@ -332,11 +332,11 @@ export default function OrganizationPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Team Members</CardTitle>
-                <CardDescription>Manage access and roles</CardDescription>
+                <CardDescription>Assign users to workspace</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => setInviteMemberOpen(true)} data-testid="button-invite-member">
                 <UserPlus className="h-4 w-4 mr-2" />
-                Invite
+                Add Member
               </Button>
             </div>
           </CardHeader>
@@ -402,13 +402,13 @@ export default function OrganizationPage() {
         </Card>
       </div>
 
-      {/* Create Organization Dialog */}
+      {/* Create Workspace Dialog */}
       <Dialog open={createOrgOpen} onOpenChange={setCreateOrgOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Organization</DialogTitle>
+            <DialogTitle>Create Workspace</DialogTitle>
             <DialogDescription>
-              Create a new organization for your team
+              Create a new workspace for your team
             </DialogDescription>
           </DialogHeader>
           <Form {...orgForm}>
@@ -418,9 +418,9 @@ export default function OrganizationPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Organization Name</FormLabel>
+                    <FormLabel>Workspace Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Acme Inc" {...field} data-testid="input-org-name" />
+                      <Input placeholder="My Team" {...field} data-testid="input-org-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -431,9 +431,9 @@ export default function OrganizationPage() {
                 name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Slug</FormLabel>
+                    <FormLabel>Workspace URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="acme-inc" {...field} data-testid="input-org-slug" />
+                      <Input placeholder="my-team" {...field} data-testid="input-org-slug" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -441,7 +441,7 @@ export default function OrganizationPage() {
               />
               <DialogFooter>
                 <Button type="submit" disabled={createOrgMutation.isPending} data-testid="button-submit-organization">
-                  {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+                  {createOrgMutation.isPending ? "Creating..." : "Create Workspace"}
                 </Button>
               </DialogFooter>
             </form>
@@ -449,13 +449,13 @@ export default function OrganizationPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Organization Dialog */}
+      {/* Edit Workspace Dialog */}
       <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Organization</DialogTitle>
+            <DialogTitle>Edit Workspace</DialogTitle>
             <DialogDescription>
-              Update your organization details
+              Update your workspace details
             </DialogDescription>
           </DialogHeader>
           <Form {...editOrgForm}>
@@ -469,9 +469,9 @@ export default function OrganizationPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Organization Name</FormLabel>
+                    <FormLabel>Workspace Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Acme Inc" {...field} data-testid="input-edit-org-name" />
+                      <Input placeholder="My Team" {...field} data-testid="input-edit-org-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -482,9 +482,9 @@ export default function OrganizationPage() {
                 name="slug"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Slug</FormLabel>
+                    <FormLabel>Workspace URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="acme-inc" {...field} data-testid="input-edit-org-slug" />
+                      <Input placeholder="my-team" {...field} data-testid="input-edit-org-slug" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -492,7 +492,7 @@ export default function OrganizationPage() {
               />
               <DialogFooter>
                 <Button type="submit" disabled={updateOrgMutation.isPending} data-testid="button-submit-edit-organization">
-                  {updateOrgMutation.isPending ? "Updating..." : "Update Organization"}
+                  {updateOrgMutation.isPending ? "Updating..." : "Update Workspace"}
                 </Button>
               </DialogFooter>
             </form>
@@ -504,9 +504,9 @@ export default function OrganizationPage() {
       <Dialog open={inviteMemberOpen} onOpenChange={setInviteMemberOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Add a new member to your organization
+              Assign a user to your workspace
             </DialogDescription>
           </DialogHeader>
           <Form {...inviteForm}>
@@ -549,7 +549,7 @@ export default function OrganizationPage() {
               />
               <DialogFooter>
                 <Button type="submit" disabled={inviteMemberMutation.isPending} data-testid="button-submit-invite">
-                  {inviteMemberMutation.isPending ? "Inviting..." : "Invite Member"}
+                  {inviteMemberMutation.isPending ? "Adding..." : "Add Member"}
                 </Button>
               </DialogFooter>
             </form>
@@ -557,13 +557,13 @@ export default function OrganizationPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Organization Confirmation */}
+      {/* Delete Workspace Confirmation */}
       <AlertDialog open={!!deleteOrgId} onOpenChange={(open) => !open && setDeleteOrgId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Organization?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Workspace?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the organization and all associated projects, estates, and data.
+              This action cannot be undone. This will permanently delete the workspace and all associated projects, estates, and data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -585,7 +585,7 @@ export default function OrganizationPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Member?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the member from the organization. They will lose access to all projects and data.
+              This will remove the member from the workspace. They will lose access to all projects and data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
