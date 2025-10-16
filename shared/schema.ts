@@ -189,6 +189,9 @@ export type Page = typeof pages.$inferSelect;
 // Severity Enum
 export const severityEnum = pgEnum('severity', ['critical', 'warning', 'minor', 'pass']);
 
+// Issue Status Enum
+export const issueStatusEnum = pgEnum('issue_status', ['new', 'in_progress', 'resolved', 'ignored']);
+
 // A11y Results table (accessibility issues)
 export const a11yResults = pgTable("a11y_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -206,16 +209,23 @@ export const a11yResults = pgTable("a11y_results", {
   isDuplicate: integer("is_duplicate").notNull().default(0),
   duplicateOfId: varchar("duplicate_of_id"),
   evidenceUrl: varchar("evidence_url", { length: 1000 }),
+  status: issueStatusEnum('status').notNull().default('new'),
+  assignedTo: varchar("assigned_to").references(() => users.id, { onDelete: 'set null' }),
+  aiSuggestion: text("ai_suggestion"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_a11y_results_scan_run").on(table.scanRunId),
   index("idx_a11y_results_page").on(table.pageId),
   index("idx_a11y_results_severity").on(table.severity),
+  index("idx_a11y_results_status").on(table.status),
+  index("idx_a11y_results_assigned").on(table.assignedTo),
 ]);
 
 export const insertA11yResultSchema = createInsertSchema(a11yResults).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertA11yResult = z.infer<typeof insertA11yResultSchema>;
@@ -270,6 +280,26 @@ export const insertA11yHistorySchema = createInsertSchema(a11yHistory).omit({
 
 export type InsertA11yHistory = z.infer<typeof insertA11yHistorySchema>;
 export type A11yHistory = typeof a11yHistory.$inferSelect;
+
+// Issue Comments table (collaboration on issues)
+export const issueComments = pgTable("issue_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  issueId: varchar("issue_id").notNull().references(() => a11yResults.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_issue_comments_issue").on(table.issueId),
+  index("idx_issue_comments_user").on(table.userId),
+]);
+
+export const insertIssueCommentSchema = createInsertSchema(issueComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertIssueComment = z.infer<typeof insertIssueCommentSchema>;
+export type IssueComment = typeof issueComments.$inferSelect;
 
 // Relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
