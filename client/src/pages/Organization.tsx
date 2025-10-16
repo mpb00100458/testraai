@@ -281,7 +281,7 @@ export default function OrganizationPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -345,7 +345,7 @@ export default function OrganizationPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
