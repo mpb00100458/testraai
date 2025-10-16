@@ -978,6 +978,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all users (for assignment dropdown)
+  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const orgs = await storage.getOrganizationsByUserId(userId);
+      
+      if (orgs.length === 0) {
+        return res.json([]);
+      }
+
+      // Get all users from user's organizations
+      const allUsers = await Promise.all(
+        orgs.map(org => storage.getUsersByOrgId(org.id))
+      );
+      
+      res.json(allUsers.flat());
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Bulk update issue status
+  app.patch('/api/issues/bulk-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const { issueIds, status } = req.body;
+      
+      if (!issueIds || !Array.isArray(issueIds) || issueIds.length === 0) {
+        return res.status(400).json({ message: "Invalid issue IDs" });
+      }
+
+      await storage.updateIssuesStatus(issueIds, status);
+      res.json({ message: "Issues updated successfully" });
+    } catch (error) {
+      console.error("Error updating issue status:", error);
+      res.status(500).json({ message: "Failed to update issues" });
+    }
+  });
+
+  // Bulk assign issues
+  app.patch('/api/issues/bulk-assign', isAuthenticated, async (req: any, res) => {
+    try {
+      const { issueIds, userId } = req.body;
+      
+      if (!issueIds || !Array.isArray(issueIds) || issueIds.length === 0) {
+        return res.status(400).json({ message: "Invalid issue IDs" });
+      }
+
+      await storage.assignIssues(issueIds, userId);
+      res.json({ message: "Issues assigned successfully" });
+    } catch (error) {
+      console.error("Error assigning issues:", error);
+      res.status(500).json({ message: "Failed to assign issues" });
+    }
+  });
+
+  // Generate AI suggestion for an issue
+  app.post('/api/issues/:issueId/ai-suggestion', isAuthenticated, async (req: any, res) => {
+    try {
+      const { issueId } = req.params;
+      const issue = await storage.getA11yResult(issueId);
+      
+      if (!issue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+
+      // Use OpenAI to generate fix suggestion
+      const openai = await import('openai');
+      const client = new openai.default();
+      
+      const prompt = `You are an accessibility expert. Provide a clear, actionable fix for this WCAG violation:
+
+Issue Type: ${issue.issueType}
+Severity: ${issue.severity}
+Description: ${issue.description || 'N/A'}
+WCAG Criteria: ${issue.wcagCriteria || 'N/A'}
+Code Snippet: ${issue.codeSnippet || 'N/A'}
+
+Provide a concise, practical solution (2-3 sentences) that a developer can implement immediately.`;
+
+      const completion = await client.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 200,
+      });
+
+      const aiSuggestion = completion.choices[0]?.message?.content || "Unable to generate suggestion";
+      
+      await storage.updateIssueAISuggestion(issueId, aiSuggestion);
+      res.json({ message: "AI suggestion generated", suggestion: aiSuggestion });
+    } catch (error) {
+      console.error("Error generating AI suggestion:", error);
+      res.status(500).json({ message: "Failed to generate AI suggestion" });
+    }
+  });
+
+  // Get comments for an issue
+  app.get('/api/issues/comments/:issueId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { issueId } = req.params;
+      const comments = await storage.getIssueComments(issueId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ message: "Failed to fetch comments" });
+    }
+  });
+
+  // Add comment to an issue
+  app.post('/api/issues/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const { issueId, userId, comment } = req.body;
+      
+      if (!issueId || !userId || !comment) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const newComment = await storage.createIssueComment({ issueId, userId, comment });
+      res.json(newComment);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      res.status(500).json({ message: "Failed to add comment" });
+    }
+  });
+
   // Dashboard stats route
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
