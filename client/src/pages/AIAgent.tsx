@@ -330,7 +330,7 @@ export default function AIAgent() {
                   {/* Show scan progress and results */}
                   {msg.metadata && typeof msg.metadata === 'object' && ('scanRunId' in msg.metadata || 'estateId' in msg.metadata) && (
                     <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-                      {((): JSX.Element => {
+                      {(() => {
                         const metadata = msg.metadata as any;
                         
                         // Find the scan: either by scanRunId (legacy) or by estateId (new approach)
