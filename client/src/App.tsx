@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -17,6 +18,7 @@ import Settings from "@/pages/Settings";
 import Tools from "@/pages/Tools";
 import ScanComparison from "@/pages/ScanComparison";
 import ScanDetail from "@/pages/ScanDetail";
+import AIAgent from "@/pages/AIAgent";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +35,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/ai-agent" component={AIAgent} />
       <Route path="/issues" component={Issues} />
       <Route path="/projects" component={Projects} />
       <Route path="/organization" component={Organization} />
@@ -52,6 +55,7 @@ function Router() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
 
   const style = {
     "--sidebar-width": "16rem",
@@ -67,6 +71,9 @@ function AppContent() {
     );
   }
 
+  // AI Agent page needs full height layout without padding
+  const isAIAgentPage = location === '/ai-agent';
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
@@ -77,9 +84,15 @@ function AppContent() {
             <ThemeToggle />
           </header>
           <main className="flex-1 overflow-auto">
-            <div className="container mx-auto p-6 max-w-7xl">
-              <Router />
-            </div>
+            {isAIAgentPage ? (
+              <div className="h-full">
+                <Router />
+              </div>
+            ) : (
+              <div className="container mx-auto p-6 max-w-7xl">
+                <Router />
+              </div>
+            )}
           </main>
         </div>
       </div>
