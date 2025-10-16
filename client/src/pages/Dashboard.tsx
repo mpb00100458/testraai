@@ -303,7 +303,7 @@ export default function Dashboard() {
                       {filteredIssues.slice(0, 20).map((issue) => (
                         <TableRow key={issue.id} data-testid={`row-issue-${issue.id}`}>
                           <TableCell>
-                            <SeverityBadge severity={issue.severity?.toLowerCase() || 'minor'} />
+                            <SeverityBadge severity={issue.severity?.toLowerCase() as any || 'minor'} />
                           </TableCell>
                           <TableCell>
                             <Badge 
