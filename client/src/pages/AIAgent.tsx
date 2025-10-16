@@ -165,7 +165,7 @@ export default function AIAgent() {
           </div>
           <Badge variant="secondary" className="gap-1">
             <Sparkles className="h-3 w-3" />
-            Powered by GPT-5
+            <span>Powered by GPT-5</span>
           </Badge>
         </div>
       </div>
@@ -233,7 +233,7 @@ export default function AIAgent() {
                       {(() => {
                         const metadata = msg.metadata as any;
                         const progress = scanProgress[metadata.scanRunId];
-                        const isRunning = progress?.status === 'running';
+                        const isRunning = !progress || progress?.status === 'running';
                         const isCompleted = progress?.status === 'completed';
                         const isFailed = progress?.status === 'failed';
 
@@ -244,23 +244,29 @@ export default function AIAgent() {
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">
-                                    Scanning... {progress.pagesAudited} / {progress.pagesDiscovered} pages
+                                    {progress ? (
+                                      <>Scanning... {progress.pagesAudited} / {progress.pagesDiscovered} pages</>
+                                    ) : (
+                                      <>Initializing scan...</>
+                                    )}
                                   </span>
                                   <Badge variant="secondary" className="gap-1">
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                     In Progress
                                   </Badge>
                                 </div>
-                                <Progress 
-                                  value={progress.pagesDiscovered > 0 ? (progress.pagesAudited / progress.pagesDiscovered) * 100 : 0} 
-                                  className="h-2"
-                                />
-                                {progress.currentPage && (
+                                {progress && progress.pagesDiscovered > 0 && (
+                                  <Progress 
+                                    value={(progress.pagesAudited / progress.pagesDiscovered) * 100} 
+                                    className="h-2"
+                                  />
+                                )}
+                                {progress?.currentPage && (
                                   <p className="text-xs text-muted-foreground truncate">
                                     Current: {progress.currentPage}
                                   </p>
                                 )}
-                                {progress.issuesFound > 0 && (
+                                {progress && progress.issuesFound > 0 && (
                                   <p className="text-xs text-muted-foreground">
                                     {progress.issuesFound} issues found so far
                                   </p>
@@ -269,7 +275,7 @@ export default function AIAgent() {
                             )}
 
                             {/* Completed - Show View Results and Downloads */}
-                            {(isCompleted || (!isRunning && !isFailed)) && (
+                            {isCompleted && (
                               <div className="space-y-2">
                                 <Link
                                   href={`/scans/${metadata.scanRunId}`}
