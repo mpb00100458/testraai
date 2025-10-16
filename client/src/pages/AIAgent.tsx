@@ -6,7 +6,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Send, Loader2, ExternalLink, CheckCircle2, AlertCircle, Download, FileVideo, FileSpreadsheet, FileJson } from "lucide-react";
+import { Sparkles, Send, Loader2, ExternalLink, CheckCircle2, AlertCircle, Download, FileVideo, FileSpreadsheet, FileJson, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { ChatMessage, ChatConversation } from "@shared/schema";
@@ -143,6 +154,18 @@ export default function AIAgent() {
     },
   });
 
+  // Clear messages mutation
+  const clearMessagesMutation = useMutation({
+    mutationFn: async () => {
+      if (!conversationId) return;
+      return await apiRequest('DELETE', `/api/ai-agent/conversations/${conversationId}/messages`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-agent/messages', conversationId] });
+      setScanProgress({});
+    },
+  });
+
   // WebSocket connection for real-time scan updates
   useEffect(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -248,60 +271,98 @@ export default function AIAgent() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col font-sans">
       {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+      <div className="border-b bg-white sticky top-0 z-10 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 shadow-lg shadow-primary/25">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">AI Accessibility Agent</h1>
-              <p className="text-sm text-muted-foreground">
-                Ask me to scan URLs and analyze accessibility
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                AI Accessibility Agent
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Powered by GPT-4o-mini • Ask me to scan URLs and analyze accessibility
               </p>
             </div>
           </div>
-          <Badge variant="secondary" className="gap-1">
-            <Sparkles className="h-3 w-3" />
-            <span>Powered by GPT-5</span>
-          </Badge>
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="gap-2"
+                    data-testid="button-clear-messages"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Clear Chat
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear all messages?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all messages in this conversation. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => clearMessagesMutation.mutate()}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                    >
+                      Clear Messages
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="max-w-4xl mx-auto space-y-4">
+      <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-background to-muted/20" ref={scrollRef}>
+        <div className="max-w-4xl mx-auto space-y-6">
           {messages.length === 0 ? (
-            <div className="text-center py-12 space-y-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600/10 to-purple-600/10 mx-auto">
-                <Sparkles className="h-8 w-8 text-primary" />
+            <div className="text-center py-16 space-y-6">
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600/10 to-indigo-600/10 mx-auto">
+                <Sparkles className="h-10 w-10 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent" />
               </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Welcome to AI Agent</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  I can help you scan websites for accessibility issues. Just tell me what you need!
+              <div className="space-y-3">
+                <h3 className="text-2xl font-bold tracking-tight">Welcome to AI Accessibility Agent</h3>
+                <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                  I can help you scan websites for WCAG compliance, analyze accessibility issues, and provide expert guidance. Just ask me anything!
                 </p>
               </div>
-              <div className="grid gap-2 max-w-md mx-auto mt-6">
+              <div className="grid gap-3 max-w-lg mx-auto mt-8">
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto py-3"
+                  className="justify-start text-left h-auto py-4 px-4 hover-elevate active-elevate-2"
                   onClick={() => setMessage("Scan https://example.com for accessibility issues")}
                   data-testid="button-example-scan"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2 shrink-0" />
-                  Scan a website for WCAG compliance
+                  <CheckCircle2 className="h-5 w-5 mr-3 shrink-0 text-primary" />
+                  <div>
+                    <div className="font-medium">Scan a website for WCAG compliance</div>
+                    <div className="text-xs text-muted-foreground mt-1">Run automated accessibility audit</div>
+                  </div>
                 </Button>
                 <Button
                   variant="outline"
-                  className="justify-start text-left h-auto py-3"
+                  className="justify-start text-left h-auto py-4 px-4 hover-elevate active-elevate-2"
                   onClick={() => setMessage("What accessibility issues should I prioritize?")}
                   data-testid="button-example-prioritize"
                 >
-                  <AlertCircle className="h-4 w-4 mr-2 shrink-0" />
-                  Get help prioritizing fixes
+                  <AlertCircle className="h-5 w-5 mr-3 shrink-0 text-primary" />
+                  <div>
+                    <div className="font-medium">Get help prioritizing fixes</div>
+                    <div className="text-xs text-muted-foreground mt-1">Learn what to fix first</div>
+                  </div>
                 </Button>
               </div>
             </div>
@@ -309,23 +370,27 @@ export default function AIAgent() {
             messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg px-4 py-3 ${
+                  className={`max-w-[85%] rounded-xl shadow-sm ${
                     msg.role === 'user'
-                      ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white'
-                      : 'bg-muted'
+                      ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white px-5 py-3.5'
+                      : 'bg-white border border-border px-5 py-4'
                   }`}
                   data-testid={`message-${msg.role}-${msg.id}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-medium text-muted-foreground">AI Agent</span>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-purple-600 to-indigo-600">
+                        <Sparkles className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">AI Agent</span>
                     </div>
                   )}
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  <div className={`leading-relaxed ${msg.role === 'user' ? 'text-[15px]' : 'text-[15px] text-foreground'}`}>
+                    {msg.content}
+                  </div>
                   
                   {/* Show scan progress and results */}
                   {msg.metadata && typeof msg.metadata === 'object' && ('scanRunId' in msg.metadata || 'estateId' in msg.metadata) && (
