@@ -120,15 +120,10 @@ Keep responses concise and helpful.`
           crawlBudget: 50, // Allow up to 50 pages for comprehensive scan
         });
 
-        // Create scan run
-        const scanRun = await storage.createScanRun({
-          estateId: estate.id,
-          status: 'running',
-        });
-
-        console.log(`[AI Agent] Triggering scan for estate ${estate.id}, scanRun ${scanRun.id}`);
+        console.log(`[AI Agent] Triggering scan for estate ${estate.id}`);
 
         // Trigger the actual scan asynchronously (don't wait for it)
+        // Note: RealScanAgent will create the scan run itself
         import('./agents/realScanAgent').then(async ({ RealScanAgent }) => {
           try {
             console.log(`[AI Agent] Starting RealScanAgent for estate ${estate.id}`);
@@ -137,18 +132,16 @@ Keep responses concise and helpful.`
             console.log(`[AI Agent] Scan completed for estate ${estate.id}`);
           } catch (error) {
             console.error('[AI Agent] Error running accessibility scan:', error);
-            await storage.updateScanRunStatus(scanRun.id, 'failed');
+            // Error handling is done within RealScanAgent
           }
         }).catch((importError) => {
           console.error('[AI Agent] Error importing RealScanAgent:', importError);
-          storage.updateScanRunStatus(scanRun.id, 'failed').catch(console.error);
         });
 
         return {
           content: `${aiResponse}\n\n🔍 I've started scanning ${url} for WCAG 2.1 A/AA compliance. You can view the live progress and results below!`,
           messageType: 'scan_trigger',
           metadata: {
-            scanRunId: scanRun.id,
             estateId: estate.id,
             projectId: aiProject.id,
           }
