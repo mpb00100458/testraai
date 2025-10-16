@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FolderOpen, Plus, Loader2 } from "lucide-react";
+import { GradientButton } from "@/components/GradientButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -130,10 +131,10 @@ export default function Projects() {
         ) : (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-project">
+              <GradientButton data-testid="button-create-project" showIcon={false}>
                 <Plus className="h-4 w-4 mr-2" />
                 New Project
-              </Button>
+              </GradientButton>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -176,9 +177,9 @@ export default function Projects() {
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={createProjectMutation.isPending} data-testid="button-submit-project">
+                  <GradientButton type="submit" disabled={createProjectMutation.isPending} data-testid="button-submit-project" showIcon={false}>
                     {createProjectMutation.isPending ? "Creating..." : "Create Project"}
-                  </Button>
+                  </GradientButton>
                 </DialogFooter>
               </form>
             </Form>
