@@ -117,7 +117,7 @@ Keep responses concise and helpful.`
           projectId: aiProject.id,
           baseUrl: url,
           name: `Scan: ${new URL(url).hostname}`,
-          crawlDepth: 1, // Single page scan for AI agent
+          crawlBudget: 1, // Single page scan for AI agent
         });
 
         // Create scan run
