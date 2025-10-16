@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FloatingAIButton } from "@/components/FloatingAIButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
@@ -96,6 +97,7 @@ function AppContent() {
           </main>
         </div>
       </div>
+      <FloatingAIButton />
       <Toaster />
     </SidebarProvider>
   );
