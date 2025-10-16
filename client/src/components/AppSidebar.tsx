@@ -58,11 +58,11 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Shield className="h-5 w-5" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-md gradient-bg">
+            <Shield className="h-5 w-5 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold">TestraAI</span>
+            <span className="text-sm font-semibold gradient-text">TestraAI</span>
             <span className="text-xs text-muted-foreground">Testing Platform</span>
           </div>
         </div>
