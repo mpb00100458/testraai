@@ -107,18 +107,18 @@ export default function Landing() {
               <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 TestraAI
               </span>
-              <span className="text-sm text-muted-foreground">AI-Powered Testing Platform</span>
+              <span className="text-sm text-muted-foreground">Accessibility Compliance Platform</span>
             </div>
           </div>
 
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">
-              {isLogin ? "Welcome back" : "Create an account"}
+              {isLogin ? "Sign In" : "Get Started"}
             </h1>
             <p className="text-muted-foreground">
               {isLogin 
-                ? "Enter your credentials to access your dashboard" 
-                : "Get started with automated accessibility testing"}
+                ? "Access your accessibility testing platform" 
+                : "Enterprise-grade WCAG compliance automation"}
             </p>
           </div>
 
@@ -127,8 +127,8 @@ export default function Landing() {
               <CardTitle>{isLogin ? "Sign In" : "Sign Up"}</CardTitle>
               <CardDescription>
                 {isLogin 
-                  ? "Access your TestraAI workspace" 
-                  : "Start testing your web applications"}
+                  ? "Access your compliance dashboard" 
+                  : "Start your accessibility testing journey"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -276,11 +276,10 @@ export default function Landing() {
         <div className="max-w-lg space-y-8">
           <div className="space-y-4">
             <h2 className="text-4xl font-bold leading-tight">
-              AI-Powered Web Accessibility Testing
+              Enterprise Accessibility Compliance Platform
             </h2>
             <p className="text-lg text-muted-foreground">
-              Automate WCAG 2.1 A/AA compliance audits with real browser testing, 
-              intelligent analysis, and detailed actionable reports
+              Ensure digital inclusivity and regulatory compliance with automated WCAG 2.1 Level A/AA testing powered by intelligent AI analysis
             </p>
           </div>
 
@@ -290,9 +289,9 @@ export default function Landing() {
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">WCAG 2.1 Compliance</h3>
+                <h3 className="font-semibold text-lg">Automated Compliance Audits</h3>
                 <p className="text-sm text-muted-foreground">
-                  Comprehensive Level A & AA testing with Playwright and axe-core integration
+                  Continuous WCAG 2.1 A/AA monitoring with browser automation and axe-core validation engine
                 </p>
               </div>
             </div>
@@ -302,9 +301,9 @@ export default function Landing() {
                 <CheckCircle className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">Live Visual Testing</h3>
+                <h3 className="font-semibold text-lg">Real-Time Monitoring</h3>
                 <p className="text-sm text-muted-foreground">
-                  Watch real-time scan progress with WebSocket-powered updates and video recording
+                  Live scan visualization with instant feedback, session recording, and complete audit trails
                 </p>
               </div>
             </div>
@@ -314,9 +313,9 @@ export default function Landing() {
                 <FileSearch className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">Detailed Reports</h3>
+                <h3 className="font-semibold text-lg">Executive Reporting</h3>
                 <p className="text-sm text-muted-foreground">
-                  Export comprehensive accessibility reports in JSON, Excel, and HTML formats
+                  Multi-format compliance reports with actionable insights for legal and development teams
                 </p>
               </div>
             </div>
@@ -326,9 +325,9 @@ export default function Landing() {
                 <AlertCircle className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">Issue Management</h3>
+                <h3 className="font-semibold text-lg">Workflow Integration</h3>
                 <p className="text-sm text-muted-foreground">
-                  Track, assign, and resolve accessibility issues with team collaboration features
+                  Seamless issue tracking and remediation management with role-based team collaboration
                 </p>
               </div>
             </div>
