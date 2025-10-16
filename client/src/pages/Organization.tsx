@@ -267,11 +267,11 @@ export default function OrganizationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Workspace</h1>
-          <p className="text-muted-foreground">Manage your workspace and team members</p>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">Workspace</h1>
+          <p className="text-lg text-muted-foreground">Manage your workspace and team collaboration</p>
         </div>
         <Button onClick={() => setCreateOrgOpen(true)} data-testid="button-create-organization">
           <Building2 className="h-4 w-4 mr-2" />

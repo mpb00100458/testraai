@@ -14,44 +14,44 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 0 0% 100%;
-  --foreground: 240 10% 4%;
-  --border: 240 6% 90%;
+  --background: 0 0% 99%;
+  --foreground: 245 15% 15%;
+  --border: 245 10% 88%;
 
-  --card: 240 5% 96%;
-  --card-foreground: 240 10% 4%;
-  --card-border: 240 6% 92%;
+  --card: 245 30% 96%;
+  --card-foreground: 245 15% 15%;
+  --card-border: 245 10% 90%;
 
-  --sidebar: 240 5% 94%;
-  --sidebar-foreground: 240 10% 4%;
-  --sidebar-border: 240 6% 88%;
-  --sidebar-primary: 221 83% 53%;
+  --sidebar: 245 25% 95%;
+  --sidebar-foreground: 245 15% 15%;
+  --sidebar-border: 245 10% 88%;
+  --sidebar-primary: 258 85% 58%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 90%;
-  --sidebar-accent-foreground: 240 10% 4%;
-  --sidebar-ring: 221 83% 53%;
+  --sidebar-accent: 245 20% 92%;
+  --sidebar-accent-foreground: 245 15% 15%;
+  --sidebar-ring: 258 85% 58%;
 
-  --popover: 240 5% 92%;
-  --popover-foreground: 240 10% 4%;
-  --popover-border: 240 6% 86%;
+  --popover: 245 25% 94%;
+  --popover-foreground: 245 15% 15%;
+  --popover-border: 245 10% 86%;
 
-  --primary: 221 83% 53%;
+  --primary: 258 85% 58%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 240 5% 88%;
-  --secondary-foreground: 240 10% 4%;
+  --secondary: 243 70% 56%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 240 5% 90%;
-  --muted-foreground: 240 4% 46%;
+  --muted: 245 15% 92%;
+  --muted-foreground: 245 5% 50%;
 
-  --accent: 240 4% 88%;
-  --accent-foreground: 240 10% 4%;
+  --accent: 245 20% 90%;
+  --accent-foreground: 245 15% 15%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 240 6% 85%;
-  --ring: 221 83% 53%;
+  --input: 245 10% 88%;
+  --ring: 258 85% 58%;
 
   --chart-1: 221 83% 53%;
   --chart-2: 142 76% 36%;
@@ -115,46 +115,56 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 240 10% 4%;
+  /* Premium Dark Theme - Deep indigo-tinted charcoal */
+  --background: 245 15% 8%;
   --foreground: 0 0% 98%;
-  --border: 240 4% 16%;
+  --border: 245 8% 20%;
 
-  --card: 240 6% 10%;
+  /* Elevated surfaces with glassmorphic feel */
+  --card: 245 12% 12%;
   --card-foreground: 0 0% 98%;
-  --card-border: 240 4% 14%;
+  --card-border: 245 8% 20%;
 
-  --sidebar: 240 6% 8%;
+  /* Sidebar with deeper background */
+  --sidebar: 245 15% 8%;
   --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 240 4% 12%;
-  --sidebar-primary: 221 83% 63%;
+  --sidebar-border: 245 8% 18%;
+  --sidebar-primary: 258 90% 66%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 16%;
+  --sidebar-accent: 245 10% 16%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 221 83% 63%;
+  --sidebar-ring: 258 90% 66%;
 
-  --popover: 240 6% 12%;
+  /* Popover with glass effect */
+  --popover: 245 10% 16%;
   --popover-foreground: 0 0% 98%;
-  --popover-border: 240 4% 18%;
+  --popover-border: 245 8% 22%;
 
-  --primary: 221 83% 63%;
+  /* Vivid purple primary */
+  --primary: 258 90% 66%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 240 5% 18%;
-  --secondary-foreground: 0 0% 98%;
+  /* Indigo secondary */
+  --secondary: 243 75% 59%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 240 5% 14%;
-  --muted-foreground: 240 5% 65%;
+  /* Muted states */
+  --muted: 245 10% 14%;
+  --muted-foreground: 245 5% 65%;
 
-  --accent: 240 4% 16%;
+  /* Accent surfaces */
+  --accent: 245 10% 16%;
   --accent-foreground: 0 0% 98%;
 
+  /* Status colors */
   --destructive: 0 72% 65%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 240 4% 20%;
-  --ring: 221 83% 63%;
+  --input: 245 8% 20%;
+  --ring: 258 90% 66%;
 
-  --chart-1: 221 83% 63%;
+  /* Chart colors - semantic status */
+  --chart-1: 258 90% 66%;
   --chart-2: 142 71% 45%;
   --chart-3: 38 90% 60%;
   --chart-4: 0 72% 65%;

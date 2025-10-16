@@ -113,11 +113,11 @@ export default function Projects() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-muted-foreground">Organize your accessibility testing by project</p>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">Projects</h1>
+          <p className="text-lg text-muted-foreground">Organize your accessibility testing by project</p>
         </div>
         {!organizations || organizations.length === 0 ? (
           <Button 

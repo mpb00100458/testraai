@@ -27,10 +27,10 @@ export default function Reports() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Reports</h1>
-        <p className="text-muted-foreground">Export and download accessibility audit reports</p>
+    <div className="space-y-8 p-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight">Reports</h1>
+        <p className="text-lg text-muted-foreground">Export and download accessibility audit reports</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

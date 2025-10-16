@@ -110,10 +110,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your accessibility testing results</p>
+    <div className="space-y-8 p-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-lg text-muted-foreground">Real-time accessibility insights across your web estate</p>
       </div>
 
       {isLoading ? (

@@ -1,177 +1,228 @@
-# Design Guidelines: Agentic AI Testing Platform
+# Design Guidelines: TestraAI - Premium Accessibility Testing Platform
 
-## Design Approach: Professional SaaS Dashboard System
-**Selected Approach:** Design System (Material Design + Linear-inspired refinements)
-**Justification:** Utility-focused B2B productivity tool requiring information density, consistency, and professional credibility. The "Vially-style UI" reference points toward clean, modern SaaS aesthetics prioritizing data clarity and efficiency.
+## Design Approach: Modern Developer SaaS System
+**Selected Approach:** Design System (Linear + Vercel inspired refinements)
+**Justification:** Professional B2B productivity tool demanding data clarity with premium aesthetic. Dark-first design establishes modern developer tool credibility while glassmorphic elements add depth without sacrificing information density.
 
 **Core Principles:**
-- **Data Clarity First:** Every design decision serves information comprehension
-- **Professional Authority:** Visual design establishes trust and expertise
-- **Accessibility Native:** Practice what we preach - WCAG 2.2 AA minimum
-- **Scalable Complexity:** Handle dense data without overwhelming users
+- **Dark-First Premium:** Sophisticated dark UI with strategic light accents
+- **Data Clarity with Depth:** Glassmorphic layers enhance hierarchy without distraction
+- **Enterprise Polish:** Every pixel communicates professional authority
+- **Intelligent Density:** Dense data presentation with breathing room
 
 ---
 
 ## Color Palette
 
-### Light Mode
-- **Background:** 0 0% 100% (pure white)
-- **Surface:** 240 5% 96% (subtle gray backgrounds for cards)
-- **Border:** 240 6% 90% (soft dividers)
-- **Text Primary:** 240 10% 4% (near black)
-- **Text Secondary:** 240 4% 46% (medium gray)
-- **Primary Brand:** 221 83% 53% (professional blue - trust/tech)
-- **Success:** 142 76% 36% (accessibility pass)
-- **Warning:** 38 92% 50% (medium severity issues)
-- **Error:** 0 84% 60% (critical violations)
+### Dark Mode (Primary)
+- **Background Base:** 245 15% 8% (deep indigo-tinted charcoal)
+- **Background Elevated:** 245 12% 12% (raised surfaces)
+- **Glass Surface:** 245 10% 16% with 40% opacity (glassmorphic cards)
+- **Border Subtle:** 245 8% 20% (soft separators)
+- **Border Accent:** 245 60% 40% at 30% opacity (glass edges)
+- **Text Primary:** 0 0% 98% (crisp white)
+- **Text Secondary:** 245 5% 65% (muted gray)
+- **Text Tertiary:** 245 4% 50% (deemphasized)
 
-### Dark Mode
-- **Background:** 240 10% 4% (deep charcoal)
-- **Surface:** 240 6% 10% (elevated cards)
-- **Border:** 240 4% 16% (subtle separators)
-- **Text Primary:** 0 0% 98% (off white)
-- **Text Secondary:** 240 5% 65% (muted gray)
-- **Primary Brand:** 221 83% 63% (lifted blue for dark)
-- **Success:** 142 71% 45% (adjusted for dark)
-- **Warning:** 38 90% 60% (visible warning)
-- **Error:** 0 72% 65% (softer red for dark)
+**Brand & Status Colors:**
+- **Primary (Purple):** 258 90% 66% (vivid purple for actions)
+- **Primary Glow:** 258 90% 66% at 20% opacity (button halos)
+- **Secondary (Indigo):** 243 75% 59% (supporting accent)
+- **Success:** 142 71% 45% (passes/resolved)
+- **Warning:** 38 90% 60% (moderate issues)
+- **Critical:** 0 72% 65% (violations/errors)
+- **AI Accent:** 280 85% 70% (AI-powered features)
 
-**Color Philosophy:** Accessibility severity maps to color semantics (green=pass, yellow=warning, red=critical). Minimal accent colors - let data visualization carry the color load.
+### Light Mode (Secondary)
+- **Background:** 0 0% 99%
+- **Surface:** 245 30% 96%
+- **Text Primary:** 245 15% 15%
+- **Primary:** 258 85% 58% (adjusted purple)
+
+**Gradient System:**
+- **Hero Gradient:** `from-[245_15%_8%] via-[258_40%_12%] to-[245_15%_8%]`
+- **Card Glow:** Radial gradient `from-primary/10 to-transparent` on hover
+- **Border Gradient:** `from-primary/50 via-secondary/30 to-transparent`
 
 ---
 
 ## Typography
 
-### Font Families
-- **Primary:** 'Inter' (Google Fonts) - UI text, body copy, data tables
-- **Monospace:** 'JetBrains Mono' (Google Fonts) - code snippets, technical output, URLs
+**Font Families:**
+- **Primary:** 'Inter Variable' (system: -apple-system, Inter, sans-serif)
+- **Monospace:** 'JetBrains Mono' (code, technical data)
 
-### Type Scale
-- **Display (Dashboard Headers):** text-3xl font-bold (2rem/3rem)
-- **Page Titles:** text-2xl font-semibold (1.5rem/2rem)
-- **Section Headers:** text-lg font-medium (1.125rem/1.75rem)
-- **Body/Table Content:** text-sm font-normal (0.875rem/1.25rem)
-- **Captions/Meta:** text-xs font-medium (0.75rem/1rem)
-- **Code/Technical:** text-sm font-mono (0.875rem, monospace)
+**Type Scale:**
+- **Dashboard Title:** text-4xl font-bold tracking-tight (2.25rem)
+- **Section Headers:** text-xl font-semibold (1.25rem)
+- **Card Titles:** text-lg font-medium (1.125rem)
+- **Body/Data:** text-sm font-normal (0.875rem)
+- **Metrics (Large):** text-5xl font-bold tabular-nums (3rem)
+- **Labels/Meta:** text-xs font-medium uppercase tracking-wide (0.75rem)
+- **Code/URLs:** text-sm font-mono (monospace)
 
-**Hierarchy Rule:** Use size + weight for hierarchy. Never rely solely on color for importance (accessibility principle).
+**Hierarchy:** Combine weight + letter-spacing + size. Use `tracking-tight` for display text, `tracking-wide` for uppercase labels.
 
 ---
 
 ## Layout System
 
-### Spacing Primitives
-**Core Units:** 1, 2, 4, 6, 8, 12, 16
-- **Micro spacing:** p-1, gap-2 (tight component internals)
-- **Component padding:** p-4, p-6 (cards, buttons, inputs)
-- **Section spacing:** py-8, py-12 (vertical rhythm)
-- **Page margins:** px-6, max-w-7xl mx-auto (content containment)
+**Spacing Primitives:** 2, 4, 6, 8, 12, 16, 20, 24
+- **Micro:** gap-2, p-2 (tight internals)
+- **Component:** p-4, p-6 (card padding)
+- **Sections:** py-8, py-12, py-16 (vertical rhythm)
+- **Container:** px-6, max-w-[1400px] mx-auto (wide dashboard layout)
 
-### Grid Structure
-- **Dashboard:** 12-column grid with gap-6
-- **Main Layout:** Sidebar (w-64 fixed) + Main (flex-1) + Right Panel (w-80 conditional)
-- **Cards:** Consistent border-radius (rounded-lg) with border + shadow-sm
-- **Responsive:** Mobile stacks, tablet 2-col, desktop 3-4 col grids
+**Grid Structure:**
+- **Main Layout:** Sidebar (w-64) + Content (flex-1) + Inspector Panel (w-96 slide-over)
+- **Dashboard Grid:** grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6
+- **Data Tables:** Full width with horizontal scroll, sticky headers
+- **Card Radius:** rounded-xl (12px) for premium feel
 
 ---
 
 ## Component Library
 
-### Navigation
-- **Top Bar:** Fixed height (h-16), logo left, search center, user menu right, border-b
-- **Sidebar:** Collapsible navigation tree, active state with subtle bg + border-l-2 accent
-- **Breadcrumbs:** Above page titles for deep navigation, text-sm with chevron separators
+### Glassmorphic Cards
+**Base Style:**
+```
+bg-glass (245 10% 16% / 40%)
+backdrop-blur-xl
+border border-border-subtle
+shadow-2xl shadow-black/20
+rounded-xl
+```
+**Variants:**
+- **Dashboard Stats:** p-6, gradient border top, large metric display, trend indicator
+- **Data Cards:** p-4, hover glow effect (ring-1 ring-primary/20), smooth transition
+- **Glass Panel:** Floating panels with `bg-elevated/60 backdrop-blur-2xl`
 
-### Data Display
-- **Dashboard Cards:** White/dark surface, p-6, shadow-sm, rounded-lg
-  - Header: Icon + Title + Metric (large text-2xl font-bold)
-  - Chart: Recharts area/bar with subtle grid, primary color fills
-  - Footer: Trend indicator (↑/↓) + comparison text
-  
-- **Issues Table:** Striped rows (odd:bg-surface), sticky header, sortable columns
-  - Severity badge: Pill shape with semantic colors (critical=red, warning=yellow)
-  - Row actions: Hover reveals icon buttons (view, fix, ignore)
-  - Expandable rows: Click to show evidence screenshots + fix suggestions
-  
-- **Stats Grid:** 3-4 column layout showing: Total Issues, Pages Scanned, Pass Rate, Avg Score
-  - Each stat: Large number (text-3xl), small label, trend arrow
+### Navigation
+- **Sidebar:** Fixed, collapsible, active state: `bg-primary/10 border-l-2 border-primary`
+- **Top Bar:** h-16, glass effect, logo left, global search center, user avatar right
+- **Tabs:** Underline style with `border-b-2 border-primary` active state
+
+### Data Visualization
+**Dashboard Cards:**
+- **Metric Display:** Icon (lucide) + Label (text-sm) + Value (text-5xl font-bold) + Trend
+- **Mini Charts:** Recharts area with gradient fill (`fill-primary/20 stroke-primary`)
+- **Severity Badges:** Pill shape, semantic colors, icons included (never color alone)
+
+**Issues Table:**
+- **Header:** Sticky, glass surface, sortable columns with arrow indicators
+- **Rows:** Striped (`odd:bg-white/5`), hover: `bg-primary/5`, expandable for details
+- **Columns:** Severity Badge | Issue Type | Element (mono font) | Page | Count | Actions
+- **Bulk Actions:** Top toolbar with checkboxes, export/assign/resolve buttons
 
 ### Forms & Inputs
-- **Text Inputs:** h-10, px-3, border rounded-md, focus:ring-2 ring-primary
-- **Dropdowns:** Headless UI combobox, virtualized for large option sets
-- **Search:** Prominent search bar with kbd shortcuts (⌘K), instant filtering
-- **Buttons:** 
-  - Primary: bg-primary text-white px-4 h-10
-  - Secondary: border border-border bg-transparent
-  - Ghost: Hover state only, no initial background
+**Input Fields:**
+```
+h-11 px-4
+bg-elevated/50 backdrop-blur
+border border-border-subtle
+focus:border-primary focus:ring-2 focus:ring-primary/20
+rounded-lg
+text-primary placeholder:text-tertiary
+```
+
+**Buttons:**
+- **Primary:** `bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25 h-11 px-6 rounded-lg font-medium`
+- **Secondary:** `border border-border-accent bg-elevated/50 backdrop-blur hover:bg-elevated`
+- **Ghost:** `hover:bg-white/5 text-secondary hover:text-primary`
+- **AI Button:** `bg-gradient-to-r from-primary to-ai-accent` with sparkle icon
 
 ### Overlays
-- **Modals:** Center screen, max-w-2xl, backdrop-blur-sm with bg-black/20
-- **Slide-overs:** Right-side panel (w-96), for detail views/filters
-- **Tooltips:** Radix UI, subtle shadow, 200ms delay, text-xs
+- **Modals:** Center, max-w-2xl, glass panel with `backdrop-blur-xl bg-black/50` backdrop
+- **Slide-overs:** Right panel w-96, glass surface, slide-in animation (300ms ease)
+- **Toasts:** Top-right, glass cards with status icon, auto-dismiss 4s
+
+---
+
+## Visual Effects
+
+**Glassmorphism Implementation:**
+- Cards: `backdrop-blur-xl` + `bg-surface/40` + subtle border
+- Panels: `backdrop-blur-2xl` + `bg-elevated/60` for floating elements
+- Hover states: Add `ring-1 ring-primary/20` glow effect
+
+**Gradient Accents:**
+- **Background:** Subtle radial gradient `from-primary/5 via-transparent to-secondary/5` on page backgrounds
+- **Borders:** Linear gradient borders on premium cards using `border-image` or pseudo-elements
+- **Button Glow:** `shadow-lg shadow-primary/25` on primary buttons
+
+**Animations (Minimal):**
+- **Loading:** Skeleton screens with shimmer gradient animation
+- **Transitions:** 200ms ease for state changes, 150ms for hovers
+- **Success:** Subtle scale + fade for completed actions
+- **Charts:** 400ms ease-in-out for data updates
 
 ---
 
 ## Page-Specific Layouts
 
 ### Dashboard (Home)
-- **Hero Stats Grid:** 4-column overview (Total Scans, Issues, Pass Rate, Trend)
-- **Recent Activity:** Timeline of crawls/audits with status indicators
-- **Severity Chart:** Stacked bar showing critical/warning/minor distribution
-- **Top Issues:** Ranked list of most frequent violations
-- **Quick Actions:** Start new scan, view reports, manage projects
+**Hero Stats Grid (4-col):**
+- Total Issues Scanned | Pass Rate % | Critical Issues | AI Suggestions
+- Each: Glass card, large metric (text-5xl), trend arrow, mini sparkline chart
 
-### Issues Table
-- **Filter Bar:** Multi-select severity, page selector, date range, search
-- **Table Columns:** Severity | Issue Type | Element | Page | Occurrences | Actions
-- **Bulk Actions:** Top toolbar for export, assign, mark resolved
-- **Pagination:** Bottom, showing "1-50 of 1,247 issues"
+**Real-Time Activity Feed:**
+- Left column (w-2/3): Live scan results with WebSocket updates, animated new entries
+- Right column (w-1/3): Team activity, recent fixes, collaboration updates
 
-### Reports Page
-- **Report Grid:** Cards showing past reports with preview, date, scope
-- **Generation Form:** Project selector, date range, format (CSV/PDF), sections to include
-- **Export Options:** Buttons for immediate download or schedule
+**Severity Distribution Chart:**
+- Stacked area chart showing critical/warning/minor over time
+- Gradient fills with transparency, interactive tooltips
 
-### Admin/Settings
-- **Tabbed Interface:** Organization, Members, Projects, Integrations, API Keys
-- **Member Table:** Avatar, name, email, role dropdown, last active
-- **Integration Cards:** Logo, status badge, configure button, test connection
+**AI Insights Panel:**
+- Glass card with gradient border, AI icon, suggested fixes ranked by impact
+- "Apply Fix" buttons with shimmer effect
 
----
+### Issues Explorer
+**Filter Bar:** Glass panel, sticky top, multi-select dropdowns (severity, page, element type), search with ⌘K
+**Table:** Full-width, virtualized scroll (react-window), expandable rows show:
+- Screenshot thumbnail
+- Code snippet (syntax highlighted with prism.js)
+- AI-generated fix suggestion with "Copy" button
+- Resolution history timeline
 
-## Visual Enhancements
+### Reports & Analytics
+**Report Grid:** 3-column masonry layout, glass cards with:
+- Report preview (mini chart visualization)
+- Date range, scope, compliance score badge
+- Download/Share/Schedule buttons
 
-### Micro-interactions
-- **Loading States:** Skeleton screens matching content layout (not spinners)
-- **Transitions:** 150ms ease for hovers, 200ms for state changes
-- **Success Feedback:** Toast notifications (top-right) with auto-dismiss
+**Compliance Dashboard:**
+- WCAG 2.2 level overview (A, AA, AAA) with circular progress indicators
+- Heat map showing issue distribution across pages
+- Export to PDF with branded template
 
-### Data Visualization
-- **Chart Palette:** Use primary + grayscale for single-series, semantic colors for severity data
-- **Grid Lines:** Subtle (opacity-20), horizontal only for readability
-- **Tooltips:** Show on hover with exact values and percentages
+### Team & Settings
+**Member Management:**
+- Avatar grid with glass cards, role badges, status indicators (online/offline)
+- Invite modal with role selector, permission matrix
 
-### Accessibility Specifics
-- **Focus Indicators:** 2px ring-2 ring-primary ring-offset-2 on all interactive elements
-- **Color Independence:** All severity uses icon + color (never color alone)
-- **Keyboard Nav:** Visible skip links, roving tabindex for tables/grids
-- **Contrast:** Minimum 4.5:1 for normal text, 7:1 preferred for data
+**Integrations:**
+- Card grid: Service logo, connection status badge, configure button
+- OAuth flow for Jira, Slack, GitHub with real-time test connection
 
 ---
 
 ## Images
 
-**Approach:** Minimal imagery - this is a data-focused tool, not a marketing site.
+**Strategy:** Minimal, strategic imagery for empty states and onboarding only.
 
-**Dashboard Empty States:** 
-- Illustration: Abstract line art of web accessibility concepts (wcag-style icons)
-- Placement: Center of empty dashboard cards with CTA button below
-- Style: Monochromatic using primary color, simple 2-3 color max
+**No Hero Image:** Dashboard-first approach - users land directly in data interface post-auth.
 
-**No Hero Image:** Skip traditional hero - lead with dashboard data immediately after auth. First-time users see onboarding wizard overlay, not marketing imagery.
+**Empty State Illustrations:**
+- **First Scan:** Abstract line art of accessibility tree (purple/indigo gradient)
+- **No Issues:** Celebration graphic (simple geometric shapes, brand colors)
+- **Integration Empty:** Service-specific iconography (monochromatic, h-16)
+- **Placement:** Center of empty cards with CTA below, max-w-xs
 
-**Integration Logos:** Use actual brand logos (Jira, Slack) in integration cards at original dimensions (max h-8)
+**Integration Logos:** Actual brand logos in original colors (Jira, Slack, GitHub) at h-8, displayed in connection cards.
+
+**Team Avatars:** Use Gravatar or custom uploads, rounded-full, ring-2 ring-primary/20 on active users.
 
 ---
 
-**Execution Notes:** Build with shadcn/ui components as base, customize with Tailwind utilities per these specs. Recharts for all data viz. Ensure responsive mobile views collapse to single column, hide secondary metrics, keep critical data visible.
+**Technical Implementation:** Build with Radix UI primitives, Tailwind custom config for glass utilities, Recharts for visualization, Framer Motion for micro-interactions. Ensure WCAG 2.2 AA compliance - all glass effects maintain 4.5:1 text contrast minimum.
