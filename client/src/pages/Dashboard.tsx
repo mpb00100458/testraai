@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
@@ -6,11 +6,14 @@ import { StatsCard } from "@/components/StatsCard";
 import { AccessibilityScoreGauge } from "@/components/AccessibilityScoreGauge";
 import { AccessibilityTrendChart } from "@/components/AccessibilityTrendChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, FileText, Globe, TrendingUp, Activity } from "lucide-react";
+import { AlertCircle, FileText, Globe, TrendingUp, Activity, ExternalLink } from "lucide-react";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import type { A11yHistory } from "@shared/schema";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { A11yHistory, A11yResult } from "@shared/schema";
 
 interface DashboardStats {
   totalScans: number;
@@ -29,6 +32,7 @@ interface DashboardStats {
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [selectedFilter, setSelectedFilter] = useState<{ type: 'severity' | 'status' | null; value: string | null }>({ type: null, value: null });
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -53,6 +57,11 @@ export default function Dashboard() {
     enabled: isAuthenticated,
   });
 
+  const { data: allIssues = [] } = useQuery<A11yResult[]>({
+    queryKey: ["/api/issues"],
+    enabled: isAuthenticated,
+  });
+
   if (authLoading || !isAuthenticated) {
     return null;
   }
@@ -63,6 +72,42 @@ export default function Dashboard() {
     { name: "Minor", value: stats.severityBreakdown.minor, fill: "hsl(var(--chart-5))" },
     { name: "Pass", value: stats.severityBreakdown.pass, fill: "hsl(var(--chart-2))" },
   ] : [];
+
+  // Calculate status breakdown
+  const statusBreakdown = {
+    new: allIssues.filter(i => !i.status || i.status === 'new').length,
+    in_progress: allIssues.filter(i => i.status === 'in_progress').length,
+    resolved: allIssues.filter(i => i.status === 'resolved').length,
+    ignored: allIssues.filter(i => i.status === 'ignored').length,
+  };
+
+  const statusChartData = [
+    { name: "New", value: statusBreakdown.new, fill: "hsl(var(--chart-1))" },
+    { name: "In Progress", value: statusBreakdown.in_progress, fill: "hsl(var(--chart-3))" },
+    { name: "Resolved", value: statusBreakdown.resolved, fill: "hsl(var(--chart-2))" },
+    { name: "Ignored", value: statusBreakdown.ignored, fill: "hsl(var(--muted))" },
+  ];
+
+  // Filter issues based on selected filter
+  const filteredIssues = allIssues.filter(issue => {
+    if (!selectedFilter.type || !selectedFilter.value) return true;
+    
+    if (selectedFilter.type === 'severity') {
+      return issue.severity?.toLowerCase() === selectedFilter.value.toLowerCase();
+    } else if (selectedFilter.type === 'status') {
+      const issueStatus = issue.status || 'new';
+      return issueStatus.toLowerCase().replace(' ', '_') === selectedFilter.value.toLowerCase().replace(' ', '_');
+    }
+    return true;
+  });
+
+  const handleChartClick = (type: 'severity' | 'status', value: string) => {
+    if (selectedFilter.type === type && selectedFilter.value === value) {
+      setSelectedFilter({ type: null, value: null });
+    } else {
+      setSelectedFilter({ type, value });
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -132,7 +177,7 @@ export default function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Issues by Severity</CardTitle>
-                <CardDescription>Distribution of accessibility issues</CardDescription>
+                <CardDescription>Click to filter issues below</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -147,9 +192,18 @@ export default function Dashboard() {
                         borderRadius: "6px",
                       }}
                     />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    <Bar 
+                      dataKey="value" 
+                      radius={[4, 4, 0, 0]}
+                      onClick={(data) => handleChartClick('severity', data.name)}
+                      className="cursor-pointer"
+                    >
                       {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.fill} 
+                          opacity={selectedFilter.type === 'severity' && selectedFilter.value !== entry.name ? 0.3 : 1}
+                        />
                       ))}
                     </Bar>
                   </BarChart>
@@ -159,45 +213,141 @@ export default function Dashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Severity Summary</CardTitle>
-                <CardDescription>Quick overview of issue categories</CardDescription>
+                <CardTitle>Issues by Status</CardTitle>
+                <CardDescription>Click to filter issues below</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <SeverityBadge severity="critical" count={stats.severityBreakdown.critical} />
-                    <span className="text-2xl font-bold" data-testid="text-critical-count">{stats.severityBreakdown.critical}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <SeverityBadge severity="warning" count={stats.severityBreakdown.warning} />
-                    <span className="text-2xl font-bold" data-testid="text-warning-count">{stats.severityBreakdown.warning}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <SeverityBadge severity="minor" count={stats.severityBreakdown.minor} />
-                    <span className="text-2xl font-bold" data-testid="text-minor-count">{stats.severityBreakdown.minor}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <SeverityBadge severity="pass" count={stats.severityBreakdown.pass} />
-                    <span className="text-2xl font-bold" data-testid="text-pass-count">{stats.severityBreakdown.pass}</span>
-                  </div>
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={statusChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry) => `${entry.name}: ${entry.value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      onClick={(data) => handleChartClick('status', data.name)}
+                      className="cursor-pointer"
+                    >
+                      {statusChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.fill}
+                          opacity={selectedFilter.type === 'status' && selectedFilter.value !== entry.name ? 0.3 : 1}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "6px",
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
+
           </div>
 
           <AccessibilityTrendChart data={history} />
 
           <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest accessibility scans and findings</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle>Issues</CardTitle>
+                <CardDescription>
+                  {selectedFilter.type && selectedFilter.value 
+                    ? `Filtered by ${selectedFilter.type}: ${selectedFilter.value} (${filteredIssues.length} issues)`
+                    : `All accessibility issues (${allIssues.length} total)`
+                  }
+                </CardDescription>
+              </div>
+              {selectedFilter.type && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setSelectedFilter({ type: null, value: null })}
+                  data-testid="button-clear-filter"
+                >
+                  Clear Filter
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No recent activity</p>
-                <p className="text-sm text-muted-foreground mt-1">Start a new scan to see activity here</p>
-              </div>
+              {filteredIssues.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No issues found</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedFilter.type ? "Try a different filter" : "Start a scan to discover accessibility issues"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Severity</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Rule</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>WCAG</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredIssues.slice(0, 20).map((issue) => (
+                        <TableRow key={issue.id} data-testid={`row-issue-${issue.id}`}>
+                          <TableCell>
+                            <SeverityBadge severity={issue.severity?.toLowerCase() || 'minor'} />
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                issue.status === 'resolved' ? 'default' :
+                                issue.status === 'in_progress' ? 'secondary' :
+                                issue.status === 'ignored' ? 'outline' :
+                                'destructive'
+                              }
+                              data-testid={`badge-status-${issue.id}`}
+                            >
+                              {issue.status || 'new'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{issue.issueType}</TableCell>
+                          <TableCell className="max-w-md truncate">{issue.description}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{issue.wcagCriteria || 'N/A'}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {issue.evidenceUrl && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                data-testid={`button-evidence-${issue.id}`}
+                              >
+                                <a href={issue.evidenceUrl} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {filteredIssues.length > 20 && (
+                    <div className="mt-4 text-center text-sm text-muted-foreground">
+                      Showing 20 of {filteredIssues.length} issues
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </>
