@@ -67,10 +67,10 @@ export default function Dashboard() {
   }
 
   const chartData = stats ? [
-    { name: "Critical", value: stats.severityBreakdown.critical, fill: "hsl(var(--chart-4))" },
-    { name: "Warning", value: stats.severityBreakdown.warning, fill: "hsl(var(--chart-3))" },
-    { name: "Minor", value: stats.severityBreakdown.minor, fill: "hsl(var(--chart-5))" },
-    { name: "Pass", value: stats.severityBreakdown.pass, fill: "hsl(var(--chart-2))" },
+    { name: "Critical", value: stats.severityBreakdown.critical, fill: "hsl(var(--destructive))" },
+    { name: "Warning", value: stats.severityBreakdown.warning, fill: "hsl(var(--warning))" },
+    { name: "Minor", value: stats.severityBreakdown.minor, fill: "hsl(var(--chart-4))" },
+    { name: "Pass", value: stats.severityBreakdown.pass, fill: "hsl(var(--success))" },
   ] : [];
 
   // Calculate status breakdown
@@ -174,7 +174,7 @@ export default function Dashboard() {
               data-testid="accessibility-score-gauge"
             />
             
-            <Card>
+            <Card className="shadow-md hover:shadow-xl transition-all duration-200">
               <CardHeader>
                 <CardTitle>Issues by Severity</CardTitle>
                 <CardDescription>Click to filter issues below</CardDescription>
@@ -211,7 +211,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="shadow-md hover:shadow-xl transition-all duration-200">
               <CardHeader>
                 <CardTitle>Issues by Status</CardTitle>
                 <CardDescription>Click to filter issues below</CardDescription>
@@ -255,7 +255,7 @@ export default function Dashboard() {
 
           <AccessibilityTrendChart data={history} />
 
-          <Card>
+          <Card className="shadow-md hover:shadow-xl transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between gap-4">
               <div>
                 <CardTitle>Issues</CardTitle>
