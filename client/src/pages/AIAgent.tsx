@@ -13,6 +13,7 @@ import type { ChatMessage, ChatConversation } from "@shared/schema";
 
 interface ScanProgress {
   scanRunId: string;
+  estateId: string;
   status: 'running' | 'completed' | 'failed';
   pagesDiscovered: number;
   pagesAudited: number;
@@ -47,35 +48,73 @@ export default function AIAgent() {
     enabled: !!conversationId,
   });
 
-  // Fetch scan statuses for all messages with scanRunId to initialize progress state
+  // Fetch scan statuses for all messages with scanRunId or estateId to initialize progress state
   useEffect(() => {
     if (!messages || messages.length === 0) return;
 
     const fetchScanStatuses = async () => {
       for (const msg of messages) {
-        if (msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata) {
-          const scanRunId = (msg.metadata as any).scanRunId;
+        if (msg.metadata && typeof msg.metadata === 'object') {
+          const metadata = msg.metadata as any;
           
-          // Skip if we already have status for this scan
-          if (scanProgress[scanRunId]) continue;
-
-          try {
-            const response = await fetch(`/api/scans/${scanRunId}`);
-            if (!response.ok) continue;
+          // Handle messages with scanRunId (legacy)
+          if ('scanRunId' in metadata) {
+            const scanRunId = metadata.scanRunId;
             
-            const scan: any = await response.json();
-            setScanProgress(prev => ({
-              ...prev,
-              [scanRunId]: {
-                scanRunId,
-                status: scan.status,
-                pagesDiscovered: scan.pagesAudited || 0,
-                pagesAudited: scan.pagesAudited || 0,
-                issuesFound: scan.totalIssues || 0,
+            // Skip if we already have status for this scan
+            if (scanProgress[scanRunId]) continue;
+
+            try {
+              const response = await fetch(`/api/scans/${scanRunId}`);
+              if (!response.ok) continue;
+              
+              const scan: any = await response.json();
+              setScanProgress(prev => ({
+                ...prev,
+                [scanRunId]: {
+                  scanRunId,
+                  estateId: scan.estateId,
+                  status: scan.status,
+                  pagesDiscovered: scan.pagesAudited || 0,
+                  pagesAudited: scan.pagesAudited || 0,
+                  issuesFound: scan.totalIssues || 0,
+                }
+              }));
+            } catch (error) {
+              console.error('Error fetching scan status:', error);
+            }
+          }
+          
+          // Handle messages with estateId (new approach)
+          else if ('estateId' in metadata) {
+            const estateId = metadata.estateId;
+            
+            // Skip if we already have a scan for this estate
+            if (Object.values(scanProgress).some(s => s.estateId === estateId)) continue;
+
+            try {
+              // Get the latest scan for this estate
+              const response = await fetch(`/api/scans?estateId=${estateId}&limit=1`);
+              if (!response.ok) continue;
+              
+              const scans: any[] = await response.json();
+              if (scans.length > 0) {
+                const scan = scans[0];
+                setScanProgress(prev => ({
+                  ...prev,
+                  [scan.id]: {
+                    scanRunId: scan.id,
+                    estateId: scan.estateId,
+                    status: scan.status,
+                    pagesDiscovered: scan.pagesAudited || 0,
+                    pagesAudited: scan.pagesAudited || 0,
+                    issuesFound: scan.totalIssues || 0,
+                  }
+                }));
               }
-            }));
-          } catch (error) {
-            console.error('Error fetching scan status:', error);
+            } catch (error) {
+              console.error('Error fetching scan for estate:', error);
+            }
           }
         }
       }
@@ -126,24 +165,29 @@ export default function AIAgent() {
         // Handle scan events
         if (data.type === 'scan_start' || data.type === 'page_complete' || data.type === 'scan_complete' || data.type === 'scan_error') {
           const scanRunId = data.data?.scanRunId;
+          const estateId = data.estateId;
+          const eventType = data.type;
           
-          // For scan_complete, use totalPages for both discovered and audited
-          // For page_complete, use pageNumber for audited and totalPages for discovered
-          const pagesAudited = data.type === 'scan_complete' 
-            ? (data.data?.totalPages || prev[scanRunId]?.pagesAudited || 0)
-            : (data.data?.pageNumber || prev[scanRunId]?.pagesAudited || 0);
-          
-          setScanProgress(prev => ({
-            ...prev,
-            [scanRunId]: {
-              scanRunId,
-              status: data.type === 'scan_complete' ? 'completed' : data.type === 'scan_error' ? 'failed' : 'running',
-              pagesDiscovered: data.data?.totalPages || prev[scanRunId]?.pagesDiscovered || 0,
-              pagesAudited,
-              currentPage: data.data?.url || prev[scanRunId]?.currentPage,
-              issuesFound: data.data?.totalIssues || prev[scanRunId]?.issuesFound || 0,
-            }
-          }));
+          setScanProgress(prev => {
+            // For scan_complete, use totalPages for both discovered and audited
+            // For page_complete, use pageNumber for audited and totalPages for discovered
+            const pagesAudited = eventType === 'scan_complete' 
+              ? (data.data?.totalPages || prev[scanRunId]?.pagesAudited || 0)
+              : (data.data?.pageNumber || prev[scanRunId]?.pagesAudited || 0);
+            
+            return {
+              ...prev,
+              [scanRunId]: {
+                scanRunId,
+                estateId,
+                status: eventType === 'scan_complete' ? 'completed' : eventType === 'scan_error' ? 'failed' : 'running',
+                pagesDiscovered: data.data?.totalPages || prev[scanRunId]?.pagesDiscovered || 0,
+                pagesAudited,
+                currentPage: data.data?.url || prev[scanRunId]?.currentPage,
+                issuesFound: data.data?.totalIssues || prev[scanRunId]?.issuesFound || 0,
+              }
+            };
+          });
 
           // Refresh messages when scan completes
           if (data.type === 'scan_complete') {
@@ -284,13 +328,28 @@ export default function AIAgent() {
                   <div className="whitespace-pre-wrap">{msg.content}</div>
                   
                   {/* Show scan progress and results */}
-                  {msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata && (
+                  {msg.metadata && typeof msg.metadata === 'object' && ('scanRunId' in msg.metadata || 'estateId' in msg.metadata) && (
                     <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-                      {(() => {
+                      {((): JSX.Element => {
                         const metadata = msg.metadata as any;
-                        const progress = scanProgress[metadata.scanRunId];
+                        
+                        // Find the scan: either by scanRunId (legacy) or by estateId (new approach)
+                        let progress: ScanProgress | undefined;
+                        let scanRunId: string | undefined;
+                        
+                        if (metadata.scanRunId) {
+                          // Legacy: metadata has scanRunId
+                          progress = scanProgress[metadata.scanRunId];
+                          scanRunId = metadata.scanRunId;
+                        } else if (metadata.estateId) {
+                          // New: find the most recent scan for this estate
+                          const estateScan = Object.values(scanProgress).find(s => s.estateId === metadata.estateId);
+                          progress = estateScan;
+                          scanRunId = estateScan?.scanRunId;
+                        }
+                        
                         const isRunning = progress?.status === 'running';
-                        const isCompleted = !progress || progress?.status === 'completed';
+                        const isCompleted = progress?.status === 'completed';
                         const isFailed = progress?.status === 'failed';
 
                         return (
@@ -331,12 +390,12 @@ export default function AIAgent() {
                             )}
 
                             {/* Completed - Show View Results and Downloads */}
-                            {isCompleted && (
+                            {isCompleted && scanRunId && (
                               <div className="space-y-2">
                                 <Link
-                                  href={`/scans/${metadata.scanRunId}`}
+                                  href={`/scans/${scanRunId}`}
                                   className="inline-flex items-center gap-2 text-sm hover-elevate active-elevate-2 px-3 py-2 rounded-md bg-background/20"
-                                  data-testid={`link-scan-${metadata.scanRunId}`}
+                                  data-testid={`link-scan-${scanRunId}`}
                                 >
                                   <ExternalLink className="h-4 w-4" />
                                   View Full Scan Results
@@ -347,9 +406,9 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${metadata.scanRunId}/download/video`, '_blank')}
+                                    onClick={() => window.open(`/api/scans/${scanRunId}/download/video`, '_blank')}
                                     className="gap-2"
-                                    data-testid={`button-download-video-${metadata.scanRunId}`}
+                                    data-testid={`button-download-video-${scanRunId}`}
                                   >
                                     <FileVideo className="h-3 w-3" />
                                     Video
@@ -357,9 +416,9 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${metadata.scanRunId}/export/excel`, '_blank')}
+                                    onClick={() => window.open(`/api/scans/${scanRunId}/export/excel`, '_blank')}
                                     className="gap-2"
-                                    data-testid={`button-download-excel-${metadata.scanRunId}`}
+                                    data-testid={`button-download-excel-${scanRunId}`}
                                   >
                                     <FileSpreadsheet className="h-3 w-3" />
                                     Excel
@@ -367,9 +426,9 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${metadata.scanRunId}/export/json`, '_blank')}
+                                    onClick={() => window.open(`/api/scans/${scanRunId}/export/json`, '_blank')}
                                     className="gap-2"
-                                    data-testid={`button-download-json-${metadata.scanRunId}`}
+                                    data-testid={`button-download-json-${scanRunId}`}
                                   >
                                     <FileJson className="h-3 w-3" />
                                     JSON
