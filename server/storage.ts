@@ -38,6 +38,7 @@ import { eq, and, inArray, desc } from "drizzle-orm";
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUsersByOrgId(orgId: string): Promise<User[]>;
   
@@ -120,6 +121,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     // Check if user exists by id first
     const existingUser = await this.getUser(userData.id);
@@ -148,13 +154,11 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return user;
     } catch (error: any) {
-      // If email conflict (different id, same email), update by email
+      // If email conflict, just update the user info by email (don't change ID)
       if (error?.code === '23505' && error?.constraint === 'users_email_unique') {
         const [user] = await db
           .update(users)
           .set({
-            id: userData.id,
-            email: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
             profileImageUrl: userData.profileImageUrl,
