@@ -389,13 +389,13 @@ export default function AIAgent() {
                               </div>
                             )}
 
-                            {/* Completed - Show View Results and Downloads */}
-                            {isCompleted && scanRunId && (
+                            {/* Completed or Previous Scan Results - Show View Results and Downloads */}
+                            {(isCompleted || metadata.scanRunId) && (scanRunId || metadata.scanRunId) && (
                               <div className="space-y-2">
                                 <Link
-                                  href={`/scans/${scanRunId}`}
+                                  href={`/scans/${scanRunId || metadata.scanRunId}`}
                                   className="inline-flex items-center gap-2 text-sm hover-elevate active-elevate-2 px-3 py-2 rounded-md bg-background/20"
-                                  data-testid={`link-scan-${scanRunId}`}
+                                  data-testid={`link-scan-${scanRunId || metadata.scanRunId}`}
                                 >
                                   <ExternalLink className="h-4 w-4" />
                                   View Full Scan Results
@@ -406,9 +406,9 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${scanRunId}/video`, '_blank')}
+                                    onClick={() => window.open(`/api/scans/${scanRunId || metadata.scanRunId}/video`, '_blank')}
                                     className="gap-2"
-                                    data-testid={`button-download-video-${scanRunId}`}
+                                    data-testid={`button-download-video-${scanRunId || metadata.scanRunId}`}
                                   >
                                     <FileVideo className="h-3 w-3" />
                                     Video
@@ -417,12 +417,14 @@ export default function AIAgent() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      if (progress?.estateId) {
-                                        window.open(`/api/estates/${progress.estateId}/report/excel?scanRunId=${scanRunId}`, '_blank');
+                                      const estateId = progress?.estateId || metadata.estateId;
+                                      const scanId = scanRunId || metadata.scanRunId;
+                                      if (estateId && scanId) {
+                                        window.open(`/api/estates/${estateId}/report/excel?scanRunId=${scanId}`, '_blank');
                                       }
                                     }}
                                     className="gap-2"
-                                    data-testid={`button-download-excel-${scanRunId}`}
+                                    data-testid={`button-download-excel-${scanRunId || metadata.scanRunId}`}
                                   >
                                     <FileSpreadsheet className="h-3 w-3" />
                                     Excel
@@ -430,9 +432,9 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${scanRunId}/export/json`, '_blank')}
+                                    onClick={() => window.open(`/api/scans/${scanRunId || metadata.scanRunId}/export/json`, '_blank')}
                                     className="gap-2"
-                                    data-testid={`button-download-json-${scanRunId}`}
+                                    data-testid={`button-download-json-${scanRunId || metadata.scanRunId}`}
                                   >
                                     <FileJson className="h-3 w-3" />
                                     JSON
