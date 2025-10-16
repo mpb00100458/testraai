@@ -24,11 +24,6 @@ const navigationItems = [
     icon: LayoutDashboard,
   },
   {
-    title: "Issues",
-    url: "/issues",
-    icon: AlertCircle,
-  },
-  {
     title: "Projects",
     url: "/projects",
     icon: FolderOpen,
