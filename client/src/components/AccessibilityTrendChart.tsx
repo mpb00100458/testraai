@@ -25,7 +25,7 @@ export function AccessibilityTrendChart({ data }: AccessibilityTrendChartProps) 
 
   if (chartData.length === 0) {
     return (
-      <Card data-testid="card-accessibility-trend">
+      <Card className="shadow-md hover:shadow-xl transition-all duration-200" data-testid="card-accessibility-trend">
         <CardHeader>
           <CardTitle>Accessibility Score Trend</CardTitle>
           <CardDescription>Track compliance progress over time</CardDescription>
@@ -38,7 +38,7 @@ export function AccessibilityTrendChart({ data }: AccessibilityTrendChartProps) 
   }
 
   return (
-    <Card data-testid="card-accessibility-trend">
+    <Card className="shadow-md hover:shadow-xl transition-all duration-200" data-testid="card-accessibility-trend">
       <CardHeader>
         <CardTitle>Accessibility Score Trend</CardTitle>
         <CardDescription>Track compliance progress over time</CardDescription>

@@ -22,7 +22,7 @@ export function AccessibilityScoreGauge({ score, className }: AccessibilityScore
   const progress = (score / 100) * circumference;
 
   return (
-    <Card className={className}>
+    <Card className={`shadow-md hover:shadow-xl transition-all duration-200 ${className || ''}`}>
       <CardHeader>
         <CardTitle className="text-lg">Accessibility Score</CardTitle>
       </CardHeader>
