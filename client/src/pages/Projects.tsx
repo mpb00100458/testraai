@@ -121,13 +121,13 @@ export default function Projects() {
           <p className="text-lg text-muted-foreground">Organize your accessibility testing by project</p>
         </div>
         {!organizations || organizations.length === 0 ? (
-          <Button 
+          <GradientButton 
             data-testid="button-create-org-first" 
             onClick={() => window.location.href = '/organization'}
-            variant="default"
+            showIcon={false}
           >
             Create Organization First
-          </Button>
+          </GradientButton>
         ) : (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -197,9 +197,9 @@ export default function Projects() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = '/organization'} data-testid="button-go-to-org">
+            <GradientButton onClick={() => window.location.href = '/organization'} data-testid="button-go-to-org" showIcon={false}>
               Go to Organization Page
-            </Button>
+            </GradientButton>
           </CardContent>
         </Card>
       ) : null}
@@ -283,10 +283,10 @@ export default function Projects() {
               <p className="text-muted-foreground max-w-md mb-4">
                 Create your first project to start organizing accessibility tests
               </p>
-              <Button onClick={() => setOpen(true)} data-testid="button-create-first-project">
+              <GradientButton onClick={() => setOpen(true)} data-testid="button-create-first-project" showIcon={false}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Project
-              </Button>
+              </GradientButton>
             </div>
           </CardContent>
         </Card>
