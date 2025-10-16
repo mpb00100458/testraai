@@ -305,6 +305,9 @@ export class RealScanAgent {
       sources: true
     });
 
+    // Create a single page for the entire scan (reuse for all URLs to get one continuous video)
+    const page = await context.newPage();
+
     try {
       while (urlsToVisit.length > 0 && results.length < MAX_PAGES_PER_ESTATE) {
         const currentUrl = urlsToVisit.shift()!;
@@ -319,7 +322,6 @@ export class RealScanAgent {
         });
 
         try {
-          const page = await context.newPage();
         
         try {
           // Emit page testing event
@@ -451,8 +453,9 @@ export class RealScanAgent {
               // Invalid URL, skip
             }
           }
-        } finally {
-          await page.close();
+        } catch (innerError) {
+          console.error(`Error processing ${currentUrl}:`, innerError);
+          // Continue with next URL
         }
       } catch (error) {
         console.error(`Error crawling ${currentUrl}:`, error);
@@ -461,6 +464,9 @@ export class RealScanAgent {
     }
 
     } finally {
+      // Close the page we've been reusing
+      await page.close();
+      
       // Stop tracing and save trace file
       await context.tracing.stop({ path: tracePath });
       console.log(`Playwright trace saved: ${tracePath}`);
