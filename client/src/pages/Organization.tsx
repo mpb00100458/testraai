@@ -344,7 +344,7 @@ export default function OrganizationPage() {
           </CardContent>
         </Card>
 
-        <Card className="gradient-border overflow-visible">
+        <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
