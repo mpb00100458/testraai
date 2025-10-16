@@ -97,7 +97,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2">
       {/* Left Column - Auth Forms */}
-      <div className="flex items-center justify-center p-8 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="flex items-center justify-center p-8 bg-gradient-to-br from-violet-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <div className="w-full max-w-md space-y-8">
           <div className="flex items-center gap-3 mb-8">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-purple-600 text-white">
