@@ -8,7 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/Landing";
+import Landing from "@/pages/SimpleLanding";
 import Dashboard from "@/pages/Dashboard";
 import Issues from "@/pages/Issues";
 import Projects from "@/pages/Projects";
