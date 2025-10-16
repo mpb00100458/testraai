@@ -174,8 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Find user by email
-      const users = await storage.getUsersByOrgId(orgId);
-      const targetUser = users.find(u => u.email === email);
+      const targetUser = await storage.getUserByEmail(email);
       
       if (!targetUser) {
         return res.status(404).json({ message: "User not found with that email" });
