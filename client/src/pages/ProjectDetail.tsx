@@ -251,7 +251,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                             href={estate.baseUrl} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-sm text-primary hover:underline truncate"
+                            className="flex items-center gap-1 text-sm text-foreground hover:underline truncate"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <span className="truncate">{estate.baseUrl}</span>

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
+import { GradientButton } from "@/components/GradientButton";
 
 interface ScanRun {
   id: string;
@@ -334,25 +335,23 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
               <TableCell className="text-right" data-testid={`table-cell-actions-${scan.id}`}>
                 <div className="flex gap-2 justify-end">
                   <Link href={`/scans/${scan.id}`}>
-                    <Button
+                    <GradientButton
                       size="sm"
-                      variant="default"
                       disabled={scan.status !== 'completed'}
                       data-testid={`button-view-report-${scan.id}`}
-                      className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                      showIcon={false}
                     >
                       <Eye className="h-3 w-3 mr-1.5" />
                       <span className="text-xs font-medium">View</span>
-                    </Button>
+                    </GradientButton>
                   </Link>
                   
-                  <Button
+                  <GradientButton
                     size="sm"
-                    variant="default"
                     onClick={() => handleDownloadExcel(scan.id)}
                     disabled={downloadingExcel === scan.id || scan.status !== 'completed'}
                     data-testid={`button-download-excel-${scan.id}`}
-                    className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                    showIcon={false}
                   >
                     {downloadingExcel === scan.id ? (
                       <>
@@ -365,15 +364,14 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                         <span className="text-xs font-medium">Excel</span>
                       </>
                     )}
-                  </Button>
+                  </GradientButton>
                   
-                  <Button
+                  <GradientButton
                     size="sm"
-                    variant="default"
                     onClick={() => handleDownloadPdf(scan.id)}
                     disabled={downloadingPdf === scan.id || scan.status !== 'completed'}
                     data-testid={`button-download-pdf-${scan.id}`}
-                    className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                    showIcon={false}
                   >
                     {downloadingPdf === scan.id ? (
                       <>
@@ -386,15 +384,14 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                         <span className="text-xs font-medium">PDF</span>
                       </>
                     )}
-                  </Button>
+                  </GradientButton>
                   
-                  <Button
+                  <GradientButton
                     size="sm"
-                    variant="default"
                     onClick={() => handleDownloadVideo(scan.id)}
                     disabled={downloadingVideo === scan.id || scan.status !== 'completed'}
                     data-testid={`button-download-video-${scan.id}`}
-                    className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800"
+                    showIcon={false}
                   >
                     {downloadingVideo === scan.id ? (
                       <>
@@ -407,15 +404,14 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                         <span className="text-xs font-medium">Video</span>
                       </>
                     )}
-                  </Button>
+                  </GradientButton>
                   
-                  <Button
+                  <GradientButton
                     size="sm"
-                    variant="default"
                     onClick={() => handleDownloadTrace(scan.id)}
                     disabled={downloadingTrace === scan.id || scan.status !== 'completed'}
                     data-testid={`button-download-trace-${scan.id}`}
-                    className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
+                    showIcon={false}
                   >
                     {downloadingTrace === scan.id ? (
                       <>
@@ -428,7 +424,7 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                         <span className="text-xs font-medium">Trace</span>
                       </>
                     )}
-                  </Button>
+                  </GradientButton>
                 </div>
               </TableCell>
             </TableRow>
