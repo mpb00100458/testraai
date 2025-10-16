@@ -37,7 +37,7 @@ const navigationItems = [
 
 const settingsItems = [
   {
-    title: "Organization",
+    title: "Workspace",
     url: "/organization",
     icon: Building2,
   },
