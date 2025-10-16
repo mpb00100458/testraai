@@ -1,50 +1,36 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle, FileSearch, Shield, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertUserSchema, loginSchema, type InsertUser } from "@shared/schema";
+import { AlertCircle, CheckCircle, FileSearch, Shield, Loader2, Sparkles } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
 import { GradientButton } from "@/components/GradientButton";
-
-type LoginData = z.infer<typeof loginSchema>;
-type RegisterData = z.infer<typeof insertUserSchema>;
 
 export default function Landing() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
 
-  const loginForm = useForm<LoginData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+  // Login form state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
-  const registerForm = useForm<RegisterData>({
-    resolver: zodResolver(insertUserSchema),
-    mode: "onSubmit",
-    defaultValues: {
-      email: "",
-      password: "",
-      firstName: "",
-      lastName: "",
-    },
-  });
+  // Register form state
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerFirstName, setRegisterFirstName] = useState("");
+  const [registerLastName, setRegisterLastName] = useState("");
 
   const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
+    mutationFn: async (e: React.FormEvent) => {
+      e.preventDefault();
+      const res = await apiRequest("POST", "/api/login", {
+        email: loginEmail,
+        password: loginPassword,
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Invalid credentials");
@@ -69,8 +55,22 @@ export default function Landing() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
+    mutationFn: async (e: React.FormEvent) => {
+      e.preventDefault();
+      
+      if (!registerEmail || !registerPassword) {
+        throw new Error("Email and password are required");
+      }
+      if (registerPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters");
+      }
+
+      const res = await apiRequest("POST", "/api/register", {
+        email: registerEmail,
+        password: registerPassword,
+        firstName: registerFirstName,
+        lastName: registerLastName,
+      });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Registration failed");
@@ -94,25 +94,19 @@ export default function Landing() {
     },
   });
 
-  const onLoginSubmit = (data: LoginData) => {
-    loginMutation.mutate(data);
-  };
-
-  const onRegisterSubmit = (data: RegisterData) => {
-    registerMutation.mutate(data);
-  };
-
   return (
     <div className="min-h-screen bg-background grid lg:grid-cols-2">
       {/* Left Column - Auth Forms */}
       <div className="flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8">
           <div className="flex items-center gap-3 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gradient-to-br from-purple-500 to-pink-600 text-white">
-              <Shield className="h-6 w-6" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+              <Sparkles className="h-6 w-6" />
             </div>
             <div className="flex flex-col">
-              <span className="text-2xl font-bold">TestraAI</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                TestraAI
+              </span>
               <span className="text-sm text-muted-foreground">AI-Powered Testing Platform</span>
             </div>
           </div>
@@ -139,240 +133,205 @@ export default function Landing() {
             </CardHeader>
             <CardContent>
               {isLogin ? (
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <FormField
-                      control={loginForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="email" 
-                              placeholder="you@example.com"
-                              data-testid="input-login-email"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                <form onSubmit={(e) => loginMutation.mutate(e)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      required
+                      data-testid="input-login-email"
                     />
-                    <FormField
-                      control={loginForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="password" 
-                              placeholder="••••••••"
-                              data-testid="input-login-password"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                      data-testid="input-login-password"
                     />
-                    <GradientButton 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={loginMutation.isPending}
-                      data-testid="button-login-submit"
-                    >
-                      {loginMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Signing in...
-                        </>
-                      ) : (
-                        "Sign In"
-                      )}
-                    </GradientButton>
-                  </form>
-                </Form>
+                  </div>
+                  <GradientButton
+                    type="submit"
+                    className="w-full"
+                    disabled={loginMutation.isPending}
+                    data-testid="button-login-submit"
+                  >
+                    {loginMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </GradientButton>
+                </form>
               ) : (
-                <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                placeholder="John"
-                                data-testid="input-register-firstname"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                placeholder="Doe"
-                                data-testid="input-register-lastname"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                <form onSubmit={(e) => registerMutation.mutate(e)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="register-firstname">First Name</Label>
+                      <Input
+                        id="register-firstname"
+                        type="text"
+                        placeholder="John"
+                        value={registerFirstName}
+                        onChange={(e) => setRegisterFirstName(e.target.value)}
+                        data-testid="input-register-firstname"
                       />
                     </div>
-                    <FormField
-                      control={registerForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="email" 
-                              autoComplete="email"
-                              placeholder="you@example.com"
-                              data-testid="input-register-email"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <div className="space-y-2">
+                      <Label htmlFor="register-lastname">Last Name</Label>
+                      <Input
+                        id="register-lastname"
+                        type="text"
+                        placeholder="Doe"
+                        value={registerLastName}
+                        onChange={(e) => setRegisterLastName(e.target.value)}
+                        data-testid="input-register-lastname"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-email">Email</Label>
+                    <Input
+                      id="register-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
+                      required
+                      autoComplete="email"
+                      data-testid="input-register-email"
                     />
-                    <FormField
-                      control={registerForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="password" 
-                              placeholder="••••••••"
-                              data-testid="input-register-password"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-password">Password</Label>
+                    <Input
+                      id="register-password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      required
+                      data-testid="input-register-password"
                     />
-                    <GradientButton 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={registerMutation.isPending}
-                      data-testid="button-register-submit"
-                    >
-                      {registerMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating account...
-                        </>
-                      ) : (
-                        "Create Account"
-                      )}
-                    </GradientButton>
-                  </form>
-                </Form>
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 6 characters
+                    </p>
+                  </div>
+                  <GradientButton
+                    type="submit"
+                    className="w-full"
+                    disabled={registerMutation.isPending}
+                    data-testid="button-register-submit"
+                  >
+                    {registerMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      "Create Account"
+                    )}
+                  </GradientButton>
+                </form>
               )}
+
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-toggle-auth-mode"
+                >
+                  {isLogin ? (
+                    <>
+                      Don't have an account?{" "}
+                      <span className="text-blue-600 font-semibold">Sign up</span>
+                    </>
+                  ) : (
+                    <>
+                      Already have an account?{" "}
+                      <span className="text-blue-600 font-semibold">Sign in</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </CardContent>
           </Card>
-
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
-              {" "}
-              <button
-                className="font-semibold text-primary hover:underline"
-                onClick={() => setIsLogin(!isLogin)}
-                data-testid="button-toggle-auth-mode"
-              >
-                {isLogin ? "Sign up" : "Sign in"}
-              </button>
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Right Column - Hero Section */}
-      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-600 p-12 text-white">
+      {/* Right Column - Hero Features */}
+      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-12">
         <div className="max-w-lg space-y-8">
-          <div>
-            <h2 className="text-4xl font-bold mb-4">
-              Automated Accessibility Testing
-            </h2>
-            <p className="text-lg text-white/90">
-              Discover, audit, and resolve WCAG 2.2 compliance issues across your entire web estate with intelligent AI agents
-            </p>
-          </div>
-
           <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                <FileSearch className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Intelligent Crawling</h3>
-                <p className="text-sm text-white/80">
-                  Automatically discover and map all pages across your web estate
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                <CheckCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">WCAG 2.2 Audits</h3>
-                <p className="text-sm text-white/80">
-                  Comprehensive accessibility compliance powered by Playwright and axe-core
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                <AlertCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Smart Deduplication</h3>
-                <p className="text-sm text-white/80">
-                  Automatically group recurring issues for efficient remediation
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                <Shield className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Enterprise Ready</h3>
-                <p className="text-sm text-white/80">
-                  Multi-tenant architecture with role-based access control
-                </p>
-              </div>
-            </div>
+            <h2 className="text-4xl font-bold leading-tight">
+              AI-Powered Web Accessibility Testing
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Automate WCAG 2.1 A/AA compliance audits with real browser testing, 
+              intelligent analysis, and detailed actionable reports
+            </p>
           </div>
 
-          <div className="pt-8 border-t border-white/20">
-            <p className="text-sm text-white/70">
-              Trusted by teams to maintain WCAG compliance across thousands of web pages
-            </p>
+          <div className="space-y-6">
+            <div className="flex gap-4 items-start">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg">WCAG 2.1 Compliance</h3>
+                <p className="text-sm text-muted-foreground">
+                  Comprehensive Level A & AA testing with Playwright and axe-core integration
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                <CheckCircle className="h-6 w-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg">Live Visual Testing</h3>
+                <p className="text-sm text-muted-foreground">
+                  Watch real-time scan progress with WebSocket-powered updates and video recording
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                <FileSearch className="h-6 w-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg">Detailed Reports</h3>
+                <p className="text-sm text-muted-foreground">
+                  Export comprehensive accessibility reports in JSON, Excel, and HTML formats
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                <AlertCircle className="h-6 w-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg">Issue Management</h3>
+                <p className="text-sm text-muted-foreground">
+                  Track, assign, and resolve accessibility issues with team collaboration features
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
