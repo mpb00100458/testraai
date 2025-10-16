@@ -142,6 +142,7 @@ Keep responses concise and helpful.`
             metadata: {
               estateId: existingEstate.id,
               projectId: existingEstate.projectId,
+              scanRunId: existingScan.id,  // Include scan ID for results link
             }
           };
         }
@@ -213,6 +214,7 @@ Keep responses concise and helpful.`
             metadata: {
               estateId: existingEstate.id,
               projectId: existingEstate.projectId,
+              scanRunId: existingScan.id,  // Include scan ID for results link
             }
           };
         }
