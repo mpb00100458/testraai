@@ -191,14 +191,13 @@ export function VisualTestingModal({ open, onOpenChange, estateId, estateName }:
           
           case 'page_testing':
             setCurrentPage(message.data?.url || '');
-            setPagesTested(message.data?.pageNumber || 0);
-            // Use maximum totalPages seen to ensure monotonic progress
-            const currentTotal = message.data?.totalPages || 1;
-            const maxTotal = Math.max(maxTotalPagesRef.current, currentTotal);
-            maxTotalPagesRef.current = maxTotal;
-            setPagesDiscovered(maxTotal);
-            setProgress(((message.data?.pageNumber || 0) / maxTotal) * 100);
-            logEntry.message = `Testing [${message.data?.pageNumber}/${maxTotal}]: ${message.data?.url}`;
+            const tested = message.data?.pageNumber || 0;
+            const discovered = message.data?.totalPages || 1;
+            setPagesTested(tested);
+            setPagesDiscovered(discovered);
+            // Calculate progress based on tested vs discovered (never decreases)
+            setProgress(Math.min((tested / discovered) * 100, 100));
+            logEntry.message = `Testing [${tested}/${discovered}]: ${message.data?.url}`;
             logEntry.severity = 'info';
             break;
           
