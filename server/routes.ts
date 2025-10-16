@@ -163,6 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add member to organization
   app.post('/api/organizations/:orgId/members', isAuthenticated, async (req: any, res) => {
     try {
+      console.log('[ADD MEMBER] Route hit with orgId:', req.params.orgId, 'body:', req.body);
       const userId = req.user.claims.sub;
       const { orgId } = req.params;
       const { email, role } = req.body;
