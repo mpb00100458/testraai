@@ -5,15 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Send, Loader2, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles, Send, Loader2, ExternalLink, CheckCircle2, AlertCircle, Download, FileVideo, FileSpreadsheet, FileJson } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { ChatMessage, ChatConversation } from "@shared/schema";
 
+interface ScanProgress {
+  scanRunId: string;
+  status: 'running' | 'completed' | 'failed';
+  pagesDiscovered: number;
+  pagesAudited: number;
+  currentPage?: string;
+  issuesFound: number;
+}
+
 export default function AIAgent() {
   const [message, setMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<Record<string, ScanProgress>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   // Get or create conversation
   const { data: conversation } = useQuery<ChatConversation>({
@@ -47,12 +59,55 @@ export default function AIAgent() {
     },
   });
 
+  // WebSocket connection for real-time scan updates
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Handle scan events
+        if (data.type === 'scan_start' || data.type === 'page_complete' || data.type === 'scan_complete' || data.type === 'scan_error') {
+          const { scanRunId, estateId } = data;
+          
+          setScanProgress(prev => ({
+            ...prev,
+            [scanRunId]: {
+              scanRunId,
+              status: data.type === 'scan_complete' ? 'completed' : data.type === 'scan_error' ? 'failed' : 'running',
+              pagesDiscovered: data.pagesDiscovered || prev[scanRunId]?.pagesDiscovered || 0,
+              pagesAudited: data.pagesAudited || prev[scanRunId]?.pagesAudited || 0,
+              currentPage: data.currentPage || prev[scanRunId]?.currentPage,
+              issuesFound: data.totalIssues || prev[scanRunId]?.issuesFound || 0,
+            }
+          }));
+
+          // Refresh messages when scan completes
+          if (data.type === 'scan_complete') {
+            queryClient.invalidateQueries({ queryKey: ['/api/ai-agent/messages', conversationId] });
+          }
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [conversationId]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, scanProgress]);
 
   const handleSend = () => {
     if (!message.trim() || sendMessageMutation.isPending) return;
@@ -146,17 +201,105 @@ export default function AIAgent() {
                   )}
                   <div className="whitespace-pre-wrap">{msg.content}</div>
                   
-                  {/* Show scan link if metadata contains scan info */}
+                  {/* Show scan progress and results */}
                   {msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata && (
-                    <div className="mt-3 pt-3 border-t border-border/50">
-                      <Link
-                        href={`/scans/${(msg.metadata as any).scanRunId}`}
-                        className="inline-flex items-center gap-2 text-sm hover-elevate active-elevate-2 px-3 py-2 rounded-md bg-background/20"
-                        data-testid={`link-scan-${(msg.metadata as any).scanRunId}`}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        View Full Scan Results
-                      </Link>
+                    <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                      {(() => {
+                        const metadata = msg.metadata as any;
+                        const progress = scanProgress[metadata.scanRunId];
+                        const isRunning = progress?.status === 'running';
+                        const isCompleted = progress?.status === 'completed';
+                        const isFailed = progress?.status === 'failed';
+
+                        return (
+                          <>
+                            {/* Live Progress */}
+                            {isRunning && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">
+                                    Scanning... {progress.pagesAudited} / {progress.pagesDiscovered} pages
+                                  </span>
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    In Progress
+                                  </Badge>
+                                </div>
+                                <Progress 
+                                  value={progress.pagesDiscovered > 0 ? (progress.pagesAudited / progress.pagesDiscovered) * 100 : 0} 
+                                  className="h-2"
+                                />
+                                {progress.currentPage && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    Current: {progress.currentPage}
+                                  </p>
+                                )}
+                                {progress.issuesFound > 0 && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {progress.issuesFound} issues found so far
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Completed - Show View Results and Downloads */}
+                            {(isCompleted || (!isRunning && !isFailed)) && (
+                              <div className="space-y-2">
+                                <Link
+                                  href={`/scans/${metadata.scanRunId}`}
+                                  className="inline-flex items-center gap-2 text-sm hover-elevate active-elevate-2 px-3 py-2 rounded-md bg-background/20"
+                                  data-testid={`link-scan-${metadata.scanRunId}`}
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  View Full Scan Results
+                                </Link>
+
+                                {/* Download buttons */}
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(`/api/scans/${metadata.scanRunId}/download/video`, '_blank')}
+                                    className="gap-2"
+                                    data-testid={`button-download-video-${metadata.scanRunId}`}
+                                  >
+                                    <FileVideo className="h-3 w-3" />
+                                    Video
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(`/api/scans/${metadata.scanRunId}/export/excel`, '_blank')}
+                                    className="gap-2"
+                                    data-testid={`button-download-excel-${metadata.scanRunId}`}
+                                  >
+                                    <FileSpreadsheet className="h-3 w-3" />
+                                    Excel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(`/api/scans/${metadata.scanRunId}/export/json`, '_blank')}
+                                    className="gap-2"
+                                    data-testid={`button-download-json-${metadata.scanRunId}`}
+                                  >
+                                    <FileJson className="h-3 w-3" />
+                                    JSON
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Failed */}
+                            {isFailed && (
+                              <Badge variant="destructive" className="gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Scan Failed
+                              </Badge>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
