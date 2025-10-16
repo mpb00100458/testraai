@@ -243,16 +243,18 @@ export class RealScanAgent {
     } catch (error) {
       console.error('Real scan error:', error);
       
-      // Emit scan error event
-      wsManager.emitScanError(estateId, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      
-      // Mark scan run as failed
+      // Mark scan run as failed and emit error
       try {
         const latestScan = await storage.getLatestScanRun(estateId);
-        if (latestScan && latestScan.status === 'running') {
-          await storage.updateScanRunStatus(latestScan.id, 'failed');
+        if (latestScan) {
+          wsManager.emitScanError(estateId, {
+            scanRunId: latestScan.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          
+          if (latestScan.status === 'running') {
+            await storage.updateScanRunStatus(latestScan.id, 'failed');
+          }
         }
       } catch (e) {
         console.error('Error updating scan run status:', e);
@@ -413,10 +415,12 @@ export class RealScanAgent {
 
           // Emit page complete event with screenshot
           wsManager.emitPageComplete(estateId, {
+            scanRunId,
             url: currentUrl,
             issuesFound: violations.reduce((sum, v) => sum + v.nodes.length, 0),
             pageNumber: results.length,
             totalPages: totalDiscovered,
+            totalIssues: results.reduce((sum, r) => sum + r.violations.reduce((s, v) => s + v.nodes.length, 0), 0) + violations.reduce((sum, v) => sum + v.nodes.length, 0),
             screenshot: screenshotBase64,
           });
 

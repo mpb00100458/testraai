@@ -119,7 +119,7 @@ class WebSocketManager {
     this.sendToEstate(estateId, { type: 'page_testing', estateId, data });
   }
 
-  emitPageComplete(estateId: string, data: { url: string; issuesFound: number; pageNumber: number; totalPages: number; screenshot?: string }) {
+  emitPageComplete(estateId: string, data: { scanRunId: string; url: string; issuesFound: number; pageNumber: number; totalPages: number; totalIssues?: number; screenshot?: string }) {
     this.sendToEstate(estateId, { type: 'page_complete', estateId, data });
   }
 
@@ -131,7 +131,7 @@ class WebSocketManager {
     this.sendToEstate(estateId, { type: 'scan_complete', estateId, data });
   }
 
-  emitScanError(estateId: string, data: { error: string }) {
+  emitScanError(estateId: string, data: { scanRunId?: string; error: string }) {
     this.sendToEstate(estateId, { type: 'scan_error', estateId, data });
   }
 
