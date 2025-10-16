@@ -33,6 +33,7 @@ export default function Landing() {
 
   const registerForm = useForm<RegisterData>({
     resolver: zodResolver(insertUserSchema),
+    mode: "onSubmit",
     defaultValues: {
       email: "",
       password: "",
