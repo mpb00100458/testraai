@@ -65,7 +65,7 @@ export function setupAuth(app: Express) {
       async (email, password, done) => {
         try {
           const user = await storage.getUserByEmail(email);
-          if (!user || !(await comparePasswords(password, user.password))) {
+          if (!user || !user.password || !(await comparePasswords(password, user.password))) {
             return done(null, false, { message: "Invalid email or password" });
           }
           // Remove password from user object before passing to session
@@ -96,8 +96,12 @@ export function setupAuth(app: Express) {
   // Registration endpoint
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log("[DEBUG] Registration attempt for email:", req.body.email);
       const existingUser = await storage.getUserByEmail(req.body.email);
+      console.log("[DEBUG] Existing user check result:", existingUser ? "FOUND" : "NOT FOUND");
+      
       if (existingUser) {
+        console.log("[DEBUG] Email already exists, rejecting registration");
         return res.status(400).json({ message: "Email already exists" });
       }
 
@@ -106,6 +110,7 @@ export function setupAuth(app: Express) {
         ...req.body,
         password: hashedPassword,
       });
+      console.log("[DEBUG] User created successfully:", user.email);
 
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
@@ -134,13 +139,25 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  // Logout endpoint
-  app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
+  // Logout endpoint (support both GET and POST for compatibility)
+  const logoutHandler = (req: any, res: any, next: any) => {
+    req.logout((err: any) => {
       if (err) return next(err);
-      res.sendStatus(200);
+      req.session.destroy((destroyErr: any) => {
+        if (destroyErr) return next(destroyErr);
+        res.clearCookie('connect.sid');
+        // Redirect to home page for GET requests
+        if (req.method === 'GET') {
+          res.redirect('/');
+        } else {
+          res.sendStatus(200);
+        }
+      });
     });
-  });
+  };
+
+  app.post("/api/logout", logoutHandler);
+  app.get("/api/logout", logoutHandler);
 
   // Get current user endpoint
   app.get("/api/user", (req, res) => {
