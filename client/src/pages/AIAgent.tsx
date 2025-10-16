@@ -21,6 +21,8 @@ interface ScanProgress {
 }
 
 export default function AIAgent() {
+  console.log('[AI Agent] Component rendering');
+  
   const [message, setMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<Record<string, ScanProgress>>({});
@@ -107,11 +109,13 @@ export default function AIAgent() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
     
+    console.log('[AI Agent] Creating WebSocket connection to:', wsUrl);
+    
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('[AI Agent] WebSocket connected');
+      console.log('[AI Agent] WebSocket connected successfully!');
     };
 
     ws.onmessage = (event) => {
@@ -123,13 +127,19 @@ export default function AIAgent() {
         if (data.type === 'scan_start' || data.type === 'page_complete' || data.type === 'scan_complete' || data.type === 'scan_error') {
           const scanRunId = data.data?.scanRunId;
           
+          // For scan_complete, use totalPages for both discovered and audited
+          // For page_complete, use pageNumber for audited and totalPages for discovered
+          const pagesAudited = data.type === 'scan_complete' 
+            ? (data.data?.totalPages || prev[scanRunId]?.pagesAudited || 0)
+            : (data.data?.pageNumber || prev[scanRunId]?.pagesAudited || 0);
+          
           setScanProgress(prev => ({
             ...prev,
             [scanRunId]: {
               scanRunId,
               status: data.type === 'scan_complete' ? 'completed' : data.type === 'scan_error' ? 'failed' : 'running',
               pagesDiscovered: data.data?.totalPages || prev[scanRunId]?.pagesDiscovered || 0,
-              pagesAudited: data.data?.pageNumber || prev[scanRunId]?.pagesAudited || 0,
+              pagesAudited,
               currentPage: data.data?.url || prev[scanRunId]?.currentPage,
               issuesFound: data.data?.totalIssues || prev[scanRunId]?.issuesFound || 0,
             }

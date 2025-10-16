@@ -117,7 +117,7 @@ Keep responses concise and helpful.`
           projectId: aiProject.id,
           baseUrl: url,
           name: `Scan: ${new URL(url).hostname}`,
-          crawlBudget: 1, // Single page scan for AI agent
+          crawlBudget: 50, // Allow up to 50 pages for comprehensive scan
         });
 
         // Create scan run
@@ -126,15 +126,22 @@ Keep responses concise and helpful.`
           status: 'running',
         });
 
+        console.log(`[AI Agent] Triggering scan for estate ${estate.id}, scanRun ${scanRun.id}`);
+
         // Trigger the actual scan asynchronously (don't wait for it)
         import('./agents/realScanAgent').then(async ({ RealScanAgent }) => {
           try {
+            console.log(`[AI Agent] Starting RealScanAgent for estate ${estate.id}`);
             const agent = new RealScanAgent();
             await agent.runScan(estate.id);
+            console.log(`[AI Agent] Scan completed for estate ${estate.id}`);
           } catch (error) {
-            console.error('Error running accessibility scan:', error);
+            console.error('[AI Agent] Error running accessibility scan:', error);
             await storage.updateScanRunStatus(scanRun.id, 'failed');
           }
+        }).catch((importError) => {
+          console.error('[AI Agent] Error importing RealScanAgent:', importError);
+          storage.updateScanRunStatus(scanRun.id, 'failed').catch(console.error);
         });
 
         return {
