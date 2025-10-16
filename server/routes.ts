@@ -1670,7 +1670,10 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
         metadata: aiResponse.metadata || null,
       });
 
-      res.json({ success: true });
+      res.json({ 
+        success: true, 
+        estateId: aiResponse.metadata?.estateId 
+      });
     } catch (error) {
       console.error("Error in AI chat:", error);
       res.status(500).json({ message: "Failed to process message" });
