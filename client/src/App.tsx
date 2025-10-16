@@ -11,7 +11,6 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Issues from "@/pages/Issues";
-import Reports from "@/pages/Reports";
 import Projects from "@/pages/Projects";
 import Organization from "@/pages/Organization";
 import Settings from "@/pages/Settings";
@@ -35,7 +34,6 @@ function Router() {
     <Switch>
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/issues" component={Issues} />
-      <Route path="/reports" component={Reports} />
       <Route path="/projects" component={Projects} />
       <Route path="/organization" component={Organization} />
       <Route path="/tools" component={Tools} />

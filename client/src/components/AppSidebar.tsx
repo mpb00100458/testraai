@@ -1,4 +1,4 @@
-import { LayoutDashboard, FileText, AlertCircle, FolderOpen, Settings, Building2, Wrench, Shield } from "lucide-react";
+import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -27,11 +27,6 @@ const navigationItems = [
     title: "Issues",
     url: "/issues",
     icon: AlertCircle,
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: FileText,
   },
   {
     title: "Projects",
