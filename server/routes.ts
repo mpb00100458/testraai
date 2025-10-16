@@ -1606,6 +1606,77 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
     }
   });
 
+  // AI Agent routes
+  app.get('/api/ai-agent/conversation', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      // Get or create a conversation for the user
+      let conversation = await storage.getChatConversationByUserId(userId);
+      
+      if (!conversation) {
+        conversation = await storage.createChatConversation({
+          userId,
+          organizationId: null,
+          title: 'New Conversation',
+        });
+      }
+      
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
+      res.status(500).json({ message: "Failed to fetch conversation" });
+    }
+  });
+
+  app.get('/api/ai-agent/messages/:conversationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const conversationId = req.params.conversationId;
+      const messages = await storage.getChatMessages(conversationId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post('/api/ai-agent/chat', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { conversationId, message } = req.body;
+
+      if (!message || !conversationId) {
+        return res.status(400).json({ message: "Message and conversation ID required" });
+      }
+
+      // Save user message
+      await storage.createChatMessage({
+        conversationId,
+        role: 'user',
+        content: message,
+        messageType: 'text',
+        metadata: null,
+      });
+
+      // Process with AI agent (will be implemented in the agent file)
+      const { processAIAgentMessage } = await import('./ai-agent');
+      const aiResponse = await processAIAgentMessage(message, userId, conversationId);
+
+      // Save AI response
+      await storage.createChatMessage({
+        conversationId,
+        role: 'assistant',
+        content: aiResponse.content,
+        messageType: aiResponse.messageType || 'text',
+        metadata: aiResponse.metadata || null,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error in AI chat:", error);
+      res.status(500).json({ message: "Failed to process message" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize WebSocket server

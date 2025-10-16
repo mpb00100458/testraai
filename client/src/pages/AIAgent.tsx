@@ -36,13 +36,9 @@ export default function AIAgent() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest(`/api/ai-agent/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          conversationId,
-          message: content 
-        }),
+      return await apiRequest('POST', '/api/ai-agent/chat', { 
+        conversationId,
+        message: content 
       });
     },
     onSuccess: () => {
@@ -151,12 +147,12 @@ export default function AIAgent() {
                   <div className="whitespace-pre-wrap">{msg.content}</div>
                   
                   {/* Show scan link if metadata contains scan info */}
-                  {msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata && (
+                  {msg.metadata && typeof msg.metadata === 'object' && 'scanRunId' in msg.metadata && 'estateId' in msg.metadata && (
                     <div className="mt-3 pt-3 border-t border-border/50">
                       <Link
-                        href={`/estates/${msg.metadata.estateId}/scans/${msg.metadata.scanRunId}`}
+                        href={`/estates/${(msg.metadata as any).estateId}/scans/${(msg.metadata as any).scanRunId}`}
                         className="inline-flex items-center gap-2 text-sm hover-elevate active-elevate-2 px-3 py-2 rounded-md bg-background/20"
-                        data-testid={`link-scan-${msg.metadata.scanRunId}`}
+                        data-testid={`link-scan-${(msg.metadata as any).scanRunId}`}
                       >
                         <ExternalLink className="h-4 w-4" />
                         View Full Scan Results

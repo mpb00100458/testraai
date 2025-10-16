@@ -10,6 +10,8 @@ import {
   a11yRollups,
   a11yHistory,
   issueComments,
+  chatConversations,
+  chatMessages,
   type User,
   type UpsertUser,
   type Organization,
@@ -31,6 +33,10 @@ import {
   type A11yHistory,
   type InsertA11yHistory,
   type IssueComment,
+  type ChatConversation,
+  type InsertChatConversation,
+  type ChatMessage,
+  type InsertChatMessage,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc } from "drizzle-orm";
@@ -113,6 +119,12 @@ export interface IStorage {
   // A11y History operations
   getA11yHistoryByEstateId(estateId: string, limit?: number): Promise<A11yHistory[]>;
   createA11yHistorySnapshot(snapshot: InsertA11yHistory): Promise<A11yHistory>;
+  
+  // Chat operations
+  getChatConversationByUserId(userId: string): Promise<ChatConversation | undefined>;
+  createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation>;
+  getChatMessages(conversationId: string): Promise<ChatMessage[]>;
+  createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -503,6 +515,35 @@ export class DatabaseStorage implements IStorage {
   async createIssueComment(comment: { issueId: string; userId: string; comment: string }): Promise<IssueComment> {
     const [newComment] = await db.insert(issueComments).values(comment).returning();
     return newComment;
+  }
+
+  // Chat operations
+  async getChatConversationByUserId(userId: string): Promise<ChatConversation | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(chatConversations)
+      .where(eq(chatConversations.userId, userId))
+      .orderBy(desc(chatConversations.updatedAt))
+      .limit(1);
+    return conversation;
+  }
+
+  async createChatConversation(conversation: InsertChatConversation): Promise<ChatConversation> {
+    const [newConversation] = await db.insert(chatConversations).values(conversation).returning();
+    return newConversation;
+  }
+
+  async getChatMessages(conversationId: string): Promise<ChatMessage[]> {
+    return await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.conversationId, conversationId))
+      .orderBy(chatMessages.createdAt);
+  }
+
+  async createChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [newMessage] = await db.insert(chatMessages).values(message).returning();
+    return newMessage;
   }
 }
 
