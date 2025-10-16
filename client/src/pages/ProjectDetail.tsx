@@ -280,20 +280,40 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right" data-testid={`table-cell-estate-actions-${estate.id}`}>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              runScanMutation.mutate({ estateId: estate.id, estateName: estate.name });
-                            }}
-                            disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
-                            data-testid={`button-run-scan-${estate.id}`}
-                          >
-                            <Play className="h-3 w-3 mr-1" />
-                            {estate.status === 'crawling' ? 'Scanning...' :
-                             estate.status === 'auditing' ? 'Testing...' :
-                             'Run Scan'}
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                runScanMutation.mutate({ estateId: estate.id, estateName: estate.name });
+                              }}
+                              disabled={runScanMutation.isPending || estate.status === 'crawling' || estate.status === 'auditing'}
+                              data-testid={`button-run-scan-${estate.id}`}
+                            >
+                              <Play className="h-3 w-3 mr-1" />
+                              {estate.status === 'crawling' ? 'Scanning...' :
+                               estate.status === 'auditing' ? 'Testing...' :
+                               'Run Scan'}
+                            </Button>
+                            
+                            {/* Live button - only visible during active scan */}
+                            {(estate.status === 'crawling' || estate.status === 'auditing') && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedEstateId(estate.id);
+                                  setSelectedEstateName(estate.name);
+                                  setLiveScanModalOpen(true);
+                                }}
+                                data-testid={`button-live-view-${estate.id}`}
+                              >
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Live
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     </TableBody>
