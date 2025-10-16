@@ -5,28 +5,42 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Building2, Users, UserPlus } from "lucide-react";
+import { Building2, Users, UserPlus, Pencil, Trash2, MoreVertical } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertOrganizationSchema, type InsertOrganization, type Organization, type Membership, type User } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { z } from "zod";
 
 interface MembershipWithUser extends Membership {
   user: User;
 }
 
+const inviteMemberSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  role: z.enum(['OWNER', 'ADMIN', 'DEV', 'VIEWER']),
+});
+
+type InviteMemberForm = z.infer<typeof inviteMemberSchema>;
+
 export default function OrganizationPage() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [editOrgOpen, setEditOrgOpen] = useState(false);
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null);
+  const [removeMemberId, setRemoveMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -56,6 +70,22 @@ export default function OrganizationPage() {
     defaultValues: {
       name: "",
       slug: "",
+    },
+  });
+
+  const editOrgForm = useForm<InsertOrganization>({
+    resolver: zodResolver(insertOrganizationSchema),
+    defaultValues: {
+      name: "",
+      slug: "",
+    },
+  });
+
+  const inviteForm = useForm<InviteMemberForm>({
+    resolver: zodResolver(inviteMemberSchema),
+    defaultValues: {
+      email: "",
+      role: "VIEWER",
     },
   });
 
@@ -92,6 +122,113 @@ export default function OrganizationPage() {
     },
   });
 
+  const updateOrgMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertOrganization }) => {
+      await apiRequest("PATCH", `/api/organizations/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
+      toast({
+        title: "Success",
+        description: "Organization updated successfully",
+      });
+      setEditOrgOpen(false);
+      setSelectedOrg(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update organization",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteOrgMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/organizations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations"] });
+      toast({
+        title: "Success",
+        description: "Organization deleted successfully",
+      });
+      setDeleteOrgId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete organization",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const inviteMemberMutation = useMutation({
+    mutationFn: async (data: InviteMemberForm) => {
+      if (!organizations || organizations.length === 0) return;
+      await apiRequest("POST", `/api/organizations/${organizations[0].id}/members`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations/members"] });
+      toast({
+        title: "Success",
+        description: "Member invited successfully",
+      });
+      setInviteMemberOpen(false);
+      inviteForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to invite member",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, role }: { id: string; role: string }) => {
+      await apiRequest("PATCH", `/api/memberships/${id}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations/members"] });
+      toast({
+        title: "Success",
+        description: "Role updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/memberships/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/organizations/members"] });
+      toast({
+        title: "Success",
+        description: "Member removed successfully",
+      });
+      setRemoveMemberId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove member",
+        variant: "destructive",
+      });
+    },
+  });
+
   if (authLoading || !isAuthenticated) {
     return null;
   }
@@ -103,6 +240,15 @@ export default function OrganizationPage() {
     VIEWER: "bg-muted text-muted-foreground border-border",
   };
 
+  const handleEditOrg = (org: Organization) => {
+    setSelectedOrg(org);
+    editOrgForm.reset({
+      name: org.name,
+      slug: org.slug,
+    });
+    setEditOrgOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -110,57 +256,10 @@ export default function OrganizationPage() {
           <h1 className="text-3xl font-bold">Organization</h1>
           <p className="text-muted-foreground">Manage your organization and team members</p>
         </div>
-        <Dialog open={createOrgOpen} onOpenChange={setCreateOrgOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-organization">
-              <Building2 className="h-4 w-4 mr-2" />
-              New Organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Organization</DialogTitle>
-              <DialogDescription>
-                Create a new organization for your team
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...orgForm}>
-              <form onSubmit={orgForm.handleSubmit((data) => createOrgMutation.mutate(data))} className="space-y-4">
-                <FormField
-                  control={orgForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Organization Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Acme Inc" {...field} data-testid="input-org-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={orgForm.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug</FormLabel>
-                      <FormControl>
-                        <Input placeholder="acme-inc" {...field} data-testid="input-org-slug" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="submit" disabled={createOrgMutation.isPending} data-testid="button-submit-organization">
-                    {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setCreateOrgOpen(true)} data-testid="button-create-organization">
+          <Building2 className="h-4 w-4 mr-2" />
+          New Organization
+        </Button>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -195,6 +294,27 @@ export default function OrganizationPage() {
                       <div className="font-medium truncate">{org.name}</div>
                       <div className="text-sm text-muted-foreground">/{org.slug}</div>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" data-testid={`button-org-menu-${org.id}`}>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditOrg(org)} data-testid={`button-edit-org-${org.id}`}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setDeleteOrgId(org.id)}
+                          className="text-destructive"
+                          data-testid={`button-delete-org-${org.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>
@@ -247,9 +367,28 @@ export default function OrganizationPage() {
                       </div>
                       <div className="text-sm text-muted-foreground truncate">{membership.user.email}</div>
                     </div>
-                    <Badge variant="outline" className={roleColors[membership.role]}>
-                      {membership.role}
-                    </Badge>
+                    <Select
+                      value={membership.role}
+                      onValueChange={(role) => updateRoleMutation.mutate({ id: membership.id, role })}
+                    >
+                      <SelectTrigger className="w-32" data-testid={`select-role-${membership.id}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OWNER">Owner</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                        <SelectItem value="DEV">Dev</SelectItem>
+                        <SelectItem value="VIEWER">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setRemoveMemberId(membership.id)}
+                      data-testid={`button-remove-member-${membership.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -262,6 +401,205 @@ export default function OrganizationPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Organization Dialog */}
+      <Dialog open={createOrgOpen} onOpenChange={setCreateOrgOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Organization</DialogTitle>
+            <DialogDescription>
+              Create a new organization for your team
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...orgForm}>
+            <form onSubmit={orgForm.handleSubmit((data) => createOrgMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={orgForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Acme Inc" {...field} data-testid="input-org-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={orgForm.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Slug</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme-inc" {...field} data-testid="input-org-slug" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={createOrgMutation.isPending} data-testid="button-submit-organization">
+                  {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Organization Dialog */}
+      <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Organization</DialogTitle>
+            <DialogDescription>
+              Update your organization details
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editOrgForm}>
+            <form onSubmit={editOrgForm.handleSubmit((data) => {
+              if (selectedOrg) {
+                updateOrgMutation.mutate({ id: selectedOrg.id, data });
+              }
+            })} className="space-y-4">
+              <FormField
+                control={editOrgForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Acme Inc" {...field} data-testid="input-edit-org-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editOrgForm.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Slug</FormLabel>
+                    <FormControl>
+                      <Input placeholder="acme-inc" {...field} data-testid="input-edit-org-slug" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={updateOrgMutation.isPending} data-testid="button-submit-edit-organization">
+                  {updateOrgMutation.isPending ? "Updating..." : "Update Organization"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Member Dialog */}
+      <Dialog open={inviteMemberOpen} onOpenChange={setInviteMemberOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Add a new member to your organization
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...inviteForm}>
+            <form onSubmit={inviteForm.handleSubmit((data) => inviteMemberMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={inviteForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="user@example.com" {...field} data-testid="input-member-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={inviteForm.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-member-role">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="OWNER">Owner</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                        <SelectItem value="DEV">Dev</SelectItem>
+                        <SelectItem value="VIEWER">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={inviteMemberMutation.isPending} data-testid="button-submit-invite">
+                  {inviteMemberMutation.isPending ? "Inviting..." : "Invite Member"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Organization Confirmation */}
+      <AlertDialog open={!!deleteOrgId} onOpenChange={(open) => !open && setDeleteOrgId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Organization?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the organization and all associated projects, estates, and data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-org">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteOrgId && deleteOrgMutation.mutate(deleteOrgId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-org"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Member Confirmation */}
+      <AlertDialog open={!!removeMemberId} onOpenChange={(open) => !open && setRemoveMemberId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the member from the organization. They will lose access to all projects and data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-remove-member">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeMemberId && removeMemberMutation.mutate(removeMemberId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-remove-member"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
