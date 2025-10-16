@@ -192,10 +192,10 @@ export default function Issues() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Issues</h1>
-        <p className="text-muted-foreground">Manage and track accessibility violations</p>
+    <div className="space-y-8 p-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight">Issues</h1>
+        <p className="text-lg text-muted-foreground">Manage and track accessibility violations</p>
       </div>
 
       {selectedPage && (
