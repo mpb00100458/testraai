@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { z } from "zod";
 import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema } from "@shared/schema";
 import PDFDocument from "pdfkit";
@@ -50,21 +50,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+  app.get('/api/user', (req: any, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not authenticated" });
     }
+    res.json(req.user);
   });
 
   // Organization routes
   app.get('/api/organizations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const organizations = await storage.getOrganizationsByUserId(userId);
       res.json(organizations);
     } catch (error) {
@@ -75,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/organizations', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertOrganizationSchema.parse(req.body);
       const organization = await storage.createOrganization(validatedData, userId);
       res.json(organization);
@@ -91,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update organization
   app.patch('/api/organizations/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       // Verify user has admin access
@@ -115,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete organization
   app.delete('/api/organizations/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       // Verify user is owner
@@ -135,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Membership routes
   app.get('/api/organizations/members', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -163,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get members for a specific organization
   app.get('/api/organizations/:orgId/members', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { orgId } = req.params;
       
       // Verify user has access to this organization
@@ -193,7 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add member to organization
   app.post('/api/organizations/:orgId/members', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { orgId } = req.params;
       const { email, role } = req.body;
       
@@ -232,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update member role
   app.patch('/api/memberships/:id/role', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const { role } = req.body;
       
@@ -261,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Remove member
   app.delete('/api/memberships/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       // Get the membership to find orgId
@@ -297,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Project routes
   app.get('/api/projects', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -318,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/projects', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Validate organizationId is provided
       if (!req.body.organizationId) {
@@ -346,7 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Estate routes
   app.get('/api/estates', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -372,7 +368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/estates', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertEstateSchema.parse(req.body);
       
       // Verify user has access to the project
@@ -400,7 +396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get single estate
   app.get('/api/estates/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const estate = await storage.getEstate(id);
       
@@ -431,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let doc: any = null;
     
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const { scanRunId } = req.query;
       const estate = await storage.getEstate(id);
@@ -621,7 +617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Download estate Excel report
   app.get('/api/estates/:id/report/excel', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const { scanRunId } = req.query;
       const estate = await storage.getEstate(id);
@@ -753,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Download estate CSV report
   app.get('/api/estates/:id/report', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const estate = await storage.getEstate(id);
       
@@ -822,7 +818,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Scan trigger route
   app.post('/api/estates/:id/scan', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const estate = await storage.getEstate(id);
       
@@ -864,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get scan history for an estate
   app.get('/api/estates/:id/scans', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const estate = await storage.getEstate(id);
       
@@ -912,7 +908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get specific scan run details
   app.get('/api/scans/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const scanRun = await storage.getScanRun(id);
       
@@ -952,7 +948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Download scan video
   app.get('/api/scans/:id/video', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const scanRun = await storage.getScanRun(id);
       
@@ -1002,7 +998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Download scan Playwright trace
   app.get('/api/scans/:id/trace', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const scanRun = await storage.getScanRun(id);
       
@@ -1052,7 +1048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Compare two scan runs
   app.get('/api/scans/compare/:id1/:id2', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id1, id2 } = req.params;
 
       // Get both scan runs
@@ -1124,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Issues routes
   app.get('/api/issues', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -1159,7 +1155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all users (for assignment dropdown)
   app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -1284,7 +1280,7 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
   // Dashboard stats route
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -1366,7 +1362,7 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
   // Historical trend data route
   app.get('/api/dashboard/history/:estateId?', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { estateId } = req.params;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
@@ -1417,7 +1413,7 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
   // Report export routes
   app.get('/api/reports/csv', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {
@@ -1468,7 +1464,7 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
 
   app.get('/api/reports/excel', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const orgs = await storage.getOrganizationsByUserId(userId);
       
       if (orgs.length === 0) {

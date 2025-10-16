@@ -36,8 +36,8 @@ export default function Landing() {
     defaultValues: {
       email: "",
       password: "",
-      firstName: "",
-      lastName: "",
+      firstName: "" as any,
+      lastName: "" as any,
     },
   });
 
@@ -293,14 +293,13 @@ export default function Landing() {
             <p className="text-sm text-muted-foreground">
               {isLogin ? "Don't have an account?" : "Already have an account?"}
               {" "}
-              <Button
-                variant="link"
-                className="p-0 h-auto font-semibold text-primary"
+              <button
+                className="font-semibold text-primary hover:underline"
                 onClick={() => setIsLogin(!isLogin)}
                 data-testid="button-toggle-auth-mode"
               >
                 {isLogin ? "Sign up" : "Sign in"}
-              </Button>
+              </button>
             </p>
           </div>
         </div>
