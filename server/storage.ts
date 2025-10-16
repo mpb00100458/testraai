@@ -155,7 +155,7 @@ export class DatabaseStorage implements IStorage {
       return user;
     } catch (error: any) {
       // If email conflict, just update the user info by email (don't change ID)
-      if (error?.code === '23505' && error?.constraint === 'users_email_unique') {
+      if (error?.code === '23505' && error?.constraint === 'users_email_unique' && userData.email) {
         const [user] = await db
           .update(users)
           .set({
@@ -164,7 +164,7 @@ export class DatabaseStorage implements IStorage {
             profileImageUrl: userData.profileImageUrl,
             updatedAt: new Date(),
           })
-          .where(eq(users.email, userData.email!))
+          .where(eq(users.email, userData.email))
           .returning();
         return user;
       }
