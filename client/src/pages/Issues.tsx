@@ -210,7 +210,7 @@ export default function Issues() {
 
       {/* Bulk Actions Bar */}
       {selectedIssues.size > 0 && (
-        <Card className="bg-primary/10 border-primary">
+        <Card className="bg-primary/10 border-primary !shadow-md hover:!shadow-xl transition-all duration-200">
           <CardContent className="py-3">
             <div className="flex items-center justify-between">
               <span className="font-medium">{selectedIssues.size} issue(s) selected</span>
@@ -256,7 +256,7 @@ export default function Issues() {
         </Card>
       )}
 
-      <Card>
+      <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
