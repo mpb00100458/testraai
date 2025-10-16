@@ -392,3 +392,69 @@ export const a11yRollupsRelations = relations(a11yRollups, ({ one }) => ({
     references: [estates.id],
   }),
 }));
+
+// AI Agent Chat Conversations
+export const chatConversations = pgTable("chat_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: 'cascade' }),
+  title: varchar("title", { length: 255 }).notNull().default('New Conversation'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_chat_conversations_user").on(table.userId),
+  index("idx_chat_conversations_org").on(table.organizationId),
+]);
+
+export const insertChatConversationSchema = createInsertSchema(chatConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertChatConversation = z.infer<typeof insertChatConversationSchema>;
+export type ChatConversation = typeof chatConversations.$inferSelect;
+
+// AI Agent Chat Messages
+export const chatMessageRoleEnum = pgEnum('chat_message_role', ['user', 'assistant', 'system']);
+export const chatMessageTypeEnum = pgEnum('chat_message_type', ['text', 'scan_result', 'scan_trigger']);
+
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => chatConversations.id, { onDelete: 'cascade' }),
+  role: chatMessageRoleEnum('role').notNull(),
+  content: text("content").notNull(),
+  messageType: chatMessageTypeEnum('message_type').notNull().default('text'),
+  metadata: jsonb("metadata"), // For storing scan IDs, estate IDs, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_chat_messages_conversation").on(table.conversationId),
+]);
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+
+// Relations
+export const chatConversationsRelations = relations(chatConversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [chatConversations.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [chatConversations.organizationId],
+    references: [organizations.id],
+  }),
+  messages: many(chatMessages),
+}));
+
+export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
+}));
