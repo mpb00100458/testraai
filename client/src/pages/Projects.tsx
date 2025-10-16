@@ -126,7 +126,7 @@ export default function Projects() {
             onClick={() => window.location.href = '/organization'}
             showIcon={false}
           >
-            Create Organization First
+            Create Workspace First
           </GradientButton>
         ) : (
           <Dialog open={open} onOpenChange={setOpen}>
@@ -191,14 +191,14 @@ export default function Projects() {
       {!organizations || organizations.length === 0 ? (
         <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
           <CardHeader>
-            <CardTitle>No Organization Found</CardTitle>
+            <CardTitle>No Workspace Found</CardTitle>
             <CardDescription>
-              You need to create an organization before you can create projects. Organizations help you organize your team and testing activities.
+              You need to create a workspace before you can create projects. Workspaces help you organize your team and testing activities.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <GradientButton onClick={() => window.location.href = '/organization'} data-testid="button-go-to-org" showIcon={false}>
-              Go to Organization Page
+              Go to Workspace Page
             </GradientButton>
           </CardContent>
         </Card>
