@@ -1055,19 +1055,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Video not found for this scan" });
       }
 
-      // Download video from object storage
-      const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
-      const objectStorageService = new ObjectStorageService();
-      
-      try {
-        const objectFile = await objectStorageService.getObjectEntityFile(scanRun.videoPath);
-        res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
-        await objectStorageService.downloadObject(objectFile, res);
-      } catch (error) {
-        if (error instanceof ObjectNotFoundError) {
-          return res.status(404).json({ message: "Video file not found" });
+      // Check if this is an object storage path or old local path
+      if (scanRun.videoPath.startsWith('/objects/')) {
+        // New: Download from object storage
+        const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
+        const objectStorageService = new ObjectStorageService();
+        
+        try {
+          const objectFile = await objectStorageService.getObjectEntityFile(scanRun.videoPath);
+          res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
+          await objectStorageService.downloadObject(objectFile, res);
+        } catch (error) {
+          if (error instanceof ObjectNotFoundError) {
+            return res.status(404).json({ message: "Video file not found in storage" });
+          }
+          throw error;
         }
-        throw error;
+      } else {
+        // Old: Local filesystem path (no longer available after restarts)
+        return res.status(404).json({ 
+          message: "Video not available. This scan was created before persistent storage was enabled. Please run a new scan to generate videos with persistent storage." 
+        });
       }
     } catch (error) {
       console.error("Error downloading video:", error);
@@ -1106,19 +1114,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Trace not found for this scan" });
       }
 
-      // Download trace from object storage
-      const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
-      const objectStorageService = new ObjectStorageService();
-      
-      try {
-        const objectFile = await objectStorageService.getObjectEntityFile(scanRun.tracePath);
-        res.setHeader('Content-Disposition', `attachment; filename="trace-${id}.zip"`);
-        await objectStorageService.downloadObject(objectFile, res);
-      } catch (error) {
-        if (error instanceof ObjectNotFoundError) {
-          return res.status(404).json({ message: "Trace file not found" });
+      // Check if this is an object storage path or old local path
+      if (scanRun.tracePath.startsWith('/objects/')) {
+        // New: Download from object storage
+        const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
+        const objectStorageService = new ObjectStorageService();
+        
+        try {
+          const objectFile = await objectStorageService.getObjectEntityFile(scanRun.tracePath);
+          res.setHeader('Content-Disposition', `attachment; filename="trace-${id}.zip"`);
+          await objectStorageService.downloadObject(objectFile, res);
+        } catch (error) {
+          if (error instanceof ObjectNotFoundError) {
+            return res.status(404).json({ message: "Trace file not found in storage" });
+          }
+          throw error;
         }
-        throw error;
+      } else {
+        // Old: Local filesystem path (no longer available after restarts)
+        return res.status(404).json({ 
+          message: "Trace not available. This scan was created before persistent storage was enabled. Please run a new scan to generate traces with persistent storage." 
+        });
       }
     } catch (error) {
       console.error("Error downloading trace:", error);
