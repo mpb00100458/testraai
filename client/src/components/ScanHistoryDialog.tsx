@@ -328,22 +328,26 @@ export function ScanHistoryDialog({ estateId, estateName, open, onOpenChange }: 
                               <FileText className="h-4 w-4 mr-2" />
                               Export PDF
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => downloadVideoMutation.mutate({ scanRunId: scan.id })}
-                              disabled={downloadingVideo === scan.id}
-                              data-testid={`menu-item-download-video-scan-${scan.id}`}
-                            >
-                              <Video className="h-4 w-4 mr-2" />
-                              Download Video
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => downloadTraceMutation.mutate({ scanRunId: scan.id })}
-                              disabled={downloadingTrace === scan.id}
-                              data-testid={`menu-item-download-trace-scan-${scan.id}`}
-                            >
-                              <FileCode className="h-4 w-4 mr-2" />
-                              Download Trace
-                            </DropdownMenuItem>
+                            {scan.videoPath && (
+                              <DropdownMenuItem
+                                onClick={() => downloadVideoMutation.mutate({ scanRunId: scan.id })}
+                                disabled={downloadingVideo === scan.id}
+                                data-testid={`menu-item-download-video-scan-${scan.id}`}
+                              >
+                                <Video className="h-4 w-4 mr-2" />
+                                Download Video
+                              </DropdownMenuItem>
+                            )}
+                            {scan.tracePath && (
+                              <DropdownMenuItem
+                                onClick={() => downloadTraceMutation.mutate({ scanRunId: scan.id })}
+                                disabled={downloadingTrace === scan.id}
+                                data-testid={`menu-item-download-trace-scan-${scan.id}`}
+                              >
+                                <FileCode className="h-4 w-4 mr-2" />
+                                Download Trace
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
 

@@ -354,15 +354,31 @@ export class DatabaseStorage implements IStorage {
   // Scan Run operations
   async getScanRun(id: string): Promise<ScanRun | undefined> {
     const [scanRun] = await db.select().from(scanRuns).where(eq(scanRuns.id, id));
-    return scanRun;
+    if (!scanRun) return undefined;
+    
+    // Check if video/trace files actually exist, set to null if missing
+    const fs = await import('fs');
+    return {
+      ...scanRun,
+      videoPath: scanRun.videoPath && fs.existsSync(scanRun.videoPath) ? scanRun.videoPath : null,
+      tracePath: scanRun.tracePath && fs.existsSync(scanRun.tracePath) ? scanRun.tracePath : null,
+    };
   }
 
   async getScanRunsByEstateId(estateId: string): Promise<ScanRun[]> {
-    return await db
+    const scans = await db
       .select()
       .from(scanRuns)
       .where(eq(scanRuns.estateId, estateId))
       .orderBy(desc(scanRuns.startedAt));
+    
+    // Check if video/trace files actually exist, set to null if missing
+    const fs = await import('fs');
+    return scans.map(scan => ({
+      ...scan,
+      videoPath: scan.videoPath && fs.existsSync(scan.videoPath) ? scan.videoPath : null,
+      tracePath: scan.tracePath && fs.existsSync(scan.tracePath) ? scan.tracePath : null,
+    }));
   }
 
   async getLatestScanRun(estateId: string): Promise<ScanRun | undefined> {

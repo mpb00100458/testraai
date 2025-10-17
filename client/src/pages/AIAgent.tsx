@@ -394,7 +394,7 @@ export default function AIAgent() {
                     </div>
                   )}
                   <div className={`leading-relaxed ${msg.role === 'user' ? 'text-[15px]' : 'text-[15px] text-foreground'}`}>
-                    {msg.content as string}
+                    {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
                   </div>
                   
                   {/* Show scan progress and results */}
@@ -476,16 +476,6 @@ export default function AIAgent() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => window.open(`/api/scans/${scanRunId || metadata.scanRunId}/video`, '_blank')}
-                                    className="gap-2"
-                                    data-testid={`button-download-video-${scanRunId || metadata.scanRunId}`}
-                                  >
-                                    <FileVideo className="h-3 w-3" />
-                                    Video
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
                                     onClick={() => {
                                       const estateId = progress?.estateId || metadata.estateId;
                                       const scanId = scanRunId || metadata.scanRunId;
@@ -510,6 +500,9 @@ export default function AIAgent() {
                                     JSON
                                   </Button>
                                 </div>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  View full results for video and trace downloads
+                                </p>
                               </div>
                             )}
 
