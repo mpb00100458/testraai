@@ -394,13 +394,13 @@ export default function AIAgent() {
                     </div>
                   )}
                   <div className={`leading-relaxed ${msg.role === 'user' ? 'text-[15px]' : 'text-[15px] text-foreground'}`}>
-                    {msg.content}
+                    {msg.content as string}
                   </div>
                   
                   {/* Show scan progress and results */}
                   {msg.metadata && typeof msg.metadata === 'object' && ('scanRunId' in msg.metadata || 'estateId' in msg.metadata) && (
                     <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-                      {((): React.ReactNode => {
+                      {(() => {
                         const metadata = msg.metadata as any;
                         
                         // Find the scan: either by scanRunId (legacy) or by estateId (new approach)
