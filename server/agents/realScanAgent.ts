@@ -13,8 +13,9 @@ const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s
 // Use home directory for persistent file storage (survives restarts)
 const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility-reports');
 
-// Track if we've already installed Playwright browsers in this session
+// Track if we've already installed Playwright browsers/ffmpeg in this session
 let playwrightBrowsersInstalled = false;
+let playwrightFfmpegInstalled = false;
 
 // Dynamically find Chromium from Nix packages (works in dev and production Reserved VM)
 function findChromiumPath(): string | null {
@@ -31,7 +32,31 @@ function findChromiumPath(): string | null {
   return null;
 }
 
-// Install Playwright browsers (including ffmpeg) if needed - only on old GCE deployments
+// Install Playwright's ffmpeg for video recording
+async function ensurePlaywrightFfmpegInstalled() {
+  if (playwrightFfmpegInstalled) {
+    return;
+  }
+  
+  console.log('[Scan Agent] Installing Playwright ffmpeg for video recording...');
+  console.log('[Scan Agent] This is a one-time setup (takes ~30 seconds)...');
+  
+  try {
+    const startTime = Date.now();
+    execSync('npx playwright install ffmpeg', { 
+      stdio: 'inherit',
+      timeout: 60000 // 1 minute timeout
+    });
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Scan Agent] ✅ Playwright ffmpeg installed successfully in ${duration}s!`);
+    playwrightFfmpegInstalled = true;
+  } catch (error) {
+    console.warn('[Scan Agent] ⚠️  Failed to install Playwright ffmpeg:', error instanceof Error ? error.message : String(error));
+    console.log('[Scan Agent] Video recording will be unavailable (scans will still work)');
+  }
+}
+
+// Install Playwright browsers (including ffmpeg) if needed
 async function ensurePlaywrightBrowsersInstalled() {
   if (playwrightBrowsersInstalled) {
     console.log('[Scan Agent] Browser setup already complete, skipping...');
@@ -43,7 +68,10 @@ async function ensurePlaywrightBrowsersInstalled() {
   // If Chromium found in PATH (Nix packages on dev or Reserved VM), use it
   if (chromiumPath) {
     console.log('[Scan Agent] Using Chromium from Nix packages (development or Reserved VM)');
-    console.log('[Scan Agent] Video recording: ENABLED (using system ffmpeg)');
+    
+    // Install Playwright's ffmpeg for video recording (works with Nix Chromium)
+    await ensurePlaywrightFfmpegInstalled();
+    
     playwrightBrowsersInstalled = true;
     return;
   }
