@@ -34,6 +34,11 @@ const navigationItems = [
     icon: FolderOpen,
   },
   {
+    title: "Issues",
+    url: "/issues",
+    icon: AlertCircle,
+  },
+  {
     title: "Tools",
     url: "/tools",
     icon: Wrench,
