@@ -22,10 +22,12 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { Badge } from "@/components/ui/badge";
 import { VisualTestingModal } from "@/components/VisualTestingModal";
 import { ScanHistoryTable } from "@/components/ScanHistoryTable";
+import { useLocation } from "wouter";
 
 export default function ProjectDetail({ projectId }: { projectId: string }) {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, navigate] = useLocation();
   const [open, setOpen] = useState(false);
   const [liveScanModalOpen, setLiveScanModalOpen] = useState(false);
   const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
@@ -192,7 +194,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => window.history.back()}
+          onClick={() => navigate("/projects")}
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4" />
