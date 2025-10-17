@@ -1840,17 +1840,21 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
   });
 
   // Generate and download documentation PDF
-  app.get('/api/documentation/download', (req, res) => {
+  app.get('/api/documentation/download', async (req, res) => {
     try {
-      const { generateDocumentationPDF } = require('./pdfGenerator');
+      console.log('[PDF] Generating documentation PDF...');
+      const { generateDocumentationPDF } = await import('./pdfGenerator.js');
       const doc = generateDocumentationPDF();
       
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename="TestraAI-Documentation.pdf"');
+      console.log('[PDF] Headers set, piping PDF to response...');
       
       doc.pipe(res);
+      doc.on('end', () => console.log('[PDF] PDF generation complete'));
+      doc.on('error', (err: Error) => console.error('[PDF] PDF generation error:', err));
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('[PDF] Error generating PDF:', error);
       res.status(500).json({ message: 'Failed to generate PDF documentation' });
     }
   });
