@@ -8,7 +8,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-const CHROMIUM_PATH = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
 const MAX_PAGES_PER_ESTATE = 50; // Crawl budget per PRD requirements
 const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s)
 // Use home directory for persistent file storage (survives restarts)
@@ -17,63 +16,74 @@ const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility
 // Track if we've already installed Playwright browsers in this session
 let playwrightBrowsersInstalled = false;
 
-// Check if we're in production - Chromium path doesn't exist means we're deployed
-function isProductionEnvironment() {
-  // In production (GCE deployment), the Nix Chromium won't exist
-  // NODE_ENV might not be set, so we check the Chromium path instead
-  return !fs.existsSync(CHROMIUM_PATH);
+// Dynamically find Chromium from Nix packages (works in dev and production Reserved VM)
+function findChromiumPath(): string | null {
+  try {
+    // Try to find chromium using 'which' command (works with Nix packages)
+    const chromiumPath = execSync('which chromium', { encoding: 'utf8' }).trim();
+    if (chromiumPath && fs.existsSync(chromiumPath)) {
+      console.log(`[Scan Agent] Found Chromium at: ${chromiumPath}`);
+      return chromiumPath;
+    }
+  } catch (error) {
+    console.log('[Scan Agent] Chromium not found in PATH (expected on old GCE deployments)');
+  }
+  return null;
 }
 
-// Install Playwright browsers (including ffmpeg) if needed
+// Install Playwright browsers (including ffmpeg) if needed - only on old GCE deployments
 async function ensurePlaywrightBrowsersInstalled() {
   if (playwrightBrowsersInstalled) {
-    console.log('[Scan Agent] Playwright browsers already installed, skipping...');
+    console.log('[Scan Agent] Browser setup already complete, skipping...');
     return;
   }
   
-  const chromiumExists = fs.existsSync(CHROMIUM_PATH);
-  console.log(`[Scan Agent] Environment check - Chromium exists: ${chromiumExists}, Production: ${isProductionEnvironment()}`);
+  const chromiumPath = findChromiumPath();
   
-  // If we're in production (no Nix Chromium), install Playwright browsers
-  if (!chromiumExists) {
-    console.log('[Scan Agent] Production environment detected - installing Playwright browsers with ffmpeg...');
-    console.log('[Scan Agent] This may take 2-3 minutes on first run...');
-    try {
-      const startTime = Date.now();
-      execSync('npx playwright install --with-deps chromium', { 
-        stdio: 'inherit',
-        timeout: 180000 // 3 minute timeout
-      });
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`[Scan Agent] ✅ Playwright browsers installed successfully in ${duration}s!`);
-      console.log('[Scan Agent] Video recording: ENABLED');
-      playwrightBrowsersInstalled = true;
-    } catch (error) {
-      console.error('[Scan Agent] ❌ Failed to install Playwright browsers:', error);
-      console.error('[Scan Agent] Error details:', error instanceof Error ? error.message : String(error));
-      throw new Error('Failed to install Playwright browsers. Video recording will be unavailable.');
-    }
-  } else {
-    console.log('[Scan Agent] Using Nix-installed Chromium (development)');
+  // If Chromium found in PATH (Nix packages on dev or Reserved VM), use it
+  if (chromiumPath) {
+    console.log('[Scan Agent] Using Chromium from Nix packages (development or Reserved VM)');
+    console.log('[Scan Agent] Video recording: ENABLED (using system ffmpeg)');
+    playwrightBrowsersInstalled = true;
+    return;
+  }
+  
+  // No Nix Chromium - this is old GCE deployment, install Playwright browsers
+  console.log('[Scan Agent] Old deployment detected - installing Playwright browsers with ffmpeg...');
+  console.log('[Scan Agent] This may take 2-3 minutes on first run...');
+  try {
+    const startTime = Date.now();
+    execSync('npx playwright install --with-deps chromium', { 
+      stdio: 'inherit',
+      timeout: 180000 // 3 minute timeout
+    });
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Scan Agent] ✅ Playwright browsers installed successfully in ${duration}s!`);
     console.log('[Scan Agent] Video recording: ENABLED');
     playwrightBrowsersInstalled = true;
+  } catch (error) {
+    console.error('[Scan Agent] ❌ Failed to install Playwright browsers:', error);
+    console.error('[Scan Agent] Error details:', error instanceof Error ? error.message : String(error));
+    throw new Error('Failed to install Playwright browsers. Video recording will be unavailable.');
   }
 }
 
-// Check if we're in production/deployment (Chromium path doesn't exist)
+// Get browser configuration - use Nix Chromium if available, otherwise Playwright bundled
 function getBrowserConfig() {
-  const chromiumExists = fs.existsSync(CHROMIUM_PATH);
+  const chromiumPath = findChromiumPath();
   
-  if (!chromiumExists) {
-    // Production: Use Playwright's bundled browser
+  if (chromiumPath) {
+    // Use Nix-installed Chromium (development or Reserved VM with cloudrun)
+    console.log(`[Scan Agent] Using Nix Chromium at: ${chromiumPath}`);
     return {
+      executablePath: chromiumPath,
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     };
   } else {
-    // Development: Use Nix-installed Chromium
+    // No Nix Chromium - use Playwright's bundled browser (old GCE deployments)
+    console.log('[Scan Agent] Using Playwright bundled Chromium');
     return {
-      executablePath: CHROMIUM_PATH,
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     };
@@ -398,7 +408,8 @@ export class RealScanAgent {
 
     // Try to create browser context with video recording
     // Gracefully fallback if ffmpeg is not available
-    console.log(`[Scan Agent] Environment: ${isProductionEnvironment() ? 'PRODUCTION' : 'DEVELOPMENT'} (NODE_ENV=${process.env.NODE_ENV})`);
+    const chromiumPath = findChromiumPath();
+    console.log(`[Scan Agent] Using ${chromiumPath ? 'Nix Chromium' : 'Playwright bundled'} (NODE_ENV=${process.env.NODE_ENV})`);
     
     let context: BrowserContext;
     let videoRecordingEnabled = false;
