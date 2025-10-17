@@ -10,9 +10,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FolderOpen, Plus, Loader2, Trash2 } from "lucide-react";
+import { FolderOpen, Plus, Loader2, Trash2, Sparkles, Bot } from "lucide-react";
 import { GradientButton } from "@/components/GradientButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,6 +61,10 @@ export default function Projects() {
     if (!estates) return 0;
     return estates.filter(e => e.projectId === projectId).length;
   };
+
+  // Separate AI Agent projects from regular projects
+  const aiAgentProjects = projects?.filter(p => p.name === "AI Agent Scans") || [];
+  const regularProjects = projects?.filter(p => p.name !== "AI Agent Scans") || [];
 
   const form = useForm<InsertProject>({
     resolver: zodResolver(insertProjectSchema),
@@ -243,101 +248,215 @@ export default function Projects() {
         <div className="flex items-center justify-center p-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : projects && projects.length > 0 ? (
-        <div className="w-full overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px]">Project Name</TableHead>
-                <TableHead className="w-[400px]">Description</TableHead>
-                <TableHead className="w-[120px] text-center">Estates</TableHead>
-                <TableHead className="w-[180px]">Created</TableHead>
-                <TableHead className="w-[120px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projects.map((project) => (
-                <TableRow 
-                  key={project.id} 
-                  className="cursor-pointer hover-elevate" 
-                  onClick={() => setSelectedProjectId(project.id)}
-                  data-testid={`row-project-${project.id}`}
-                >
-                  <TableCell data-testid={`table-cell-project-name-${project.id}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary flex-shrink-0">
-                        <FolderOpen className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold truncate">{project.name}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell data-testid={`table-cell-project-description-${project.id}`}>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {project.description || "No description"}
-                    </p>
-                  </TableCell>
-                  <TableCell className="text-center" data-testid={`table-cell-project-estates-${project.id}`}>
-                    <span className="font-medium text-base">{getEstateCount(project.id)}</span>
-                  </TableCell>
-                  <TableCell data-testid={`table-cell-project-created-${project.id}`}>
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">
-                        {new Date(project.createdAt!).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(project.createdAt!), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right" data-testid={`table-cell-project-actions-${project.id}`}>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedProjectId(project.id);
-                        }}
-                        data-testid={`button-view-project-${project.id}`}
-                      >
-                        View Details
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setProjectToDelete(project.id);
-                        }}
-                        data-testid={`button-delete-project-${project.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
       ) : (
-        <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
-          <CardContent className="py-16">
-            <div className="flex flex-col items-center justify-center text-center">
-              <FolderOpen className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Projects</h3>
-              <p className="text-muted-foreground max-w-md mb-4">
-                Create your first project to start organizing accessibility tests
-              </p>
-              <GradientButton onClick={() => setOpen(true)} data-testid="button-create-first-project" showIcon={false}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Project
-              </GradientButton>
+        <div className="space-y-8">
+          {/* AI Agent Scans Section */}
+          {aiAgentProjects.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
+                  <Bot className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <h2 className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">
+                    AI Agent Scans
+                  </h2>
+                  <Badge variant="secondary" className="ml-2">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Auto-generated
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="w-full overflow-auto rounded-lg border border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-indigo-500/5">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-purple-500/20">
+                      <TableHead className="w-[300px]">Project Name</TableHead>
+                      <TableHead className="w-[400px]">Description</TableHead>
+                      <TableHead className="w-[120px] text-center">Estates</TableHead>
+                      <TableHead className="w-[180px]">Created</TableHead>
+                      <TableHead className="w-[120px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {aiAgentProjects.map((project) => (
+                      <TableRow 
+                        key={project.id} 
+                        className="cursor-pointer hover-elevate border-purple-500/10" 
+                        onClick={() => setSelectedProjectId(project.id)}
+                        data-testid={`row-project-${project.id}`}
+                      >
+                        <TableCell data-testid={`table-cell-project-name-${project.id}`}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gradient-to-br from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
+                              <Bot className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold truncate">{project.name}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`table-cell-project-description-${project.id}`}>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {project.description || "No description"}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-center" data-testid={`table-cell-project-estates-${project.id}`}>
+                          <span className="font-medium text-base">{getEstateCount(project.id)}</span>
+                        </TableCell>
+                        <TableCell data-testid={`table-cell-project-created-${project.id}`}>
+                          <div className="space-y-0.5">
+                            <p className="text-sm font-medium">
+                              {new Date(project.createdAt!).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(project.createdAt!), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right" data-testid={`table-cell-project-actions-${project.id}`}>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProjectId(project.id);
+                              }}
+                              data-testid={`button-view-project-${project.id}`}
+                            >
+                              View Details
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjectToDelete(project.id);
+                              }}
+                              data-testid={`button-delete-project-${project.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          {/* Regular Projects Section */}
+          {regularProjects.length > 0 && (
+            <div className="space-y-4">
+              {aiAgentProjects.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="text-xl font-semibold">Your Projects</h2>
+                </div>
+              )}
+
+              <div className="w-full overflow-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[300px]">Project Name</TableHead>
+                      <TableHead className="w-[400px]">Description</TableHead>
+                      <TableHead className="w-[120px] text-center">Estates</TableHead>
+                      <TableHead className="w-[180px]">Created</TableHead>
+                      <TableHead className="w-[120px] text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {regularProjects.map((project) => (
+                      <TableRow 
+                        key={project.id} 
+                        className="cursor-pointer hover-elevate" 
+                        onClick={() => setSelectedProjectId(project.id)}
+                        data-testid={`row-project-${project.id}`}
+                      >
+                        <TableCell data-testid={`table-cell-project-name-${project.id}`}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary flex-shrink-0">
+                              <FolderOpen className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold truncate">{project.name}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`table-cell-project-description-${project.id}`}>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {project.description || "No description"}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-center" data-testid={`table-cell-project-estates-${project.id}`}>
+                          <span className="font-medium text-base">{getEstateCount(project.id)}</span>
+                        </TableCell>
+                        <TableCell data-testid={`table-cell-project-created-${project.id}`}>
+                          <div className="space-y-0.5">
+                            <p className="text-sm font-medium">
+                              {new Date(project.createdAt!).toLocaleDateString()}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(project.createdAt!), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right" data-testid={`table-cell-project-actions-${project.id}`}>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProjectId(project.id);
+                              }}
+                              data-testid={`button-view-project-${project.id}`}
+                            >
+                              View Details
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjectToDelete(project.id);
+                              }}
+                              data-testid={`button-delete-project-${project.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* No projects state */}
+          {regularProjects.length === 0 && aiAgentProjects.length === 0 && (
+            <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
+              <CardContent className="py-16">
+                <div className="flex flex-col items-center justify-center text-center">
+                  <FolderOpen className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No Projects</h3>
+                  <p className="text-muted-foreground max-w-md mb-4">
+                    Create your first project to start organizing accessibility tests
+                  </p>
+                  <GradientButton onClick={() => setOpen(true)} data-testid="button-create-first-project" showIcon={false}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Project
+                  </GradientButton>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
