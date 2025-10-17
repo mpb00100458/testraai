@@ -1055,19 +1055,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Video not found for this scan" });
       }
 
-      // Send video file
-      const fs = await import('fs');
-      const path = await import('path');
+      // Download video from object storage
+      const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
+      const objectStorageService = new ObjectStorageService();
       
-      if (!fs.existsSync(scanRun.videoPath)) {
-        return res.status(404).json({ message: "Video file not found on disk" });
+      try {
+        const objectFile = await objectStorageService.getObjectEntityFile(scanRun.videoPath);
+        res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
+        await objectStorageService.downloadObject(objectFile, res);
+      } catch (error) {
+        if (error instanceof ObjectNotFoundError) {
+          return res.status(404).json({ message: "Video file not found" });
+        }
+        throw error;
       }
-
-      res.setHeader('Content-Type', 'video/webm');
-      res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
-      
-      const fileStream = fs.createReadStream(scanRun.videoPath);
-      fileStream.pipe(res);
     } catch (error) {
       console.error("Error downloading video:", error);
       res.status(500).json({ message: "Failed to download video" });
@@ -1105,19 +1106,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Trace not found for this scan" });
       }
 
-      // Send trace file
-      const fs = await import('fs');
-      const path = await import('path');
+      // Download trace from object storage
+      const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
+      const objectStorageService = new ObjectStorageService();
       
-      if (!fs.existsSync(scanRun.tracePath)) {
-        return res.status(404).json({ message: "Trace file not found on disk" });
+      try {
+        const objectFile = await objectStorageService.getObjectEntityFile(scanRun.tracePath);
+        res.setHeader('Content-Disposition', `attachment; filename="trace-${id}.zip"`);
+        await objectStorageService.downloadObject(objectFile, res);
+      } catch (error) {
+        if (error instanceof ObjectNotFoundError) {
+          return res.status(404).json({ message: "Trace file not found" });
+        }
+        throw error;
       }
-
-      res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename="trace-${id}.zip"`);
-      
-      const fileStream = fs.createReadStream(scanRun.tracePath);
-      fileStream.pipe(res);
     } catch (error) {
       console.error("Error downloading trace:", error);
       res.status(500).json({ message: "Failed to download trace" });
