@@ -6,6 +6,7 @@ import { wsManager } from "../websocket";
 import { ObjectStorageService } from "../objectStorage";
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 const CHROMIUM_PATH = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
 const MAX_PAGES_PER_ESTATE = 50; // Crawl budget per PRD requirements
@@ -13,9 +14,38 @@ const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s
 // Use home directory for persistent file storage (survives restarts)
 const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility-reports');
 
+// Track if we've already installed Playwright browsers in this session
+let playwrightBrowsersInstalled = false;
+
 // Check if we're in production using NODE_ENV
 function isProductionEnvironment() {
   return process.env.NODE_ENV === 'production';
+}
+
+// Install Playwright browsers (including ffmpeg) if needed
+async function ensurePlaywrightBrowsersInstalled() {
+  if (playwrightBrowsersInstalled) return;
+  
+  const chromiumExists = fs.existsSync(CHROMIUM_PATH);
+  
+  // If we're in production (no Nix Chromium), install Playwright browsers
+  if (!chromiumExists && isProductionEnvironment()) {
+    console.log('[Scan Agent] Production environment detected - installing Playwright browsers with ffmpeg...');
+    try {
+      execSync('npx playwright install --with-deps chromium', { 
+        stdio: 'inherit',
+        timeout: 120000 // 2 minute timeout
+      });
+      console.log('[Scan Agent] Playwright browsers installed successfully!');
+      playwrightBrowsersInstalled = true;
+    } catch (error) {
+      console.error('[Scan Agent] Failed to install Playwright browsers:', error);
+      throw new Error('Failed to install Playwright browsers. Please check logs.');
+    }
+  } else if (chromiumExists) {
+    console.log('[Scan Agent] Using Nix-installed Chromium (development)');
+    playwrightBrowsersInstalled = true;
+  }
 }
 
 // Check if we're in production/deployment (Chromium path doesn't exist)
@@ -105,6 +135,9 @@ export class RealScanAgent {
         baseUrl: estate.baseUrl,
         timestamp: new Date().toISOString(),
       });
+
+      // Ensure Playwright browsers are installed (auto-installs in production)
+      await ensurePlaywrightBrowsersInstalled();
 
       // Launch browser (local to this scan run)
       const browserConfig = getBrowserConfig();
@@ -351,22 +384,17 @@ export class RealScanAgent {
     const videoDir = path.join(REPORTS_DIR, `${scanRunId}_video`);
     const tracePath = path.join(REPORTS_DIR, `${scanRunId}_trace.zip`);
 
-    // Create browser context with conditional video recording
-    // In production, video recording is COMPLETELY DISABLED to avoid ffmpeg dependency issues
-    const isProd = isProductionEnvironment();
-    console.log(`[Scan Agent] Environment: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'} (NODE_ENV=${process.env.NODE_ENV})`);
-    console.log(`[Scan Agent] Video recording: ${isProd ? 'DISABLED (avoiding ffmpeg)' : 'ENABLED'}`);
+    // Create browser context with video recording
+    // Video recording now works in both dev and production (Playwright browsers auto-installed)
+    console.log(`[Scan Agent] Environment: ${isProductionEnvironment() ? 'PRODUCTION' : 'DEVELOPMENT'} (NODE_ENV=${process.env.NODE_ENV})`);
+    console.log(`[Scan Agent] Video recording: ENABLED`);
     
-    const context = await browser.newContext(
-      isProd 
-        ? {} // Production: NO video recording to avoid ffmpeg
-        : { // Development: Enable video recording
-            recordVideo: {
-              dir: videoDir,
-              size: { width: 1280, height: 720 }
-            }
-          }
-    );
+    const context = await browser.newContext({
+      recordVideo: {
+        dir: videoDir,
+        size: { width: 1280, height: 720 }
+      }
+    });
 
     // Start Playwright tracing
     await context.tracing.start({
@@ -546,8 +574,8 @@ export class RealScanAgent {
       // Close context (this will finalize video recording)
       await context.close();
       
-      // Only process video if recording was enabled (development mode)
-      if (!isProductionEnvironment() && fs.existsSync(videoDir)) {
+      // Process video in both development and production
+      if (fs.existsSync(videoDir)) {
         // Wait for video to be saved
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -564,8 +592,8 @@ export class RealScanAgent {
           finalVideoPath = videoFilesWithSize[0].path;
           console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
         }
-      } else if (isProductionEnvironment()) {
-        console.log('Video recording disabled in production (ffmpeg not available)');
+      } else {
+        console.log('No video directory found - video may not have been recorded');
       }
     }
 
