@@ -240,6 +240,42 @@ export class RealScanAgent {
         averageScore: avgScore,
         timestamp: new Date().toISOString(),
       });
+
+      // Add completion message to chat conversation if this scan was triggered by AI Agent
+      try {
+        const { db } = await import('../db');
+        const { chatMessages } = await import('@shared/schema');
+        const { eq, and, sql: drizzleSql } = await import('drizzle-orm');
+        
+        // Find chat messages with this estate ID in metadata
+        const messagesWithEstate = await db.select()
+          .from(chatMessages)
+          .where(drizzleSql`${chatMessages.metadata}->>'estateId' = ${estateId}`)
+          .limit(1);
+        
+        if (messagesWithEstate.length > 0) {
+          const conversationId = messagesWithEstate[0].conversationId;
+          
+          // Add completion message
+          const completionMessage = `✅ **Scan Complete!**\n\nFinished scanning ${estate.baseUrl}:\n- **${crawledPages.length}** pages audited\n- **${totalIssues}** issues found (${criticalCount} critical, ${warningCount} warnings, ${minorCount} minor)\n- **Pass rate:** ${passRate}%`;
+          
+          await storage.createChatMessage({
+            conversationId,
+            role: 'assistant',
+            content: completionMessage,
+            messageType: 'scan_result',
+            metadata: {
+              estateId: estate.id,
+              scanRunId: scanRun.id,
+            }
+          });
+          
+          console.log(`[AI Agent] Added scan completion message to conversation ${conversationId}`);
+        }
+      } catch (msgError) {
+        console.error('[AI Agent] Error adding completion message:', msgError);
+        // Don't fail the scan if message addition fails
+      }
     } catch (error) {
       console.error('Real scan error:', error);
       

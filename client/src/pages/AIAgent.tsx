@@ -235,20 +235,25 @@ export default function AIAgent() {
     };
   }, [conversationId]);
 
-  // Subscribe to latest estate with scan metadata
+  // Subscribe to ALL estates with scan metadata (not just latest)
   useEffect(() => {
     if (!messages || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
-    // Find the most recent message with scan metadata
-    const latestScanMessage = [...messages]
-      .reverse()
-      .find(msg => msg.metadata && typeof msg.metadata === 'object' && 'estateId' in msg.metadata);
-
-    if (latestScanMessage) {
-      const estateId = (latestScanMessage.metadata as any).estateId;
-      console.log('[AI Agent] Subscribing to latest estate:', estateId);
-      wsRef.current?.send(JSON.stringify({ type: 'subscribe', estateId }));
+    // Find ALL messages with scan metadata and subscribe to their estates
+    const estateIds = new Set<string>();
+    
+    for (const msg of messages) {
+      if (msg.metadata && typeof msg.metadata === 'object' && 'estateId' in msg.metadata) {
+        const estateId = (msg.metadata as any).estateId;
+        estateIds.add(estateId);
+      }
     }
+
+    // Subscribe to all estates
+    estateIds.forEach(estateId => {
+      console.log('[AI Agent] Subscribing to estate:', estateId);
+      wsRef.current?.send(JSON.stringify({ type: 'subscribe', estateId }));
+    });
   }, [messages]);
 
   // Auto-scroll to bottom when new messages arrive
