@@ -48,6 +48,8 @@ export interface IStorage {
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   getUsersByOrgId(orgId: string): Promise<User[]>;
+  updateUser(id: string, data: Partial<Pick<User, 'firstName' | 'lastName' | 'profileImageUrl'>>): Promise<User>;
+  updateUserPassword(id: string, hashedPassword: string): Promise<void>;
   
   // Organization operations
   getOrganization(id: string): Promise<Organization | undefined>;
@@ -194,6 +196,28 @@ export class DatabaseStorage implements IStorage {
       }
       throw error;
     }
+  }
+
+  async updateUser(id: string, data: Partial<Pick<User, 'firstName' | 'lastName' | 'profileImageUrl'>>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async updateUserPassword(id: string, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id));
   }
 
   // Organization operations
