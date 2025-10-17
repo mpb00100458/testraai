@@ -396,17 +396,29 @@ export class RealScanAgent {
     const videoDir = path.join(REPORTS_DIR, `${scanRunId}_video`);
     const tracePath = path.join(REPORTS_DIR, `${scanRunId}_trace.zip`);
 
-    // Create browser context with video recording
-    // Video recording now works in both dev and production (Playwright browsers auto-installed)
+    // Try to create browser context with video recording
+    // Gracefully fallback if ffmpeg is not available
     console.log(`[Scan Agent] Environment: ${isProductionEnvironment() ? 'PRODUCTION' : 'DEVELOPMENT'} (NODE_ENV=${process.env.NODE_ENV})`);
-    console.log(`[Scan Agent] Video recording: ENABLED`);
     
-    const context = await browser.newContext({
-      recordVideo: {
-        dir: videoDir,
-        size: { width: 1280, height: 720 }
-      }
-    });
+    let context: BrowserContext;
+    let videoRecordingEnabled = false;
+    
+    try {
+      context = await browser.newContext({
+        recordVideo: {
+          dir: videoDir,
+          size: { width: 1280, height: 720 }
+        }
+      });
+      videoRecordingEnabled = true;
+      console.log(`[Scan Agent] ✅ Video recording: ENABLED`);
+    } catch (videoError) {
+      // If video recording fails (ffmpeg not available), create context without video
+      console.warn(`[Scan Agent] ⚠️  Video recording unavailable:`, videoError instanceof Error ? videoError.message : String(videoError));
+      console.log(`[Scan Agent] Continuing scan without video recording...`);
+      context = await browser.newContext();
+      console.log(`[Scan Agent] Video recording: DISABLED (ffmpeg not available)`);
+    }
 
     // Start Playwright tracing
     await context.tracing.start({
@@ -586,8 +598,8 @@ export class RealScanAgent {
       // Close context (this will finalize video recording)
       await context.close();
       
-      // Process video in both development and production
-      if (fs.existsSync(videoDir)) {
+      // Process video only if recording was enabled
+      if (videoRecordingEnabled && fs.existsSync(videoDir)) {
         // Wait for video to be saved
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -604,8 +616,8 @@ export class RealScanAgent {
           finalVideoPath = videoFilesWithSize[0].path;
           console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
         }
-      } else {
-        console.log('No video directory found - video may not have been recorded');
+      } else if (!videoRecordingEnabled) {
+        console.log('[Scan Agent] Video recording was disabled - no video to process');
       }
     }
 
