@@ -308,35 +308,35 @@ export default function Landing() {
       </div>
 
       {/* Right Column - Animated Feature Cards */}
-      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-violet-500 to-purple-600 p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJWMGgydjMwem0wIDMwdi0yaC0ydjJoMnpNMCAzMHYtMmgzMHYySDB6bTYwIDB2LTJIMzB2Mmgzem0wLTMwdjJIMzBWMGgzMHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
+      <div className="hidden lg:flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-violet-100 dark:from-gray-900 dark:to-purple-950 p-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5MzMzZWEiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDMwaC0yVjBoMnYzMHptMCAzMHYtMmgtMnYyaDJ6TTAgMzB2LTJoMzB2Mkgwem02MCAwdi0ySDMwdjJoM3ptMC0zMHYySDMwVjBoMzB6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
         
         <div className="relative z-10 max-w-lg w-full">
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-8 shadow-2xl transition-all duration-500 min-h-[480px] flex flex-col">
+          <div className="bg-white dark:bg-gray-800 border border-purple-100 dark:border-purple-900 rounded-3xl p-8 shadow-2xl transition-all duration-500 min-h-[480px] flex flex-col">
             <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
-              <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-lg">
+              <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
                 <Icon className="h-12 w-12 text-white" />
               </div>
               
               <div className="space-y-4">
-                <h3 className="text-3xl font-bold text-white leading-tight">
+                <h3 className="text-3xl font-bold text-gray-900 dark:text-white leading-tight">
                   {currentFeature.title}
                 </h3>
-                <p className="text-lg text-white/90 leading-relaxed">
+                <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
                   {currentFeature.description}
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-center gap-2 pt-6 mt-6 border-t border-white/20">
+            <div className="flex justify-center gap-2 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
               {features.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentSlide(index)}
                   className={`h-2 rounded-full transition-all duration-300 ${
                     index === currentSlide 
-                      ? "w-8 bg-white" 
-                      : "w-2 bg-white/40 hover:bg-white/60"
+                      ? "w-8 bg-gradient-to-r from-violet-500 to-purple-600" 
+                      : "w-2 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
                   }`}
                   aria-label={`Go to slide ${index + 1}`}
                   data-testid={`button-slide-${index}`}
@@ -346,7 +346,7 @@ export default function Landing() {
           </div>
 
           <div className="mt-8 text-center">
-            <p className="text-white/80 text-sm italic">
+            <p className="text-gray-600 dark:text-gray-400 text-sm italic">
               Ensure digital inclusivity with AI-powered accessibility testing
             </p>
           </div>
