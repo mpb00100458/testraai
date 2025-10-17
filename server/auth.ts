@@ -127,13 +127,22 @@ export function setupAuth(app: Express) {
 
   // Login endpoint
   app.post("/api/login", (req, res, next) => {
+    console.log("[LOGIN] Attempt for email:", req.body.email);
     passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) return next(err);
+      if (err) {
+        console.error("[LOGIN ERROR] Authentication error:", err);
+        return res.status(500).json({ message: "Login failed. Please try again." });
+      }
       if (!user) {
+        console.log("[LOGIN] Authentication failed for:", req.body.email);
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      req.login(user, (err) => {
-        if (err) return next(err);
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("[LOGIN ERROR] Session creation error:", loginErr);
+          return res.status(500).json({ message: "Login failed. Please try again." });
+        }
+        console.log("[LOGIN] Success for:", req.body.email);
         res.status(200).json(user);
       });
     })(req, res, next);
