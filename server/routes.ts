@@ -339,6 +339,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const projectId = req.params.id;
+
+      // Verify project exists and user has access
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Verify user has access to the organization
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership || (membership.role !== 'OWNER' && membership.role !== 'ADMIN')) {
+        return res.status(403).json({ message: "Only organization owners and admins can delete projects" });
+      }
+
+      await storage.deleteProject(projectId);
+      res.json({ message: "Project deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
   // Estate routes
   app.get('/api/estates', isAuthenticated, async (req: any, res) => {
     try {
@@ -390,6 +415,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error creating estate:", error);
       res.status(500).json({ message: "Failed to create estate" });
+    }
+  });
+
+  app.delete('/api/estates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const estateId = req.params.id;
+
+      // Verify estate exists and user has access
+      const estate = await storage.getEstate(estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      // Verify user has access to the project
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership || (membership.role !== 'OWNER' && membership.role !== 'ADMIN')) {
+        return res.status(403).json({ message: "Only organization owners and admins can delete estates" });
+      }
+
+      await storage.deleteEstate(estateId);
+      res.json({ message: "Estate deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting estate:", error);
+      res.status(500).json({ message: "Failed to delete estate" });
     }
   });
 
@@ -942,6 +997,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching scan details:", error);
       res.status(500).json({ message: "Failed to fetch scan details" });
+    }
+  });
+
+  app.delete('/api/scans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const scanId = req.params.id;
+
+      // Verify scan exists and user has access
+      const scanRun = await storage.getScanRun(scanId);
+      if (!scanRun) {
+        return res.status(404).json({ message: "Scan not found" });
+      }
+
+      // Verify user has access to the estate's project
+      const estate = await storage.getEstate(scanRun.estateId);
+      if (!estate) {
+        return res.status(404).json({ message: "Estate not found" });
+      }
+
+      const project = await storage.getProject(estate.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const membership = await storage.getMembership(userId, project.organizationId);
+      if (!membership || (membership.role !== 'OWNER' && membership.role !== 'ADMIN')) {
+        return res.status(403).json({ message: "Only organization owners and admins can delete scans" });
+      }
+
+      await storage.deleteScanRun(scanId);
+      res.json({ message: "Scan deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting scan:", error);
+      res.status(500).json({ message: "Failed to delete scan" });
     }
   });
 
