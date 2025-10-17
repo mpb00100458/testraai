@@ -6,9 +6,10 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GradientButton } from "@/components/GradientButton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,6 +29,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
   const [liveScanModalOpen, setLiveScanModalOpen] = useState(false);
   const [selectedEstateId, setSelectedEstateId] = useState<string | null>(null);
   const [selectedEstateName, setSelectedEstateName] = useState<string>("");
+  const [estateToDelete, setEstateToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -127,6 +129,38 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
       toast({
         title: "Error",
         description: error.message || "Failed to start scan",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEstateMutation = useMutation({
+    mutationFn: async (estateId: string) => {
+      await apiRequest("DELETE", `/api/estates/${estateId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/estates", projectId] });
+      toast({
+        title: "Success",
+        description: "Estate deleted successfully",
+      });
+      setEstateToDelete(null);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete estate",
         variant: "destructive",
       });
     },
@@ -315,6 +349,18 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                                 Live
                               </Button>
                             )}
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEstateToDelete(estate.id);
+                              }}
+                              data-testid={`button-delete-estate-${estate.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -366,6 +412,27 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           }}
         />
       )}
+
+      <AlertDialog open={!!estateToDelete} onOpenChange={(open) => !open && setEstateToDelete(null)}>
+        <AlertDialogContent data-testid="dialog-delete-estate-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Estate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this estate? This will also delete all scans and accessibility data associated with it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-estate">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => estateToDelete && deleteEstateMutation.mutate(estateToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-estate"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
