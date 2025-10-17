@@ -19,13 +19,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProjectSchema, type InsertProject, type Project, type Organization, type Estate } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import ProjectDetail from "./ProjectDetail";
+import { useLocation } from "wouter";
 
 export default function Projects() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   useEffect(() => {
@@ -147,10 +147,6 @@ export default function Projects() {
 
   if (authLoading || !isAuthenticated) {
     return null;
-  }
-
-  if (selectedProjectId) {
-    return <ProjectDetail projectId={selectedProjectId} onBack={() => setSelectedProjectId(null)} />;
   }
 
   return (
@@ -282,7 +278,7 @@ export default function Projects() {
                       <TableRow 
                         key={project.id} 
                         className="cursor-pointer hover-elevate" 
-                        onClick={() => setSelectedProjectId(project.id)}
+                        onClick={() => setLocation(`/projects/${project.id}`)}
                         data-testid={`row-project-${project.id}`}
                       >
                         <TableCell data-testid={`table-cell-project-name-${project.id}`}>
@@ -320,7 +316,7 @@ export default function Projects() {
                               variant="outline"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedProjectId(project.id);
+                                setLocation(`/projects/${project.id}`);
                               }}
                               data-testid={`button-view-project-${project.id}`}
                             >
@@ -373,7 +369,7 @@ export default function Projects() {
                       <TableRow 
                         key={project.id} 
                         className="cursor-pointer hover-elevate" 
-                        onClick={() => setSelectedProjectId(project.id)}
+                        onClick={() => setLocation(`/projects/${project.id}`)}
                         data-testid={`row-project-${project.id}`}
                       >
                         <TableCell data-testid={`table-cell-project-name-${project.id}`}>
@@ -411,7 +407,7 @@ export default function Projects() {
                               variant="outline"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedProjectId(project.id);
+                                setLocation(`/projects/${project.id}`);
                               }}
                               data-testid={`button-view-project-${project.id}`}
                             >
