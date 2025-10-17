@@ -20,6 +20,7 @@ import Tools from "@/pages/Tools";
 import ScanComparison from "@/pages/ScanComparison";
 import ScanDetail from "@/pages/ScanDetail";
 import AIAgent from "@/pages/AIAgent";
+import ProjectDetail from "@/pages/ProjectDetail";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +39,9 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/ai-agent" component={AIAgent} />
       <Route path="/issues" component={Issues} />
+      <Route path="/projects/:id">
+        {(params) => <ProjectDetail projectId={params.id} onBack={() => window.history.back()} />}
+      </Route>
       <Route path="/projects" component={Projects} />
       <Route path="/organization" component={Organization} />
       <Route path="/tools" component={Tools} />
