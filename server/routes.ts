@@ -1839,6 +1839,22 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
     }
   });
 
+  // Generate and download documentation PDF
+  app.get('/api/documentation/download', (req, res) => {
+    try {
+      const { generateDocumentationPDF } = require('./pdfGenerator');
+      const doc = generateDocumentationPDF();
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="TestraAI-Documentation.pdf"');
+      
+      doc.pipe(res);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      res.status(500).json({ message: 'Failed to generate PDF documentation' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Initialize WebSocket server
