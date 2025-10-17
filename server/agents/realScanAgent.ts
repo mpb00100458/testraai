@@ -13,6 +13,26 @@ const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s
 // Use home directory for persistent file storage (survives restarts)
 const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility-reports');
 
+// Check if we're in production/deployment (Chromium path doesn't exist)
+function getBrowserConfig() {
+  const isProduction = !fs.existsSync(CHROMIUM_PATH);
+  
+  if (isProduction) {
+    // Production: Use Playwright's bundled browser
+    return {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    };
+  } else {
+    // Development: Use Nix-installed Chromium
+    return {
+      executablePath: CHROMIUM_PATH,
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    };
+  }
+}
+
 interface AxeViolation {
   id: string;
   impact?: string;
@@ -82,11 +102,8 @@ export class RealScanAgent {
       });
 
       // Launch browser (local to this scan run)
-      browser = await chromium.launch({
-        executablePath: CHROMIUM_PATH,
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      });
+      const browserConfig = getBrowserConfig();
+      browser = await chromium.launch(browserConfig);
 
       // Crawl and audit pages (now with WebSocket progress, video & traces)
       const { pages: crawledPages, videoPath, tracePath } = await this.crawlWebsite(estate.baseUrl, browser, estateId, scanRun.id);
