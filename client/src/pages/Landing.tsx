@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle, FileSearch, Shield, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle, FileSearch, Shield, Loader2, Sparkles, Bot, Activity } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -275,19 +275,31 @@ export default function Landing() {
           <div className="space-y-6">
             <div className="flex gap-4 items-start">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
-                <Shield className="h-6 w-6 text-white" />
+                <Bot className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">
-                <h3 className="font-semibold text-lg">Automated Compliance Audits</h3>
+                <h3 className="font-semibold text-lg">AI-Powered Testing Agent</h3>
                 <p className="text-sm text-muted-foreground">
-                  Continuous WCAG 2.1 A/AA monitoring with browser automation and axe-core validation engine
+                  Conversational AI assistant for natural language accessibility testing, instant WCAG guidance, and intelligent scan orchestration
                 </p>
               </div>
             </div>
 
             <div className="flex gap-4 items-start">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
-                <CheckCircle className="h-6 w-6 text-white" />
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-semibold text-lg">Automated Compliance Audits</h3>
+                <p className="text-sm text-muted-foreground">
+                  Continuous WCAG 2.1 A/AA monitoring with intelligent browser automation and comprehensive validation
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 items-start">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
+                <Activity className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">
                 <h3 className="font-semibold text-lg">Real-Time Monitoring</h3>
