@@ -439,7 +439,33 @@ export class RealScanAgent {
     });
 
     // Create a single page for the entire scan (reuse for all URLs to get one continuous video)
-    const page = await context.newPage();
+    // Wrap in try-catch because ffmpeg error can be thrown here too
+    let page: Page;
+    try {
+      page = await context.newPage();
+    } catch (pageError) {
+      // If newPage fails due to missing ffmpeg, recreate context without video and try again
+      console.warn(`[Scan Agent] ⚠️  newPage() failed (likely ffmpeg missing):`, pageError instanceof Error ? pageError.message : String(pageError));
+      console.log(`[Scan Agent] Recreating context without video recording...`);
+      
+      // Close the video-enabled context
+      await context.close();
+      
+      // Create new context without video
+      context = await browser.newContext();
+      videoRecordingEnabled = false;
+      console.log(`[Scan Agent] Video recording: DISABLED (ffmpeg not available)`);
+      
+      // Restart tracing on new context
+      await context.tracing.start({
+        screenshots: true,
+        snapshots: true,
+        sources: true
+      });
+      
+      // Create page without video
+      page = await context.newPage();
+    }
 
     try {
       while (urlsToVisit.length > 0 && results.length < MAX_PAGES_PER_ESTATE) {

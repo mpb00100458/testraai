@@ -1,0 +1,128 @@
+
+3d180eaf
+User
+[WS] Emit scan_start to estate 3791e24f-44a5-4b0b-9328-8917ab28c3c9, clients: 0
+2025-10-17 20:52:10.65
+3d180eaf
+User
+[Scan Agent] Found Chromium at: /nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium
+2025-10-17 20:52:10.65
+3d180eaf
+User
+[Scan Agent] Using Chromium from Nix packages (development or Reserved VM)
+2025-10-17 20:52:10.65
+3d180eaf
+User
+[Scan Agent] Video recording: ENABLED (using system ffmpeg)
+2025-10-17 20:52:10.66
+3d180eaf
+User
+[Scan Agent] Found Chromium at: /nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium
+2025-10-17 20:52:10.66
+3d180eaf
+User
+[Scan Agent] Using Nix Chromium at: /nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium
+2025-10-17 20:52:15.73
+3d180eaf
+User
+7:52:15 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 256ms :: [{"…
+2025-10-17 20:52:21.16
+3d180eaf
+User
+7:52:21 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 259ms :: [{"…
+2025-10-17 20:52:26.58
+3d180eaf
+User
+7:52:26 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 257ms :: [{"…
+2025-10-17 20:52:32.00
+3d180eaf
+User
+7:52:32 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 259ms :: [{"…
+2025-10-17 20:52:36.14
+3d180eaf
+User
+[Scan Agent] Found Chromium at: /nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium
+2025-10-17 20:52:36.14
+3d180eaf
+User
+[Scan Agent] Using Nix Chromium (NODE_ENV=production)
+2025-10-17 20:52:36.17
+3d180eaf
+User
+[Scan Agent] ✅ Video recording: ENABLED
+2025-10-17 20:52:37.19
+3d180eaf
+User
+Real scan error: browserContext.newPage: Executable doesn't exist at /home/runner/workspace/.cache/ms-playwright/ffmpeg-1011/ffmpeg-linux
+2025-10-17 20:52:37.19
+3d180eaf
+User
+╔═════════════════════════════════════════════════════════════════════════╗
+2025-10-17 20:52:37.19
+3d180eaf
+User
+║ Looks like Playwright Test or Playwright was just installed or updated. ║
+2025-10-17 20:52:37.19
+3d180eaf
+User
+║ Please run the following command to download new browsers: ║
+2025-10-17 20:52:37.19
+3d180eaf
+User
+║ ║
+2025-10-17 20:52:37.19
+3d180eaf
+User
+║ npx playwright install ║
+2025-10-17 20:52:37.19
+3d180eaf
+User
+║ ║
+2025-10-17 20:52:37.19
+3d180eaf
+User
+║ <3 Playwright Team ║
+2025-10-17 20:52:37.19
+3d180eaf
+User
+╚═════════════════════════════════════════════════════════════════════════╝
+2025-10-17 20:52:37.19
+3d180eaf
+User
+at RealScanAgent.crawlWebsite (/home/runner/workspace/dist/index.js:1350:36)
+2025-10-17 20:52:37.19
+3d180eaf
+User
+at async RealScanAgent.runScan (/home/runner/workspace/dist/index.js:1149:65) {
+2025-10-17 20:52:37.19
+3d180eaf
+User
+name: 'Error'
+2025-10-17 20:52:37.19
+3d180eaf
+User
+}
+2025-10-17 20:52:37.22
+3d180eaf
+User
+[WS] Emit scan_error to estate 3791e24f-44a5-4b0b-9328-8917ab28c3c9, clients: 0
+2025-10-17 20:52:37.53
+3d180eaf
+User
+7:52:37 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 360ms :: [{"…
+2025-10-17 20:52:42.93
+3d180eaf
+User
+7:52:42 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 242ms :: [{"…
+2025-10-17 20:52:48.33
+3d180eaf
+User
+7:52:48 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 244ms :: [{"…
+2025-10-17 20:52:53.76
+3d180eaf
+User
+7:52:53 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 253ms :: [{"…
+2025-10-17 20:52:59.16
+3d180eaf
+User
+7:52:59 PM [express] GET /api/estates/3791e24f-44a5-4b0b-9328-8917ab28c3c9/scans 200 in 242ms :: [{"…
