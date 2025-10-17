@@ -1062,7 +1062,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this scan" });
       }
 
+      console.log('=== VIDEO DOWNLOAD DEBUG ===');
+      console.log('Scan run object:', JSON.stringify(scanRun, null, 2));
+      console.log('videoPath field:', scanRun.videoPath);
+      console.log('Has videoPath?', 'videoPath' in scanRun);
+      
       if (!scanRun.videoPath) {
+        console.log('ERROR: No videoPath in scanRun');
         return res.status(404).json({ message: "Video not found for this scan" });
       }
 
@@ -1070,9 +1076,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const path = await import('path');
       
-      if (!fs.existsSync(scanRun.videoPath)) {
+      console.log('Checking if file exists:', scanRun.videoPath);
+      const exists = fs.existsSync(scanRun.videoPath);
+      console.log('File exists?', exists);
+      
+      if (!exists) {
+        console.log('ERROR: Video file not found on disk');
         return res.status(404).json({ message: "Video file not found on disk" });
       }
+      
+      console.log('Sending video file...');
+      console.log('===========================');
 
       res.setHeader('Content-Type', 'video/webm');
       res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
@@ -1171,7 +1185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         estate: {
           id: estate.id,
           name: estate.name,
-          url: estate.url
+          url: estate.baseUrl
         },
         issues: issues,
         exportedAt: new Date().toISOString()
