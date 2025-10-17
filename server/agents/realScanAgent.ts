@@ -13,11 +13,16 @@ const PAGE_TIMEOUT = 30000; // 30s timeout for complex pages (increased from 10s
 // Use home directory for persistent file storage (survives restarts)
 const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility-reports');
 
+// Check if we're in production using NODE_ENV
+function isProductionEnvironment() {
+  return process.env.NODE_ENV === 'production';
+}
+
 // Check if we're in production/deployment (Chromium path doesn't exist)
 function getBrowserConfig() {
-  const isProduction = !fs.existsSync(CHROMIUM_PATH);
+  const chromiumExists = fs.existsSync(CHROMIUM_PATH);
   
-  if (isProduction) {
+  if (!chromiumExists) {
     // Production: Use Playwright's bundled browser
     return {
       headless: true,
@@ -346,20 +351,22 @@ export class RealScanAgent {
     const videoDir = path.join(REPORTS_DIR, `${scanRunId}_video`);
     const tracePath = path.join(REPORTS_DIR, `${scanRunId}_trace.zip`);
 
-    // Check if we're in production (Playwright's ffmpeg might not be installed)
-    const isProduction = !fs.existsSync(CHROMIUM_PATH);
-    
     // Create browser context with conditional video recording
-    // In production, video recording is disabled to avoid ffmpeg dependency issues
-    const contextOptions: any = {};
-    if (!isProduction) {
-      contextOptions.recordVideo = {
-        dir: videoDir,
-        size: { width: 1280, height: 720 }
-      };
-    }
+    // In production, video recording is COMPLETELY DISABLED to avoid ffmpeg dependency issues
+    const isProd = isProductionEnvironment();
+    console.log(`[Scan Agent] Environment: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'} (NODE_ENV=${process.env.NODE_ENV})`);
+    console.log(`[Scan Agent] Video recording: ${isProd ? 'DISABLED (avoiding ffmpeg)' : 'ENABLED'}`);
     
-    const context = await browser.newContext(contextOptions);
+    const context = await browser.newContext(
+      isProd 
+        ? {} // Production: NO video recording to avoid ffmpeg
+        : { // Development: Enable video recording
+            recordVideo: {
+              dir: videoDir,
+              size: { width: 1280, height: 720 }
+            }
+          }
+    );
 
     // Start Playwright tracing
     await context.tracing.start({
@@ -540,7 +547,7 @@ export class RealScanAgent {
       await context.close();
       
       // Only process video if recording was enabled (development mode)
-      if (!isProduction && fs.existsSync(videoDir)) {
+      if (!isProductionEnvironment() && fs.existsSync(videoDir)) {
         // Wait for video to be saved
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -557,7 +564,7 @@ export class RealScanAgent {
           finalVideoPath = videoFilesWithSize[0].path;
           console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
         }
-      } else if (isProduction) {
+      } else if (isProductionEnvironment()) {
         console.log('Video recording disabled in production (ffmpeg not available)');
       }
     }
