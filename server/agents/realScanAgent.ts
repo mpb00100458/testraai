@@ -17,33 +17,45 @@ const REPORTS_DIR = path.join(process.env.HOME || '/home/runner', 'accessibility
 // Track if we've already installed Playwright browsers in this session
 let playwrightBrowsersInstalled = false;
 
-// Check if we're in production using NODE_ENV
+// Check if we're in production - Chromium path doesn't exist means we're deployed
 function isProductionEnvironment() {
-  return process.env.NODE_ENV === 'production';
+  // In production (GCE deployment), the Nix Chromium won't exist
+  // NODE_ENV might not be set, so we check the Chromium path instead
+  return !fs.existsSync(CHROMIUM_PATH);
 }
 
 // Install Playwright browsers (including ffmpeg) if needed
 async function ensurePlaywrightBrowsersInstalled() {
-  if (playwrightBrowsersInstalled) return;
+  if (playwrightBrowsersInstalled) {
+    console.log('[Scan Agent] Playwright browsers already installed, skipping...');
+    return;
+  }
   
   const chromiumExists = fs.existsSync(CHROMIUM_PATH);
+  console.log(`[Scan Agent] Environment check - Chromium exists: ${chromiumExists}, Production: ${isProductionEnvironment()}`);
   
   // If we're in production (no Nix Chromium), install Playwright browsers
-  if (!chromiumExists && isProductionEnvironment()) {
+  if (!chromiumExists) {
     console.log('[Scan Agent] Production environment detected - installing Playwright browsers with ffmpeg...');
+    console.log('[Scan Agent] This may take 2-3 minutes on first run...');
     try {
+      const startTime = Date.now();
       execSync('npx playwright install --with-deps chromium', { 
         stdio: 'inherit',
-        timeout: 120000 // 2 minute timeout
+        timeout: 180000 // 3 minute timeout
       });
-      console.log('[Scan Agent] Playwright browsers installed successfully!');
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      console.log(`[Scan Agent] ✅ Playwright browsers installed successfully in ${duration}s!`);
+      console.log('[Scan Agent] Video recording: ENABLED');
       playwrightBrowsersInstalled = true;
     } catch (error) {
-      console.error('[Scan Agent] Failed to install Playwright browsers:', error);
-      throw new Error('Failed to install Playwright browsers. Please check logs.');
+      console.error('[Scan Agent] ❌ Failed to install Playwright browsers:', error);
+      console.error('[Scan Agent] Error details:', error instanceof Error ? error.message : String(error));
+      throw new Error('Failed to install Playwright browsers. Video recording will be unavailable.');
     }
-  } else if (chromiumExists) {
+  } else {
     console.log('[Scan Agent] Using Nix-installed Chromium (development)');
+    console.log('[Scan Agent] Video recording: ENABLED');
     playwrightBrowsersInstalled = true;
   }
 }
