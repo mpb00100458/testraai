@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, Globe, Plus, Play, History, Loader2, ExternalLink, Trash2, Bot, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GradientButton } from "@/components/GradientButton";
+import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDistanceToNow } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -67,6 +68,21 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
     },
     enabled: isAuthenticated && !!projectId,
   });
+
+  // Check if this is an AI Agent Scans project
+  const isAIAgentProject = project?.name === "AI Agent Scans";
+
+  // Group estates by URL for AI Agent projects
+  const groupedEstates = isAIAgentProject && estates
+    ? estates.reduce((acc, estate) => {
+        const url = estate.baseUrl;
+        if (!acc[url]) {
+          acc[url] = [];
+        }
+        acc[url].push(estate);
+        return acc;
+      }, {} as Record<string, Estate[]>)
+    : {};
 
   const form = useForm<InsertEstate>({
     resolver: zodResolver(insertEstateSchema),
@@ -253,9 +269,139 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : estates && estates.length > 0 ? (
-        <div className="space-y-4">
-          {estates.map((estate) => (
-            <Card key={estate.id} data-testid={`card-estate-${estate.id}`} className="!shadow-md hover:!shadow-xl transition-all duration-200">
+        <div className="space-y-6">
+          {/* AI Agent Scans - Grouped by URL */}
+          {isAIAgentProject ? (
+            <>
+              {Object.entries(groupedEstates).map(([url, urlEstates]) => {
+                // Get the most recent estate for this URL
+                const primaryEstate = urlEstates[0];
+                const totalScans = urlEstates.length;
+                
+                return (
+                  <Card 
+                    key={url} 
+                    data-testid={`card-estate-group-${url}`} 
+                    className="!shadow-md hover:!shadow-xl transition-all duration-200 border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-indigo-500/5"
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 text-purple-600 dark:text-purple-400 flex-shrink-0">
+                            <Bot className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <a 
+                              href={url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 text-lg font-semibold hover:underline group"
+                            >
+                              <span className="truncate">{url}</span>
+                              <ExternalLink className="h-4 w-4 flex-shrink-0 opacity-50 group-hover:opacity-100 transition-opacity" />
+                            </a>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="secondary" className="text-xs">
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                AI Generated
+                              </Badge>
+                              {totalScans > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {totalScans} scan instances
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <GradientButton
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              runScanMutation.mutate({ estateId: primaryEstate.id, estateName: primaryEstate.name });
+                            }}
+                            disabled={runScanMutation.isPending || primaryEstate.status === 'crawling' || primaryEstate.status === 'auditing'}
+                            data-testid={`button-run-scan-${primaryEstate.id}`}
+                            showIcon={false}
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            {primaryEstate.status === 'crawling' ? 'Scanning...' :
+                             primaryEstate.status === 'auditing' ? 'Testing...' :
+                             'Run New Scan'}
+                          </GradientButton>
+                          
+                          {(primaryEstate.status === 'crawling' || primaryEstate.status === 'auditing') && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEstateId(primaryEstate.id);
+                                setSelectedEstateName(primaryEstate.name);
+                                setLiveScanModalOpen(true);
+                              }}
+                              data-testid={`button-live-view-${primaryEstate.id}`}
+                            >
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Live
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="pt-0">
+                      {/* Show combined scan history for all estates with this URL */}
+                      <div className="space-y-4">
+                        {urlEstates.map((estate, idx) => (
+                          <div key={estate.id}>
+                            {idx > 0 && <Separator className="my-4" />}
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <p className="text-sm font-medium">{estate.name}</p>
+                                  <Badge variant={
+                                    estate.status === 'completed' ? 'default' :
+                                    estate.status === 'failed' ? 'destructive' :
+                                    estate.status === 'crawling' || estate.status === 'auditing' ? 'secondary' :
+                                    'outline'
+                                  }>
+                                    {estate.status === 'crawling' ? 'Scanning Pages' :
+                                     estate.status === 'auditing' ? 'Testing Accessibility' :
+                                     estate.status === 'completed' ? 'Completed' :
+                                     estate.status === 'failed' ? 'Failed' :
+                                     'Ready to Scan'}
+                                  </Badge>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEstateToDelete(estate.id);
+                                  }}
+                                  data-testid={`button-delete-estate-${estate.id}`}
+                                  className="h-8"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                              
+                              <ScanHistoryTable estateId={estate.id} estateName={estate.name} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </>
+          ) : (
+            /* Regular Projects - Original Card Display */
+            <>
+              {estates.map((estate) => (
+                <Card key={estate.id} data-testid={`card-estate-${estate.id}`} className="!shadow-md hover:!shadow-xl transition-all duration-200">
               <CardContent className="p-0">
                 <div className="w-full overflow-auto rounded-md border-0">
                   <Table>
@@ -379,6 +525,8 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               </CardContent>
             </Card>
           ))}
+            </>
+          )}
         </div>
       ) : (
         <Card className="!shadow-md hover:!shadow-xl transition-all duration-200">
