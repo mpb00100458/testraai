@@ -936,17 +936,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const scans = await storage.getScanRunsByEstateId(id);
       
-      // Debug: Check what Drizzle is actually returning
-      if (scans.length > 0) {
-        console.log('=== DRIZZLE RETURNED ===');
-        console.log('Raw scan object:', JSON.stringify(scans[0], null, 2));
-        console.log('Has videoPath?', 'videoPath' in scans[0]);
-        console.log('Has video_path?', 'video_path' in scans[0]);
-        console.log('videoPath value:', scans[0].videoPath);
-        console.log('video_path value:', (scans[0] as any).video_path);
-        console.log('========================');
-      }
-      
       // Disable caching to ensure fresh data
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -1062,13 +1051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied to this scan" });
       }
 
-      console.log('=== VIDEO DOWNLOAD DEBUG ===');
-      console.log('Scan run object:', JSON.stringify(scanRun, null, 2));
-      console.log('videoPath field:', scanRun.videoPath);
-      console.log('Has videoPath?', 'videoPath' in scanRun);
-      
       if (!scanRun.videoPath) {
-        console.log('ERROR: No videoPath in scanRun');
         return res.status(404).json({ message: "Video not found for this scan" });
       }
 
@@ -1076,17 +1059,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fs = await import('fs');
       const path = await import('path');
       
-      console.log('Checking if file exists:', scanRun.videoPath);
-      const exists = fs.existsSync(scanRun.videoPath);
-      console.log('File exists?', exists);
-      
-      if (!exists) {
-        console.log('ERROR: Video file not found on disk');
+      if (!fs.existsSync(scanRun.videoPath)) {
         return res.status(404).json({ message: "Video file not found on disk" });
       }
-      
-      console.log('Sending video file...');
-      console.log('===========================');
 
       res.setHeader('Content-Type', 'video/webm');
       res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);

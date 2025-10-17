@@ -422,45 +422,49 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                     )}
                   </GradientButton>
                   
-                  <GradientButton
-                    size="sm"
-                    onClick={() => handleDownloadVideo(scan.id)}
-                    disabled={downloadingVideo === scan.id || scan.status !== 'completed'}
-                    data-testid={`button-download-video-${scan.id}`}
-                    showIcon={false}
-                  >
-                    {downloadingVideo === scan.id ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                        <span className="text-xs">Downloading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Video className="h-3 w-3 mr-1.5" />
-                        <span className="text-xs font-medium">Video</span>
-                      </>
-                    )}
-                  </GradientButton>
+                  {scan.videoPath && (
+                    <GradientButton
+                      size="sm"
+                      onClick={() => handleDownloadVideo(scan.id)}
+                      disabled={downloadingVideo === scan.id || scan.status !== 'completed'}
+                      data-testid={`button-download-video-${scan.id}`}
+                      showIcon={false}
+                    >
+                      {downloadingVideo === scan.id ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                          <span className="text-xs">Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Video className="h-3 w-3 mr-1.5" />
+                          <span className="text-xs font-medium">Video</span>
+                        </>
+                      )}
+                    </GradientButton>
+                  )}
                   
-                  <GradientButton
-                    size="sm"
-                    onClick={() => handleDownloadTrace(scan.id)}
-                    disabled={downloadingTrace === scan.id || scan.status !== 'completed'}
-                    data-testid={`button-download-trace-${scan.id}`}
-                    showIcon={false}
-                  >
-                    {downloadingTrace === scan.id ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                        <span className="text-xs">Downloading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileCode className="h-3 w-3 mr-1.5" />
-                        <span className="text-xs font-medium">Trace</span>
-                      </>
-                    )}
-                  </GradientButton>
+                  {scan.tracePath && (
+                    <GradientButton
+                      size="sm"
+                      onClick={() => handleDownloadTrace(scan.id)}
+                      disabled={downloadingTrace === scan.id || scan.status !== 'completed'}
+                      data-testid={`button-download-trace-${scan.id}`}
+                      showIcon={false}
+                    >
+                      {downloadingTrace === scan.id ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                          <span className="text-xs">Downloading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileCode className="h-3 w-3 mr-1.5" />
+                          <span className="text-xs font-medium">Trace</span>
+                        </>
+                      )}
+                    </GradientButton>
+                  )}
 
                   <Button
                     size="sm"
