@@ -67,6 +67,7 @@ export interface IStorage {
   getProject(id: string): Promise<Project | undefined>;
   getProjectsByOrgId(orgId: string): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
+  deleteProject(id: string): Promise<void>;
   
   // Estate operations
   getEstate(id: string): Promise<Estate | undefined>;
@@ -74,6 +75,7 @@ export interface IStorage {
   createEstate(estate: InsertEstate): Promise<Estate>;
   updateEstateStatus(id: string, status: 'idle' | 'crawling' | 'auditing' | 'completed' | 'failed'): Promise<Estate>;
   updateEstateStats(id: string, pagesDiscovered: number, pagesAudited: number): Promise<Estate>;
+  deleteEstate(id: string): Promise<void>;
   
   // Page operations
   getPage(id: string): Promise<Page | undefined>;
@@ -97,6 +99,7 @@ export interface IStorage {
     pagesAudited?: number;
   }): Promise<ScanRun>;
   completeScanRun(id: string): Promise<ScanRun>;
+  deleteScanRun(id: string): Promise<void>;
   
   // A11y Result operations
   getA11yResult(id: string): Promise<A11yResult | undefined>;
@@ -283,6 +286,10 @@ export class DatabaseStorage implements IStorage {
     return newProject;
   }
 
+  async deleteProject(id: string): Promise<void> {
+    await db.delete(projects).where(eq(projects.id, id));
+  }
+
   // Estate operations
   async getEstate(id: string): Promise<Estate | undefined> {
     const [estate] = await db.select().from(estates).where(eq(estates.id, id));
@@ -314,6 +321,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(estates.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteEstate(id: string): Promise<void> {
+    await db.delete(estates).where(eq(estates.id, id));
   }
 
   // Page operations
@@ -397,6 +408,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(scanRuns.id, id))
       .returning();
     return updated;
+  }
+
+  async deleteScanRun(id: string): Promise<void> {
+    await db.delete(scanRuns).where(eq(scanRuns.id, id));
   }
 
   // A11y Result operations
