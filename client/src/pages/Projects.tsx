@@ -266,10 +266,10 @@ export default function Projects() {
                 </div>
               </div>
 
-              <div className="w-full overflow-auto rounded-lg border border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-indigo-500/5">
+              <div className="w-full overflow-auto rounded-lg border">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-purple-500/20">
+                    <TableRow>
                       <TableHead className="w-[300px]">Project Name</TableHead>
                       <TableHead className="w-[400px]">Description</TableHead>
                       <TableHead className="w-[120px] text-center">Estates</TableHead>
@@ -281,7 +281,7 @@ export default function Projects() {
                     {aiAgentProjects.map((project) => (
                       <TableRow 
                         key={project.id} 
-                        className="cursor-pointer hover-elevate border-purple-500/10" 
+                        className="cursor-pointer hover-elevate" 
                         onClick={() => setSelectedProjectId(project.id)}
                         data-testid={`row-project-${project.id}`}
                       >
