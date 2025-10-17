@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FileText, Loader2, Eye, Video, FileCode } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { FileSpreadsheet, FileText, Loader2, Eye, Video, FileCode, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { GradientButton } from "@/components/GradientButton";
+import { isUnauthorizedError } from "@/lib/authUtils";
 
 interface ScanRun {
   id: string;
@@ -38,6 +41,7 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [downloadingVideo, setDownloadingVideo] = useState<string | null>(null);
   const [downloadingTrace, setDownloadingTrace] = useState<string | null>(null);
+  const [scanToDelete, setScanToDelete] = useState<string | null>(null);
 
   const { data: scans, isLoading, error } = useQuery<ScanRun[]>({
     queryKey: ['/api/estates', estateId, 'scans'],
@@ -189,6 +193,38 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
       setDownloadingTrace(null);
     }
   };
+
+  const deleteScanMutation = useMutation({
+    mutationFn: async (scanId: string) => {
+      await apiRequest("DELETE", `/api/scans/${scanId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/estates', estateId, 'scans'] });
+      toast({
+        title: "Success",
+        description: "Scan deleted successfully",
+      });
+      setScanToDelete(null);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to delete scan",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getStatusBadge = (scan: ScanRun) => {
     if (scan.status === 'completed') {
@@ -425,12 +461,45 @@ export function ScanHistoryTable({ estateId, estateName }: ScanHistoryTableProps
                       </>
                     )}
                   </GradientButton>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setScanToDelete(scan.id);
+                    }}
+                    data-testid={`button-delete-scan-${scan.id}`}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <AlertDialog open={!!scanToDelete} onOpenChange={(open) => !open && setScanToDelete(null)}>
+        <AlertDialogContent data-testid="dialog-delete-scan-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Scan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this scan? This will permanently remove all scan data and accessibility results. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-scan">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => scanToDelete && deleteScanMutation.mutate(scanToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-scan"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
