@@ -37,17 +37,26 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **Detailed violation reporting** including rule ID, WCAG reference, severity classification, element selectors, and remediation suggestions.
 - **Pass/fail tracking** with comprehensive reporting of passed checks, violations, and incomplete tests.
 - **Performance optimized** for 50+ pages per scan with 10-second timeout per page.
-- **JSON/HTML export capabilities** generating detailed accessibility reports stored in `/tmp/accessibility-reports`.
+- **JSON/HTML export capabilities** generating detailed accessibility reports.
 - Severity classification (critical, warning, minor, pass) with impact-based mapping.
 - **Real-time progress streaming** via WebSocket events (scan_start, page_discovered, page_testing, page_complete, issue_found, scan_complete, scan_error) for live visual testing interface.
-- **Video recording** of entire scan sessions (1280x720 resolution) saved to `/tmp/accessibility-reports/{scanRunId}_video/`.
-- **Playwright trace capture** with full action logging, screenshots, network, and console data saved to `/tmp/accessibility-reports/{scanRunId}_trace.zip`.
+- **Video recording** of entire scan sessions (1280x720 resolution) uploaded to **Replit Object Storage** for persistent access.
+- **Playwright trace capture** with full action logging, screenshots, network, and console data uploaded to **Replit Object Storage**.
 - **Live screenshot streaming** via WebSocket - captures and broadcasts page screenshots during active scans for real-time visual feedback.
 - **Enhanced visual testing modal** displaying live screenshots of pages being tested with real-time progress indicators.
-- **Download capabilities** for scan videos (WebM format) and Playwright traces (ZIP format) via dedicated API endpoints.
+- **Persistent file storage** - Videos (WebM) and traces (ZIP) stored in Replit Object Storage with download links in database.
+- **Download capabilities** for scan videos and Playwright traces via dedicated API endpoints served from object storage.
 
 ### Data Storage
 **PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, `chat_conversations`, `chat_messages`, and `sessions`. Drizzle Kit is used for schema migrations.
+
+**Replit Object Storage** (Google Cloud Storage) stores scan artifacts:
+- **Video recordings** - Complete scan session videos (WebM format, 1280x720) at `/objects/scans/{scanRunId}/video.webm`
+- **Playwright traces** - Full interaction traces (ZIP format) at `/objects/scans/{scanRunId}/trace.zip`
+- **ObjectStorageService** (`server/objectStorage.ts`) handles upload/download operations
+- Videos and traces uploaded after scan completion, local temp files cleaned up
+- Database stores object storage paths (`/objects/*`) in `video_path` and `trace_path` columns
+- Download endpoints serve files directly from object storage with proper authentication
 
 **Workspace Management Features:**
 - Create/edit/delete workspaces with name and URL slug
