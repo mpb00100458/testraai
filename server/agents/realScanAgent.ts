@@ -3,6 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { storage } from "../storage";
 import type { InsertPage, InsertA11yResult } from "@shared/schema";
 import { wsManager } from "../websocket";
+import { ObjectStorageService } from "../objectStorage";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -532,7 +533,41 @@ export class RealScanAgent {
       }
     }
 
-    return { pages: results, videoPath: finalVideoPath, tracePath };
+    // Upload video and trace to object storage
+    const objectStorageService = new ObjectStorageService();
+    let videoObjectPath = '';
+    let traceObjectPath = '';
+
+    try {
+      if (finalVideoPath && fs.existsSync(finalVideoPath)) {
+        videoObjectPath = await objectStorageService.uploadFile(
+          finalVideoPath,
+          `scans/${scanRunId}/video.webm`
+        );
+        console.log(`Video uploaded to object storage: ${videoObjectPath}`);
+        
+        // Clean up local video files
+        fs.rmSync(videoDir, { recursive: true, force: true });
+      }
+
+      if (tracePath && fs.existsSync(tracePath)) {
+        traceObjectPath = await objectStorageService.uploadFile(
+          tracePath,
+          `scans/${scanRunId}/trace.zip`
+        );
+        console.log(`Trace uploaded to object storage: ${traceObjectPath}`);
+        
+        // Clean up local trace file
+        fs.unlinkSync(tracePath);
+      }
+    } catch (uploadError) {
+      console.error('Error uploading to object storage:', uploadError);
+      // If upload fails, keep the local paths
+      videoObjectPath = finalVideoPath;
+      traceObjectPath = tracePath;
+    }
+
+    return { pages: results, videoPath: videoObjectPath, tracePath: traceObjectPath };
   }
 
   private mapImpactToSeverity(impact?: string): 'critical' | 'warning' | 'minor' | 'pass' {
