@@ -346,13 +346,20 @@ export class RealScanAgent {
     const videoDir = path.join(REPORTS_DIR, `${scanRunId}_video`);
     const tracePath = path.join(REPORTS_DIR, `${scanRunId}_trace.zip`);
 
-    // Create browser context with video recording
-    const context = await browser.newContext({
-      recordVideo: {
+    // Check if we're in production (Playwright's ffmpeg might not be installed)
+    const isProduction = !fs.existsSync(CHROMIUM_PATH);
+    
+    // Create browser context with conditional video recording
+    // In production, video recording is disabled to avoid ffmpeg dependency issues
+    const contextOptions: any = {};
+    if (!isProduction) {
+      contextOptions.recordVideo = {
         dir: videoDir,
         size: { width: 1280, height: 720 }
-      }
-    });
+      };
+    }
+    
+    const context = await browser.newContext(contextOptions);
 
     // Start Playwright tracing
     await context.tracing.start({
@@ -532,21 +539,26 @@ export class RealScanAgent {
       // Close context (this will finalize video recording)
       await context.close();
       
-      // Wait for video to be saved
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Find the LARGEST video file (the full scan recording, not individual page videos)
-      const videoFiles = fs.readdirSync(videoDir);
-      if (videoFiles.length > 0) {
-        // Sort by file size descending to get the largest video
-        const videoFilesWithSize = videoFiles.map(file => {
-          const filePath = path.join(videoDir, file);
-          const stats = fs.statSync(filePath);
-          return { file, size: stats.size, path: filePath };
-        }).sort((a, b) => b.size - a.size);
+      // Only process video if recording was enabled (development mode)
+      if (!isProduction && fs.existsSync(videoDir)) {
+        // Wait for video to be saved
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        finalVideoPath = videoFilesWithSize[0].path;
-        console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
+        // Find the LARGEST video file (the full scan recording, not individual page videos)
+        const videoFiles = fs.readdirSync(videoDir);
+        if (videoFiles.length > 0) {
+          // Sort by file size descending to get the largest video
+          const videoFilesWithSize = videoFiles.map(file => {
+            const filePath = path.join(videoDir, file);
+            const stats = fs.statSync(filePath);
+            return { file, size: stats.size, path: filePath };
+          }).sort((a, b) => b.size - a.size);
+          
+          finalVideoPath = videoFilesWithSize[0].path;
+          console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
+        }
+      } else if (isProduction) {
+        console.log('Video recording disabled in production (ffmpeg not available)');
       }
     }
 
