@@ -354,7 +354,14 @@ export class DatabaseStorage implements IStorage {
   // Scan Run operations
   async getScanRun(id: string): Promise<ScanRun | undefined> {
     const [scanRun] = await db.select().from(scanRuns).where(eq(scanRuns.id, id));
-    return scanRun;
+    if (!scanRun) return undefined;
+    
+    // Filter out old local paths - only return object storage paths
+    return {
+      ...scanRun,
+      videoPath: scanRun.videoPath?.startsWith('/objects/') ? scanRun.videoPath : null,
+      tracePath: scanRun.tracePath?.startsWith('/objects/') ? scanRun.tracePath : null,
+    };
   }
 
   async getScanRunsByEstateId(estateId: string): Promise<ScanRun[]> {
@@ -364,7 +371,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(scanRuns.estateId, estateId))
       .orderBy(desc(scanRuns.startedAt));
     
-    return scans;
+    // Filter out old local paths - only return object storage paths
+    return scans.map(scan => ({
+      ...scan,
+      videoPath: scan.videoPath?.startsWith('/objects/') ? scan.videoPath : null,
+      tracePath: scan.tracePath?.startsWith('/objects/') ? scan.tracePath : null,
+    }));
   }
 
   async getLatestScanRun(estateId: string): Promise<ScanRun | undefined> {
