@@ -282,7 +282,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                   <Card 
                     key={url} 
                     data-testid={`card-estate-group-${url}`} 
-                    className="!shadow-md hover:!shadow-xl transition-all duration-200 border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-indigo-500/5"
+                    className="!shadow-md hover:!shadow-xl transition-all duration-200 bg-background"
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
