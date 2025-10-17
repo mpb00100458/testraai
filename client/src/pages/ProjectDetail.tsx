@@ -24,7 +24,7 @@ import { VisualTestingModal } from "@/components/VisualTestingModal";
 import { ScanHistoryTable } from "@/components/ScanHistoryTable";
 import { useLocation } from "wouter";
 
-export default function ProjectDetail({ projectId }: { projectId: string }) {
+export default function ProjectDetail({ projectId, onBack }: { projectId: string; onBack?: () => void }) {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
@@ -194,7 +194,7 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/projects")}
+          onClick={() => onBack ? onBack() : navigate("/projects")}
           data-testid="button-back"
         >
           <ArrowLeft className="h-4 w-4" />

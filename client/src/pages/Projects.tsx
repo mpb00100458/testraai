@@ -150,7 +150,7 @@ export default function Projects() {
   }
 
   if (selectedProjectId) {
-    return <ProjectDetail projectId={selectedProjectId} />;
+    return <ProjectDetail projectId={selectedProjectId} onBack={() => setSelectedProjectId(null)} />;
   }
 
   return (
