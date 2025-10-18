@@ -1,0 +1,35 @@
+{
+  "name": "accessibility-testing-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for web accessibility testing using Playwright and axe-core",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "accessibility-mcp-server": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "dev": "tsx index.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "accessibility",
+    "a11y",
+    "wcag",
+    "axe-core",
+    "playwright",
+    "testing"
+  ],
+  "author": "TestraAI",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@axe-core/playwright": "*",
+    "playwright": "*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "tsx": "*"
+  }
+}
