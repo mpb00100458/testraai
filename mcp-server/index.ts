@@ -16,12 +16,13 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
+import { generateExcelReport, generateJsonReport, generateMarkdownReport, ExportData } from './exportUtils.js';
 
 // Define available tools
 const TOOLS: Tool[] = [
   {
     name: "scan_url_accessibility",
-    description: "Scan a URL for WCAG 2.1 A/AA accessibility violations using Playwright and axe-core. Returns detailed violation reports with severity, impact, and remediation guidance.",
+    description: "Scan a URL for WCAG 2.1 A/AA accessibility violations using Playwright and axe-core. Returns detailed violation reports with severity, impact, and remediation guidance. Supports multiple output formats (text, Excel, JSON, or all).",
     inputSchema: {
       type: "object",
       properties: {
@@ -34,6 +35,17 @@ const TOOLS: Tool[] = [
           enum: ["A", "AA", "AAA"],
           description: "WCAG conformance level to test (default: AA)",
           default: "AA"
+        },
+        outputFormat: {
+          type: "string",
+          enum: ["text", "excel", "json", "markdown", "all"],
+          description: "Output format: 'text' (default, AI-readable), 'excel' (XLSX file), 'json' (JSON file), 'markdown' (MD file), or 'all' (generates all formats)",
+          default: "text"
+        },
+        saveToFile: {
+          type: "boolean",
+          description: "Whether to save results to file (default: true for excel/json/markdown, false for text)",
+          default: true
         }
       },
       required: ["url"],
@@ -202,10 +214,21 @@ class AccessibilityMCPServer {
     });
   }
 
-  private async scanUrlAccessibility(args: { url: string; wcagLevel?: string }) {
-    const { url, wcagLevel = "AA" } = args;
+  private async scanUrlAccessibility(args: { 
+    url: string; 
+    wcagLevel?: string;
+    outputFormat?: string;
+    saveToFile?: boolean;
+  }) {
+    const { 
+      url, 
+      wcagLevel = "AA",
+      outputFormat = "text",
+      saveToFile = outputFormat !== "text"
+    } = args;
 
     console.error(`[MCP] Scanning ${url} for WCAG ${wcagLevel} violations...`);
+    console.error(`[MCP] Output format: ${outputFormat}, Save to file: ${saveToFile}`);
 
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext();
@@ -233,7 +256,8 @@ class AccessibilityMCPServer {
         minor: violations.filter((v: any) => v.impact === 'minor').length,
       };
 
-      const detailedViolations = violations.slice(0, 10).map((v: any) => ({
+      // Prepare ALL violations for export (not just first 10)
+      const allViolations = violations.map((v: any) => ({
         id: v.id,
         impact: v.impact,
         description: v.description,
@@ -244,6 +268,9 @@ class AccessibilityMCPServer {
         exampleHtml: v.nodes[0]?.html || 'N/A',
         selector: v.nodes[0]?.target?.join(', ') || 'N/A'
       }));
+
+      // First 10 for text report
+      const detailedViolations = allViolations.slice(0, 10);
 
       const report = `# Accessibility Scan Report
 
@@ -291,11 +318,55 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
 
       await browser.close();
 
+      // Generate file exports if requested
+      const exportData: ExportData = {
+        summary,
+        violations: allViolations
+      };
+
+      const generatedFiles: string[] = [];
+      let responseText = report;
+
+      if (saveToFile) {
+        try {
+          if (outputFormat === 'excel' || outputFormat === 'all') {
+            const excelPath = await generateExcelReport(exportData);
+            generatedFiles.push(excelPath);
+            console.error(`[MCP] ✅ Excel report saved: ${excelPath}`);
+          }
+
+          if (outputFormat === 'json' || outputFormat === 'all') {
+            const jsonPath = await generateJsonReport(exportData);
+            generatedFiles.push(jsonPath);
+            console.error(`[MCP] ✅ JSON report saved: ${jsonPath}`);
+          }
+
+          if (outputFormat === 'markdown' || outputFormat === 'all') {
+            const mdPath = await generateMarkdownReport(exportData, report);
+            generatedFiles.push(mdPath);
+            console.error(`[MCP] ✅ Markdown report saved: ${mdPath}`);
+          }
+
+          // Add file paths to response
+          if (generatedFiles.length > 0) {
+            responseText += `\n\n---\n\n## 📁 Generated Files\n\n`;
+            generatedFiles.forEach((filepath, idx) => {
+              const filename = filepath.split('/').pop();
+              responseText += `${idx + 1}. **${filename}**\n   Path: \`${filepath}\`\n\n`;
+            });
+            responseText += `\nAll reports saved to: \`${generatedFiles[0].split('/').slice(0, -1).join('/')}/\`\n`;
+          }
+        } catch (exportError) {
+          console.error('[MCP] ⚠️  Error generating file exports:', exportError);
+          responseText += `\n\n⚠️ **Warning:** Failed to generate some file exports. Text report is still available above.\n`;
+        }
+      }
+
       return {
         content: [
           {
             type: "text",
-            text: report,
+            text: responseText,
           },
         ],
       };
