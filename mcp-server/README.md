@@ -14,6 +14,10 @@ Powered by **Playwright** and **axe-core**, this server enables AI assistants to
    - Scans any URL for WCAG violations
    - Supports A, AA, AAA conformance levels
    - Returns detailed violation reports with severity and remediation
+   - **NEW:** Multiple output formats (text, Excel, JSON, Markdown, all)
+   - **NEW:** Professional Excel reports with color-coded severity
+   - **NEW:** Structured JSON exports for CI/CD integration
+   - **NEW:** Saves reports to `~/mcp-accessibility-reports/`
 
 2. **`get_wcag_guidance`** - WCAG rule explanations
    - Get detailed guidance for specific WCAG rules
@@ -97,12 +101,30 @@ Configure according to the client's MCP server settings, using:
 
 ## 💡 Usage Examples
 
-### Example 1: Scan a Website
+### Example 1: Quick Text Scan
 
 Ask your AI assistant:
 > "Can you scan https://example.com for accessibility issues?"
 
-The assistant will use the `scan_url_accessibility` tool and provide a detailed report.
+Returns: Markdown text report (no files saved)
+
+### Example 2: Excel Report Export
+
+> "Scan https://example.com and save as Excel"
+
+Returns: Text report + Professional XLSX file with color-coded violations
+
+### Example 3: JSON Data Export
+
+> "Scan https://example.com and output as JSON"
+
+Returns: Text report + Structured JSON file for integration
+
+### Example 4: All Formats
+
+> "Scan https://example.com and generate all output formats"
+
+Returns: Text report + Excel + JSON + Markdown files
 
 ### Example 2: Get WCAG Guidance
 
