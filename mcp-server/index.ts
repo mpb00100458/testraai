@@ -19,6 +19,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { generateExcelReport, generateJsonReport, generateMarkdownReport, ExportData, ensureVideosDir, ensureScreenshotsDir } from './exportUtils.js';
 import { rename, unlink } from 'fs/promises';
 import path from 'path';
+import { fileServer } from './fileServer.js';
 
 // Define available tools
 const TOOLS: Tool[] = [
@@ -452,23 +453,28 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
         }
       }
 
-      // Add visual feedback files to response
+      // Add visual feedback files to response with download URLs
       if (visualFiles.video || visualFiles.screenshots.length > 0) {
         responseText += `\n\n---\n\n## 🎬 Visual Feedback Files\n\n`;
         
         if (visualFiles.video) {
-          const filename = visualFiles.video.split('/').pop();
+          const filename = visualFiles.video.split('/').pop()!;
+          const downloadUrl = fileServer.getDownloadUrl('videos', filename);
           responseText += `**📹 Video Recording:**\n`;
           responseText += `- **${filename}**\n`;
-          responseText += `  Path: \`${visualFiles.video}\`\n`;
-          responseText += `  Duration: ~${Math.ceil((Date.now() - new Date(summary.timestamp).getTime()) / 1000)}s\n\n`;
+          responseText += `  📥 **Download:** ${downloadUrl}\n`;
+          responseText += `  📁 Path: \`${visualFiles.video}\`\n`;
+          responseText += `  ⏱️  Duration: ~${Math.ceil((Date.now() - new Date(summary.timestamp).getTime()) / 1000)}s\n\n`;
         }
         
         if (visualFiles.screenshots.length > 0) {
           responseText += `**📸 Screenshots:**\n`;
           visualFiles.screenshots.forEach((screenshot, idx) => {
-            const filename = screenshot.split('/').pop();
-            responseText += `${idx + 1}. **${filename}**\n   Path: \`${screenshot}\`\n\n`;
+            const filename = screenshot.split('/').pop()!;
+            const downloadUrl = fileServer.getDownloadUrl('screenshots', filename);
+            responseText += `${idx + 1}. **${filename}**\n`;
+            responseText += `   📥 Download: ${downloadUrl}\n`;
+            responseText += `   📁 Path: \`${screenshot}\`\n\n`;
           });
         }
 
@@ -476,6 +482,7 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
           ? visualFiles.video.split('/').slice(0, -2).join('/') 
           : visualFiles.screenshots[0].split('/').slice(0, -2).join('/');
         responseText += `All visual files saved to: \`${baseDir}/\`\n`;
+        responseText += `\n💡 **Tip:** Click the download links above or open them in your browser!\n`;
       }
 
       return {
@@ -671,6 +678,9 @@ ${results.violations === 0 ? '✅ **PASSED** - No automated violations detected'
   }
 
   async run() {
+    // Start file server for downloads
+    await fileServer.start();
+    
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error("Accessibility Testing MCP Server running on stdio");
