@@ -8,8 +8,9 @@
     "accessibility-mcp-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x dist/index.js",
+    "build": "tsc && chmod +x dist/index.js && chmod +x dist/sse-server.js",
     "dev": "tsx index.ts",
+    "sse": "node dist/sse-server.js",
     "prepare": "npm run build"
   },
   "keywords": [
