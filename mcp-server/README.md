@@ -21,6 +21,7 @@ Powered by **Playwright** and **axe-core**, this server enables AI assistants to
    - **🎬 NEW:** Live browser window viewing (`headless=false`)
    - **🎥 NEW:** Video recording of scan sessions
    - **📸 NEW:** Screenshot capture before/after scanning
+   - **📥 NEW:** HTTP download server with clickable links (localhost:3456)
 
 2. **`get_wcag_guidance`** - WCAG rule explanations
    - Get detailed guidance for specific WCAG rules
@@ -145,7 +146,18 @@ Returns: Text report + WebM video file (1280x720)
 
 > "Scan https://example.com - show browser, record video, and take screenshots"
 
-Returns: Text report + Live browser window + Video + Screenshots
+Returns: Text report + Live browser window + Video + Screenshots + Download URLs
+
+**Download links included in response:**
+```
+📥 Download: http://localhost:3456/videos/scan-2025-10-19T10-45-30.webm
+```
+
+### Example 8: Full Package with Downloads
+
+> "Scan https://example.com with full visual feedback and export all formats"
+
+Get everything: Text + Excel + JSON + Markdown + Video + Screenshots + Download URLs for all files!
 
 ### Example 2: Get WCAG Guidance
 

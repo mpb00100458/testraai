@@ -438,12 +438,15 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
             console.error(`[MCP] ✅ Markdown report saved: ${mdPath}`);
           }
 
-          // Add file paths to response
+          // Add file paths to response with download URLs
           if (generatedFiles.length > 0) {
             responseText += `\n\n---\n\n## 📁 Generated Report Files\n\n`;
             generatedFiles.forEach((filepath, idx) => {
-              const filename = filepath.split('/').pop();
-              responseText += `${idx + 1}. **${filename}**\n   Path: \`${filepath}\`\n\n`;
+              const filename = filepath.split('/').pop()!;
+              const downloadUrl = fileServer.getDownloadUrl('reports', filename);
+              responseText += `${idx + 1}. **${filename}**\n`;
+              responseText += `   📥 Download: ${downloadUrl}\n`;
+              responseText += `   📁 Path: \`${filepath}\`\n\n`;
             });
             responseText += `\nAll reports saved to: \`${generatedFiles[0].split('/').slice(0, -1).join('/')}/\`\n`;
           }
