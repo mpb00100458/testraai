@@ -18,6 +18,9 @@ Powered by **Playwright** and **axe-core**, this server enables AI assistants to
    - **NEW:** Professional Excel reports with color-coded severity
    - **NEW:** Structured JSON exports for CI/CD integration
    - **NEW:** Saves reports to `~/mcp-accessibility-reports/`
+   - **🎬 NEW:** Live browser window viewing (`headless=false`)
+   - **🎥 NEW:** Video recording of scan sessions
+   - **📸 NEW:** Screenshot capture before/after scanning
 
 2. **`get_wcag_guidance`** - WCAG rule explanations
    - Get detailed guidance for specific WCAG rules
@@ -125,6 +128,24 @@ Returns: Text report + Structured JSON file for integration
 > "Scan https://example.com and generate all output formats"
 
 Returns: Text report + Excel + JSON + Markdown files
+
+### Example 5: Live Browser Viewing 🎬
+
+> "Scan https://example.com with headless=false"
+
+Watch the browser window open and perform the scan live on your screen!
+
+### Example 6: Video Recording 🎥
+
+> "Scan https://example.com and record a video"
+
+Returns: Text report + WebM video file (1280x720)
+
+### Example 7: Full Visual Feedback (Option C!)
+
+> "Scan https://example.com - show browser, record video, and take screenshots"
+
+Returns: Text report + Live browser window + Video + Screenshots
 
 ### Example 2: Get WCAG Guidance
 
