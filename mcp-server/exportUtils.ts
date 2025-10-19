@@ -9,6 +9,8 @@ import path from 'path';
 import { existsSync } from 'fs';
 
 const OUTPUT_DIR = path.join(process.env.HOME || '/home/runner', 'mcp-accessibility-reports');
+const VIDEOS_DIR = path.join(OUTPUT_DIR, 'videos');
+const SCREENSHOTS_DIR = path.join(OUTPUT_DIR, 'screenshots');
 
 // Ensure output directory exists
 export async function ensureOutputDir() {
@@ -16,6 +18,22 @@ export async function ensureOutputDir() {
     await mkdir(OUTPUT_DIR, { recursive: true });
   }
   return OUTPUT_DIR;
+}
+
+// Ensure videos directory exists
+export async function ensureVideosDir() {
+  if (!existsSync(VIDEOS_DIR)) {
+    await mkdir(VIDEOS_DIR, { recursive: true });
+  }
+  return VIDEOS_DIR;
+}
+
+// Ensure screenshots directory exists
+export async function ensureScreenshotsDir() {
+  if (!existsSync(SCREENSHOTS_DIR)) {
+    await mkdir(SCREENSHOTS_DIR, { recursive: true });
+  }
+  return SCREENSHOTS_DIR;
 }
 
 interface ViolationData {

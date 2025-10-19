@@ -16,13 +16,15 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from 'playwright';
 import AxeBuilder from '@axe-core/playwright';
-import { generateExcelReport, generateJsonReport, generateMarkdownReport, ExportData } from './exportUtils.js';
+import { generateExcelReport, generateJsonReport, generateMarkdownReport, ExportData, ensureVideosDir, ensureScreenshotsDir } from './exportUtils.js';
+import { rename, unlink } from 'fs/promises';
+import path from 'path';
 
 // Define available tools
 const TOOLS: Tool[] = [
   {
     name: "scan_url_accessibility",
-    description: "Scan a URL for WCAG 2.1 A/AA accessibility violations using Playwright and axe-core. Returns detailed violation reports with severity, impact, and remediation guidance. Supports multiple output formats (text, Excel, JSON, or all).",
+    description: "Scan a URL for WCAG 2.1 A/AA accessibility violations using Playwright and axe-core. Returns detailed violation reports with severity, impact, and remediation guidance. Supports multiple output formats (text, Excel, JSON, or all). NEW: Visual feedback with live browser window, video recording, and screenshots!",
     inputSchema: {
       type: "object",
       properties: {
@@ -46,6 +48,21 @@ const TOOLS: Tool[] = [
           type: "boolean",
           description: "Whether to save results to file (default: true for excel/json/markdown, false for text)",
           default: true
+        },
+        headless: {
+          type: "boolean",
+          description: "Run browser in headless mode (default: true). Set to false to watch the scan happen live in a browser window!",
+          default: true
+        },
+        recordVideo: {
+          type: "boolean",
+          description: "Record video of the scan session (default: false). Video saved to ~/mcp-accessibility-reports/videos/",
+          default: false
+        },
+        captureScreenshots: {
+          type: "boolean",
+          description: "Capture screenshots during scan (default: false). Screenshots saved to ~/mcp-accessibility-reports/screenshots/",
+          default: false
         }
       },
       required: ["url"],
@@ -219,27 +236,75 @@ class AccessibilityMCPServer {
     wcagLevel?: string;
     outputFormat?: string;
     saveToFile?: boolean;
+    headless?: boolean;
+    recordVideo?: boolean;
+    captureScreenshots?: boolean;
   }) {
     const { 
       url, 
       wcagLevel = "AA",
       outputFormat = "text",
-      saveToFile = outputFormat !== "text"
+      saveToFile = outputFormat !== "text",
+      headless = true,
+      recordVideo = false,
+      captureScreenshots = false
     } = args;
 
     console.error(`[MCP] Scanning ${url} for WCAG ${wcagLevel} violations...`);
     console.error(`[MCP] Output format: ${outputFormat}, Save to file: ${saveToFile}`);
+    console.error(`[MCP] Visual: headless=${headless}, video=${recordVideo}, screenshots=${captureScreenshots}`);
 
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext();
+    // Prepare video recording if requested
+    let videoDir: string | undefined;
+    if (recordVideo) {
+      videoDir = await ensureVideosDir();
+    }
+
+    const browser = await chromium.launch({ 
+      headless,
+      slowMo: headless ? 0 : 300  // Slow down visible browser for better viewing
+    });
+    
+    const contextOptions: any = {};
+    if (recordVideo) {
+      contextOptions.recordVideo = {
+        dir: videoDir,
+        size: { width: 1280, height: 720 }
+      };
+    }
+    
+    const context = await browser.newContext(contextOptions);
     const page = await context.newPage();
 
     try {
+      // Navigate to page
       await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
       
+      // Capture "before" screenshot if requested
+      let screenshotPaths: string[] = [];
+      if (captureScreenshots) {
+        const screenshotsDir = await ensureScreenshotsDir();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const beforePath = path.join(screenshotsDir, `scan-${timestamp}-before.png`);
+        await page.screenshot({ path: beforePath, fullPage: true });
+        screenshotPaths.push(beforePath);
+        console.error(`[MCP] 📸 Screenshot saved: ${beforePath}`);
+      }
+      
+      // Run accessibility analysis
       const axeResults = await new AxeBuilder({ page })
         .withTags([`wcag2${wcagLevel.toLowerCase()}`, 'wcag21aa', 'best-practice'])
         .analyze();
+
+      // Capture "after" screenshot if requested
+      if (captureScreenshots) {
+        const screenshotsDir = await ensureScreenshotsDir();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const afterPath = path.join(screenshotsDir, `scan-${timestamp}-after.png`);
+        await page.screenshot({ path: afterPath, fullPage: true });
+        screenshotPaths.push(afterPath);
+        console.error(`[MCP] 📸 Screenshot saved: ${afterPath}`);
+      }
 
       const violations = axeResults.violations;
       const passes = axeResults.passes;
@@ -316,6 +381,22 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
 4. Re-scan after fixes to verify
 `;
 
+      // Handle video recording
+      let videoPath: string | undefined;
+      if (recordVideo) {
+        const videoTempPath = await page.video()?.path();
+        await page.close();
+        await context.close();
+        
+        if (videoTempPath) {
+          // Rename video with proper timestamp
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+          videoPath = path.join(videoDir!, `scan-${timestamp}.webm`);
+          await rename(videoTempPath, videoPath);
+          console.error(`[MCP] 🎥 Video saved: ${videoPath}`);
+        }
+      }
+
       await browser.close();
 
       // Generate file exports if requested
@@ -325,7 +406,16 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
       };
 
       const generatedFiles: string[] = [];
+      const visualFiles: { video?: string; screenshots: string[] } = { screenshots: [] };
       let responseText = report;
+
+      // Track visual feedback files
+      if (videoPath) {
+        visualFiles.video = videoPath;
+      }
+      if (screenshotPaths.length > 0) {
+        visualFiles.screenshots = screenshotPaths;
+      }
 
       if (saveToFile) {
         try {
@@ -349,7 +439,7 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
 
           // Add file paths to response
           if (generatedFiles.length > 0) {
-            responseText += `\n\n---\n\n## 📁 Generated Files\n\n`;
+            responseText += `\n\n---\n\n## 📁 Generated Report Files\n\n`;
             generatedFiles.forEach((filepath, idx) => {
               const filename = filepath.split('/').pop();
               responseText += `${idx + 1}. **${filename}**\n   Path: \`${filepath}\`\n\n`;
@@ -362,6 +452,32 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
         }
       }
 
+      // Add visual feedback files to response
+      if (visualFiles.video || visualFiles.screenshots.length > 0) {
+        responseText += `\n\n---\n\n## 🎬 Visual Feedback Files\n\n`;
+        
+        if (visualFiles.video) {
+          const filename = visualFiles.video.split('/').pop();
+          responseText += `**📹 Video Recording:**\n`;
+          responseText += `- **${filename}**\n`;
+          responseText += `  Path: \`${visualFiles.video}\`\n`;
+          responseText += `  Duration: ~${Math.ceil((Date.now() - new Date(summary.timestamp).getTime()) / 1000)}s\n\n`;
+        }
+        
+        if (visualFiles.screenshots.length > 0) {
+          responseText += `**📸 Screenshots:**\n`;
+          visualFiles.screenshots.forEach((screenshot, idx) => {
+            const filename = screenshot.split('/').pop();
+            responseText += `${idx + 1}. **${filename}**\n   Path: \`${screenshot}\`\n\n`;
+          });
+        }
+
+        const baseDir = visualFiles.video 
+          ? visualFiles.video.split('/').slice(0, -2).join('/') 
+          : visualFiles.screenshots[0].split('/').slice(0, -2).join('/');
+        responseText += `All visual files saved to: \`${baseDir}/\`\n`;
+      }
+
       return {
         content: [
           {
@@ -371,7 +487,13 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
         ],
       };
     } catch (error) {
-      await browser.close();
+      try {
+        await page?.close();
+        await context?.close();
+        await browser?.close();
+      } catch (closeError) {
+        console.error('[MCP] Error closing browser:', closeError);
+      }
       throw error;
     }
   }
