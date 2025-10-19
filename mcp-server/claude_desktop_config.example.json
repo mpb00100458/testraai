@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "accessibility-testing": {
+      "command": "node",
+      "args": [
+        "/REPLACE/WITH/YOUR/ABSOLUTE/PATH/mcp-server/dist/index.js"
+      ]
+    }
+  }
+}
