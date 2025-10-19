@@ -307,4 +307,30 @@ All visual features work together seamlessly:
 
 ---
 
+---
+
+## 📥 Download Links
+
+All visual feedback files come with **instant download URLs**!
+
+When you record a video or capture screenshots, the response includes clickable download links:
+
+```markdown
+**📹 Video Recording:**
+- **scan-2025-10-19T10-45-30.webm**
+  📥 **Download:** http://localhost:3456/videos/scan-2025-10-19T10-45-30.webm
+  📁 Path: `/home/runner/mcp-accessibility-reports/videos/scan-2025-10-19T10-45-30.webm`
+  ⏱️  Duration: ~8s
+```
+
+### **How It Works:**
+- Built-in HTTP server runs on `http://localhost:3456`
+- Starts automatically with MCP server
+- All files served with proper download headers
+- Click the URL → Download instantly!
+
+See **DOWNLOAD_LINKS.md** for full details.
+
+---
+
 **Now you can SEE your accessibility scans happen! 🎥👁️📸**
