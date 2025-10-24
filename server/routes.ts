@@ -8,6 +8,7 @@ import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
 import type { A11yResult } from "@shared/schema";
 import { wsManager } from "./websocket";
+import mcpRoutes from "./mcpRoutes";
 
 // Helper function to calculate issue type changes between two scans
 function calculateIssueTypeChanges(issues1: A11yResult[], issues2: A11yResult[]) {
@@ -46,6 +47,9 @@ function calculateIssueTypeChanges(issues1: A11yResult[], issues2: A11yResult[])
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Mount MCP routes for OpenAI Agent Builder integration
+  app.use('/mcp', mcpRoutes);
+
   // Auth middleware
   await setupAuth(app);
 
