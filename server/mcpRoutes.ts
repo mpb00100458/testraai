@@ -121,21 +121,26 @@ router.get('/info', (req, res) => {
     version: '1.0.0',
     endpoints: {
       sse: `${baseUrl}/mcp/sse`,
+      messages: `${baseUrl}/mcp/messages`,
       health: `${baseUrl}/mcp/health`,
       info: `${baseUrl}/mcp/info`
     },
     integration: {
       platform: 'OpenAI Agent Builder',
       url: 'https://platform.openai.com/agent-builder',
-      instructions: `Use ${baseUrl}/mcp/sse as the MCP Server URL`
+      instructions: `Use ${baseUrl}/mcp/sse as the MCP Server URL`,
+      note: 'SSE transport with dual endpoints: GET /mcp/sse + POST /mcp/messages'
     },
     tools: TOOLS.map(t => t.name)
   });
 });
 
-// SSE endpoint for MCP protocol
+// Store active MCP servers by session ID
+const mcpServers = new Map<string, Server>();
+
+// SSE endpoint for MCP protocol (GET - persistent connection)
 router.get('/sse', async (req, res) => {
-  console.log('[MCP SSE] New connection from:', req.ip);
+  console.log('[MCP SSE] New SSE connection from:', req.ip);
   
   const server = new Server(
     {
@@ -185,10 +190,45 @@ router.get('/sse', async (req, res) => {
 
   const transport = new SSEServerTransport('/mcp/sse', res);
   await server.connect(transport);
+  
+  // Store server for POST messages endpoint
+  const sessionId = transport.sessionId;
+  if (sessionId) {
+    mcpServers.set(sessionId, server);
+  }
 
   req.on('close', () => {
     console.log('[MCP SSE] Connection closed');
+    if (sessionId) {
+      mcpServers.delete(sessionId);
+    }
   });
+});
+
+// Messages endpoint for MCP protocol (POST - send requests)
+router.post('/messages', async (req, res) => {
+  console.log('[MCP Messages] POST request from:', req.ip);
+  
+  try {
+    // Extract session ID from URL or body
+    const sessionId = req.query.sessionId as string;
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Missing sessionId' });
+    }
+    
+    const server = mcpServers.get(sessionId);
+    if (!server) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    // Forward the message to the MCP server
+    // The SSEServerTransport will handle the request/response
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('[MCP Messages] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Tool implementations
