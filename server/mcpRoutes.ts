@@ -26,21 +26,39 @@ router.use(cors({
   credentials: true
 }));
 
-// WCAG Guidance Database (60+ rules)
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-let WCAG_GUIDANCE: any = {};
-try {
-  const guidancePath = path.join(__dirname, '../mcp-server/wcag-guidance.json');
-  WCAG_GUIDANCE = JSON.parse(readFileSync(guidancePath, 'utf-8'));
-} catch (err) {
-  console.error('[MCP] Could not load WCAG guidance:', err);
-}
+// WCAG Guidance - embedded for simplicity
+const WCAG_GUIDANCE: Record<string, any> = {
+  "1.1.1": {
+    name: "Non-text Content",
+    level: "A",
+    description: "All non-text content has a text alternative",
+    remediation: "Add alt text to images, labels to form controls, and captions to media"
+  },
+  "1.4.3": {
+    name: "Contrast (Minimum)",
+    level: "AA",
+    description: "Text has a contrast ratio of at least 4.5:1",
+    remediation: "Increase color contrast between text and background"
+  },
+  "2.1.1": {
+    name: "Keyboard",
+    level: "A",
+    description: "All functionality is available from keyboard",
+    remediation: "Ensure interactive elements can be accessed via keyboard"
+  },
+  "2.4.3": {
+    name: "Focus Order",
+    level: "A",
+    description: "Focus order preserves meaning and operability",
+    remediation: "Ensure tab order matches visual layout"
+  },
+  "4.1.2": {
+    name: "Name, Role, Value",
+    level: "A",
+    description: "UI components have accessible names and roles",
+    remediation: "Use semantic HTML and ARIA attributes correctly"
+  }
+};
 
 // Define MCP tools
 const TOOLS: Tool[] = [
