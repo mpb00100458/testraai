@@ -70,6 +70,47 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "scan_website_accessibility",
+    description: "Scan multiple pages of a website for WCAG violations. Crawls up to maxPages, records video of entire scan session, captures screenshots, and generates comprehensive multi-page reports. Perfect for full website audits!",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "Starting URL to scan (must include http:// or https://)",
+        },
+        maxPages: {
+          type: "number",
+          description: "Maximum number of pages to scan (default: 10, recommended: 5-20)",
+          default: 10
+        },
+        wcagLevel: {
+          type: "string",
+          enum: ["A", "AA", "AAA"],
+          description: "WCAG conformance level to test (default: AA)",
+          default: "AA"
+        },
+        outputFormat: {
+          type: "string",
+          enum: ["text", "excel", "json", "markdown", "all"],
+          description: "Output format (default: text)",
+          default: "text"
+        },
+        recordVideo: {
+          type: "boolean",
+          description: "Record video of entire scan session (default: true)",
+          default: true
+        },
+        captureScreenshots: {
+          type: "boolean",
+          description: "Capture screenshot of each page (default: true)",
+          default: true
+        }
+      },
+      required: ["url"],
+    },
+  },
+  {
     name: "get_wcag_guidance",
     description: "Get detailed WCAG guidance for a specific success criterion or rule. Provides context, requirements, and remediation strategies.",
     inputSchema: {
@@ -204,6 +245,9 @@ class AccessibilityMCPServer {
         switch (name) {
           case "scan_url_accessibility":
             return await this.scanUrlAccessibility(args as any);
+          
+          case "scan_website_accessibility":
+            return await this.scanWebsiteAccessibility(args as any);
           
           case "get_wcag_guidance":
             return await this.getWcagGuidance(args as any);
@@ -496,6 +540,256 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
           },
         ],
       };
+    } catch (error) {
+      try {
+        await page?.close();
+        await context?.close();
+        await browser?.close();
+      } catch (closeError) {
+        console.error('[MCP] Error closing browser:', closeError);
+      }
+      throw error;
+    }
+  }
+
+  private async scanWebsiteAccessibility(args: {
+    url: string;
+    maxPages?: number;
+    wcagLevel?: string;
+    outputFormat?: string;
+    recordVideo?: boolean;
+    captureScreenshots?: boolean;
+  }) {
+    const {
+      url,
+      maxPages = 10,
+      wcagLevel = "AA",
+      outputFormat = "text",
+      recordVideo = true,
+      captureScreenshots = true
+    } = args;
+
+    console.error(`[MCP] 🌐 Scanning website: ${url} (max ${maxPages} pages)`);
+    console.error(`[MCP] WCAG Level: ${wcagLevel}, Video: ${recordVideo}, Screenshots: ${captureScreenshots}`);
+
+    let videoDir: string | undefined;
+    let screenshotsDir: string | undefined;
+    
+    if (recordVideo) videoDir = await ensureVideosDir();
+    if (captureScreenshots) screenshotsDir = await ensureScreenshotsDir();
+
+    const browser = await chromium.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-dev-shm-usage']
+    });
+    
+    const contextOptions: any = { viewport: { width: 1280, height: 720 } };
+    if (recordVideo) {
+      contextOptions.recordVideo = {
+        dir: videoDir,
+        size: { width: 1280, height: 720 }
+      };
+    }
+    
+    const context = await browser.newContext(contextOptions);
+    const page = await context.newPage();
+
+    const visitedUrls = new Set<string>();
+    const toVisit: string[] = [url];
+    const allResults: any[] = [];
+    const baseUrl = new URL(url);
+    
+    try {
+      while (toVisit.length > 0 && visitedUrls.size < maxPages) {
+        const currentUrl = toVisit.shift()!;
+        if (visitedUrls.has(currentUrl)) continue;
+        
+        visitedUrls.add(currentUrl);
+        console.error(`[MCP] 📄 Scanning page ${visitedUrls.size}/${maxPages}: ${currentUrl}`);
+        
+        try {
+          await page.goto(currentUrl, { waitUntil: 'networkidle', timeout: 30000 });
+          
+          if (captureScreenshots && screenshotsDir) {
+            const timestamp = Date.now();
+            const pageNum = visitedUrls.size;
+            const screenshotPath = path.join(screenshotsDir, `page-${pageNum}-${timestamp}.png`);
+            await page.screenshot({ path: screenshotPath, fullPage: true });
+            console.error(`[MCP] 📸 Screenshot: ${screenshotPath}`);
+          }
+          
+          const axeResults = await new AxeBuilder({ page })
+            .withTags([`wcag2${wcagLevel.toLowerCase()}`, 'wcag21aa'])
+            .analyze();
+          
+          allResults.push({
+            url: currentUrl,
+            pageNumber: visitedUrls.size,
+            violations: axeResults.violations.length,
+            passes: axeResults.passes.length,
+            incomplete: axeResults.incomplete.length,
+            violationDetails: axeResults.violations.map((v: any) => ({
+              id: v.id,
+              impact: v.impact,
+              description: v.description,
+              help: v.help,
+              helpUrl: v.helpUrl,
+              tags: v.tags,
+              nodes: v.nodes.length,
+              exampleHtml: v.nodes[0]?.html || 'N/A',
+              selector: v.nodes[0]?.target?.join(', ') || 'N/A'
+            }))
+          });
+          
+          if (visitedUrls.size < maxPages) {
+            const links = await page.$$eval('a[href]', (anchors) =>
+              anchors.map((a) => (a as HTMLAnchorElement).href)
+            );
+            
+            for (const link of links) {
+              try {
+                const linkUrl = new URL(link);
+                if (linkUrl.origin === baseUrl.origin && !linkUrl.hash && !visitedUrls.has(link) && !toVisit.includes(link)) {
+                  toVisit.push(link);
+                }
+              } catch (e) {}
+            }
+          }
+        } catch (pageError) {
+          console.error(`[MCP] ⚠️  Error scanning ${currentUrl}:`, pageError);
+        }
+      }
+      
+      let videoPath: string | undefined;
+      if (recordVideo) {
+        const videoTempPath = await page.video()?.path();
+        await page.close();
+        await context.close();
+        
+        if (videoTempPath) {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+          videoPath = path.join(videoDir!, `website-scan-${timestamp}.webm`);
+          await rename(videoTempPath, videoPath);
+          console.error(`[MCP] 🎥 Video saved: ${videoPath}`);
+        }
+      }
+      
+      await browser.close();
+      
+      const totalViolations = allResults.reduce((sum, r) => sum + r.violations, 0);
+      const totalPasses = allResults.reduce((sum, r) => sum + r.passes, 0);
+      const allViolations = allResults.flatMap(r => r.violationDetails);
+      const criticalCount = allViolations.filter(v => v.impact === 'critical').length;
+      const seriousCount = allViolations.filter(v => v.impact === 'serious').length;
+      const moderateCount = allViolations.filter(v => v.impact === 'moderate').length;
+      const minorCount = allViolations.filter(v => v.impact === 'minor').length;
+      
+      const violationCounts = new Map<string, number>();
+      allViolations.forEach(v => {
+        violationCounts.set(v.id, (violationCounts.get(v.id) || 0) + 1);
+      });
+      
+      const topViolations = Array.from(violationCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([id, count]) => {
+          const example = allViolations.find(v => v.id === id)!;
+          return { id, count, help: example.help, impact: example.impact };
+        });
+      
+      const summary = {
+        url,
+        wcagLevel,
+        timestamp: new Date().toISOString(),
+        violations: totalViolations,
+        passes: totalPasses,
+        critical: criticalCount,
+        serious: seriousCount,
+        moderate: moderateCount,
+        minor: minorCount
+      };
+      
+      const websiteInfo = {
+        pagesScanned: visitedUrls.size,
+        maxPages
+      };
+      
+      const report = `# Website Accessibility Scan Report
+
+**Starting URL:** ${url}
+**Pages Scanned:** ${websiteInfo.pagesScanned} / ${websiteInfo.maxPages}
+**WCAG Level:** ${wcagLevel}
+**Scanned:** ${new Date().toISOString()}
+
+## Overall Summary
+- ✅ **Total Passed Checks:** ${totalPasses}
+- ❌ **Total Violations:** ${totalViolations}
+  - 🔴 Critical: ${criticalCount}
+  - 🟠 Serious: ${seriousCount}
+  - 🟡 Moderate: ${moderateCount}
+  - 🔵 Minor: ${minorCount}
+
+## Top 10 Most Common Issues
+
+${topViolations.map((v, i) => `${i + 1}. **${v.help}** (${v.count} occurrences)
+   - Impact: ${v.impact?.toUpperCase() || 'UNKNOWN'}
+   - Rule ID: ${v.id}`).join('\n\n')}
+
+## Page-by-Page Results
+
+${allResults.map(result => `### Page ${result.pageNumber}: ${result.url}
+- Violations: ${result.violations}
+- Passes: ${result.passes}
+- Status: ${result.violations === 0 ? '✅ PASSED' : `❌ ${result.violations} issue(s)`}`).join('\n\n')}
+
+## Recommendations
+1. **Critical Priority:** Fix ${criticalCount} critical violations across all pages
+2. **High Priority:** Address ${seriousCount} serious violations
+3. **Medium Priority:** Resolve ${moderateCount} moderate issues
+4. **Low Priority:** ${minorCount} minor issues for best practices
+`;
+
+      const exportData: ExportData = { summary, violations: allViolations };
+      const generatedFiles: string[] = [];
+      let responseText = report;
+      
+      if (outputFormat === 'excel' || outputFormat === 'all') {
+        const excelPath = await generateExcelReport(exportData);
+        generatedFiles.push(excelPath);
+      }
+      if (outputFormat === 'json' || outputFormat === 'all') {
+        const jsonPath = await generateJsonReport(exportData);
+        generatedFiles.push(jsonPath);
+      }
+      if (outputFormat === 'markdown' || outputFormat === 'all') {
+        const markdownPath = await generateMarkdownReport(exportData, report);
+        generatedFiles.push(markdownPath);
+      }
+      
+      if (generatedFiles.length > 0) {
+        responseText += `\n\n## 📥 Generated Reports\n\n`;
+        generatedFiles.forEach(filePath => {
+          const filename = filePath.split('/').pop()!;
+          const downloadUrl = fileServer.getDownloadUrl('reports', filename);
+          responseText += `- **${filename}**\n  📥 Download: ${downloadUrl}\n  📁 Path: \`${filePath}\`\n\n`;
+        });
+      }
+      
+      if (videoPath) {
+        const filename = videoPath.split('/').pop()!;
+        const downloadUrl = fileServer.getDownloadUrl('videos', filename);
+        responseText += `\n## 🎥 Scan Video\n\nWatch the entire scan session:\n- **${filename}**\n  📥 Download: ${downloadUrl}\n  📁 Path: \`${videoPath}\`\n  ⏱️  Duration: ~${websiteInfo.pagesScanned * 5} seconds\n\n`;
+      }
+      
+      responseText += `\n💡 **Tip:** All files saved to \`~/mcp-accessibility-reports/\`\n`;
+      
+      return {
+        content: [{
+          type: "text",
+          text: responseText
+        }]
+      };
+      
     } catch (error) {
       try {
         await page?.close();
