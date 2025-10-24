@@ -158,50 +158,355 @@ const TOOLS: Tool[] = [
   }
 ];
 
-// WCAG guidance database
+// WCAG guidance database - Comprehensive coverage of common axe-core rules
 const WCAG_GUIDANCE: Record<string, any> = {
+  // Perceivable - Text Alternatives
   "color-contrast": {
     criterion: "1.4.3 Contrast (Minimum)",
     level: "AA",
     description: "Text must have sufficient contrast ratio against background",
-    requirements: "Normal text: 4.5:1, Large text: 3:1",
-    remediation: "Increase color contrast using darker text or lighter backgrounds. Use browser DevTools to test ratios."
+    requirements: "Normal text: 4.5:1, Large text (18pt+): 3:1",
+    remediation: "Increase color contrast using darker text or lighter backgrounds. Use browser DevTools contrast checker or WebAIM Contrast Checker. Common fixes: #757575 on white (4.54:1 ✓), #595959 on white (7:1 ✓)"
   },
-  "aria-required-attr": {
-    criterion: "4.1.2 Name, Role, Value",
-    level: "A",
-    description: "ARIA roles must have all required attributes",
-    remediation: "Add missing required ARIA attributes for the role. Check ARIA specification for role requirements."
+  "color-contrast-enhanced": {
+    criterion: "1.4.6 Contrast (Enhanced)",
+    level: "AAA",
+    description: "Enhanced contrast for better readability",
+    requirements: "Normal text: 7:1, Large text: 4.5:1",
+    remediation: "Use even higher contrast ratios for AAA compliance. Example: Black on white (21:1), #595959 on white (7:1)"
   },
   "image-alt": {
     criterion: "1.1.1 Non-text Content",
     level: "A",
     description: "Images must have alternative text",
-    remediation: "Add meaningful alt text describing image content. Use alt='' for decorative images."
+    requirements: "All <img> elements must have alt attribute with meaningful description, or alt='' for decorative images",
+    remediation: "Add descriptive alt text. Good: alt='Team photo from 2024 conference'. Bad: alt='image' or alt='photo'. Decorative: alt=''"
   },
+  "input-image-alt": {
+    criterion: "1.1.1 Non-text Content",
+    level: "A",
+    description: "Image buttons must have text alternatives",
+    remediation: "Add alt attribute to <input type='image'>. Example: <input type='image' src='submit.png' alt='Submit form'>"
+  },
+  "area-alt": {
+    criterion: "1.1.1 Non-text Content",
+    level: "A",
+    description: "Image map areas must have text alternatives",
+    remediation: "Add alt attribute to <area> elements in image maps."
+  },
+
+  // Perceivable - Adaptable
   "label": {
     criterion: "1.3.1 Info and Relationships, 4.1.2 Name, Role, Value",
     level: "A",
     description: "Form inputs must have associated labels",
-    remediation: "Add <label> elements with for attribute matching input id, or use aria-label/aria-labelledby."
+    requirements: "Every form control must have an associated label element or aria-label",
+    remediation: "Use <label for='inputId'> or aria-label='Field name'. Example: <label for='email'>Email</label><input id='email'> or <input aria-label='Email address'>"
+  },
+  "form-field-multiple-labels": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Form fields should not have multiple labels",
+    remediation: "Ensure each form field has only one associated label element."
+  },
+  "label-title-only": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Labels must use label element or aria-label, not just title attribute",
+    remediation: "Replace title attribute with proper <label> or aria-label. Title is only a tooltip."
+  },
+  "heading-order": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Headings must be in correct hierarchical order",
+    requirements: "Don't skip levels (h1→h2→h3). Page should have one h1",
+    remediation: "Fix heading hierarchy. Wrong: h1→h3. Right: h1→h2→h3. Use CSS for visual styling, not different heading levels."
+  },
+  "empty-heading": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Headings must have text content",
+    remediation: "Remove empty headings or add meaningful text. Don't use headings for spacing."
+  },
+  "p-as-heading": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Don't style paragraphs as headings",
+    remediation: "Use actual heading elements (h1-h6) instead of styled <p> tags for headings."
+  },
+  "list": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Lists must be properly structured",
+    remediation: "Use <ul>/<ol> for lists, with <li> as direct children only."
+  },
+  "listitem": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "List items must be inside list containers",
+    remediation: "Ensure <li> elements are inside <ul>, <ol>, or <menu>."
+  },
+  "definition-list": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Definition lists must only contain dt/dd elements",
+    remediation: "Only include <dt> and <dd> as children of <dl>."
+  },
+  "dlitem": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "dt/dd elements must be inside dl",
+    remediation: "Wrap <dt> and <dd> elements in a <dl> parent."
+  },
+  "landmark-one-main": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Document should have one main landmark",
+    remediation: "Add <main> element or role='main' to primary content area. Only one main per page."
+  },
+  "region": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Page content should be in landmarks",
+    remediation: "Use semantic HTML5 elements: <header>, <nav>, <main>, <footer>, <aside>, or ARIA landmarks."
+  },
+
+  // Perceivable - Distinguishable
+  "link-in-text-block": {
+    criterion: "1.4.1 Use of Color",
+    level: "A",
+    description: "Links in text blocks must be distinguishable without color",
+    requirements: "Links need underline, 3:1 contrast with surrounding text, or other non-color indicator",
+    remediation: "Add text-decoration: underline to links, or ensure 3:1 contrast difference from body text."
+  },
+  "meta-viewport": {
+    criterion: "1.4.4 Resize Text",
+    level: "AA",
+    description: "Viewport meta tag must not prevent zooming",
+    requirements: "Don't use user-scalable=no or maximum-scale=1.0",
+    remediation: "Remove or change: <meta name='viewport' content='width=device-width, initial-scale=1.0, user-scalable=yes'>"
+  },
+  "meta-viewport-large": {
+    criterion: "1.4.4 Resize Text",
+    level: "AA",
+    description: "Viewport must allow text scaling",
+    remediation: "Ensure maximum-scale is at least 2.0 or not specified."
+  },
+  "css-orientation-lock": {
+    criterion: "1.3.4 Orientation",
+    level: "AA",
+    description: "Content must not be locked to single orientation",
+    remediation: "Remove CSS that forces landscape or portrait only. Allow both orientations."
+  },
+  "autocomplete-valid": {
+    criterion: "1.3.5 Identify Input Purpose",
+    level: "AA",
+    description: "Input fields should have appropriate autocomplete attribute",
+    requirements: "Use autocomplete for name, email, phone, address, cc fields",
+    remediation: "Add autocomplete attribute: <input type='email' autocomplete='email'>, <input type='tel' autocomplete='tel'>"
+  },
+
+  // Operable - Keyboard Accessible
+  "button": {
+    criterion: "2.1.1 Keyboard",
+    level: "A",
+    description: "Buttons must be keyboard accessible",
+    remediation: "Use <button> element or add role='button' with keyboard event handlers (Enter/Space)."
+  },
+  "link": {
+    criterion: "2.1.1 Keyboard",
+    level: "A",
+    description: "Links must be keyboard accessible",
+    remediation: "Use <a href> for links. If using onclick on other elements, add role='link' and keyboard handlers."
+  },
+  "tabindex": {
+    criterion: "2.1.1 Keyboard, 2.4.3 Focus Order",
+    level: "A",
+    description: "Don't use positive tabindex values",
+    requirements: "Use tabindex='0' to add to tab order, '-1' to remove, never positive numbers",
+    remediation: "Remove positive tabindex. Use 0 or -1 only. Positive values disrupt natural tab order."
+  },
+  "focus-order-semantics": {
+    criterion: "2.4.3 Focus Order",
+    level: "A",
+    description: "Focus order should be meaningful",
+    remediation: "Ensure tab order matches visual layout. Use flexbox/grid order carefully."
+  },
+
+  // Operable - Navigable
+  "bypass": {
+    criterion: "2.4.1 Bypass Blocks",
+    level: "A",
+    description: "Provide mechanism to skip repetitive content",
+    requirements: "Add 'Skip to main content' link or use proper landmarks",
+    remediation: "Add skip link: <a href='#main-content' class='skip-link'>Skip to main content</a> or use <main> landmark."
+  },
+  "skip-link": {
+    criterion: "2.4.1 Bypass Blocks",
+    level: "A",
+    description: "Skip links must have valid target",
+    remediation: "Ensure skip link href points to existing element with matching id."
+  },
+  "document-title": {
+    criterion: "2.4.2 Page Titled",
+    level: "A",
+    description: "Pages must have descriptive titles",
+    requirements: "Every page needs unique, descriptive <title> element",
+    remediation: "Add <title> in <head>. Good: 'Contact Us - Acme Corp'. Bad: 'Untitled' or 'Page'."
   },
   "button-name": {
     criterion: "4.1.2 Name, Role, Value",
     level: "A",
     description: "Buttons must have discernible text",
-    remediation: "Add text content, aria-label, or aria-labelledby to buttons."
+    requirements: "Button needs text content, aria-label, or aria-labelledby",
+    remediation: "Add text: <button>Submit</button> or <button aria-label='Close dialog'><X /></button>"
   },
   "link-name": {
     criterion: "4.1.2 Name, Role, Value, 2.4.4 Link Purpose",
     level: "A",
     description: "Links must have discernible text",
-    remediation: "Add text content, aria-label, or aria-labelledby to links. Avoid 'click here' or 'read more' without context."
+    requirements: "Links need text content or aria-label describing destination",
+    remediation: "Add meaningful text. Wrong: <a href='#'>Click here</a>. Right: <a href='#'>Download annual report (PDF)</a>"
   },
+  "identical-links-same-purpose": {
+    criterion: "2.4.4 Link Purpose",
+    level: "A",
+    description: "Links with same text should go to same destination",
+    remediation: "If links have identical text but different destinations, add distinguishing context."
+  },
+  "focus-visible": {
+    criterion: "2.4.7 Focus Visible",
+    level: "AA",
+    description: "Keyboard focus indicator must be visible",
+    requirements: "Don't remove focus outlines without providing custom focus styles",
+    remediation: "Remove outline: none or add custom focus styles: button:focus { outline: 2px solid blue; }"
+  },
+  "target-size": {
+    criterion: "2.5.8 Target Size (Minimum)",
+    level: "AA",
+    description: "Touch targets must be at least 24x24 CSS pixels",
+    remediation: "Increase button/link size or add padding. Minimum: 24px × 24px for touch targets."
+  },
+
+  // Understandable - Readable
   "html-has-lang": {
     criterion: "3.1.1 Language of Page",
     level: "A",
     description: "HTML element must have a lang attribute",
-    remediation: "Add lang='en' (or appropriate language code) to <html> tag."
+    requirements: "Specify page language with valid ISO 639-1 code",
+    remediation: "Add to <html> tag: <html lang='en'> for English, <html lang='es'> for Spanish, etc."
+  },
+  "html-lang-valid": {
+    criterion: "3.1.1 Language of Page",
+    level: "A",
+    description: "HTML lang attribute must have valid value",
+    remediation: "Use valid ISO 639-1 language code. Common: 'en', 'es', 'fr', 'de', 'ja', 'zh', 'ar'"
+  },
+  "lang-valid": {
+    criterion: "3.1.2 Language of Parts",
+    level: "AA",
+    description: "lang attribute must have valid value",
+    remediation: "Use valid language codes in lang attributes throughout document."
+  },
+
+  // Understandable - Input Assistance
+  "aria-input-field-name": {
+    criterion: "3.3.2 Labels or Instructions",
+    level: "A",
+    description: "ARIA input fields must have accessible names",
+    remediation: "Add aria-label or aria-labelledby to inputs with ARIA roles."
+  },
+
+  // Robust - Compatible
+  "duplicate-id": {
+    criterion: "4.1.1 Parsing",
+    level: "A",
+    description: "IDs must be unique",
+    requirements: "Each id attribute value must be used only once per page",
+    remediation: "Find duplicate IDs and make them unique. Common cause: copying/pasting HTML without changing IDs."
+  },
+  "duplicate-id-active": {
+    criterion: "4.1.1 Parsing",
+    level: "A",
+    description: "IDs of active elements must be unique",
+    remediation: "Interactive elements with duplicate IDs confuse assistive technology. Make IDs unique."
+  },
+  "duplicate-id-aria": {
+    criterion: "4.1.1 Parsing",
+    level: "A",
+    description: "IDs referenced by ARIA must be unique",
+    remediation: "Elements referenced by aria-labelledby, aria-describedby must have unique IDs."
+  },
+  "aria-required-attr": {
+    criterion: "4.1.2 Name, Role, Value",
+    level: "A",
+    description: "ARIA roles must have all required attributes",
+    requirements: "Check ARIA spec for required attributes per role",
+    remediation: "Add missing ARIA attributes. Example: role='checkbox' requires aria-checked. role='slider' requires aria-valuemin, aria-valuemax, aria-valuenow."
+  },
+  "aria-roles": {
+    criterion: "4.1.2 Name, Role, Value",
+    level: "A",
+    description: "ARIA role must be valid",
+    remediation: "Use valid ARIA 1.2 roles. Common: button, checkbox, dialog, navigation, main, complementary, tabpanel."
+  },
+  "aria-valid-attr": {
+    criterion: "4.1.2 Name, Role, Value",
+    level: "A",
+    description: "ARIA attributes must be valid",
+    remediation: "Check attribute spelling. Common typos: aria-labelled-by → aria-labelledby, aria-describeby → aria-describedby"
+  },
+  "aria-valid-attr-value": {
+    criterion: "4.1.2 Name, Role, Value",
+    level: "A",
+    description: "ARIA attributes must have valid values",
+    requirements: "Boolean attributes need 'true'/'false', IDs must reference existing elements",
+    remediation: "Fix invalid values. aria-pressed='yes' → aria-pressed='true', aria-labelledby must reference existing id."
+  },
+  "aria-allowed-attr": {
+    criterion: "4.1.2 Name, Role, Value",
+    level: "A",
+    description: "ARIA attributes must be allowed for role",
+    remediation: "Remove ARIA attributes not supported by the element's role. Check ARIA spec for allowed attributes."
+  },
+  "aria-hidden-focus": {
+    criterion: "4.1.2 Name, Role, Value",
+    level: "A",
+    description: "aria-hidden elements must not be focusable",
+    requirements: "Elements with aria-hidden='true' cannot receive keyboard focus",
+    remediation: "Remove aria-hidden='true' from focusable elements, or add tabindex='-1' to prevent focus."
+  },
+  "aria-live": {
+    criterion: "4.1.3 Status Messages",
+    level: "AA",
+    description: "Status messages should use appropriate ARIA live regions",
+    remediation: "Use role='status', role='alert', or aria-live for dynamic status messages."
+  },
+
+  // Additional Common Rules
+  "table-duplicate-name": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Data tables should not have duplicate names",
+    remediation: "Ensure table captions and summaries are unique or properly describe different tables."
+  },
+  "td-headers-attr": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Table cells using headers attribute must reference valid header cells",
+    remediation: "Ensure headers attribute references valid th element IDs."
+  },
+  "th-has-data-cells": {
+    criterion: "1.3.1 Info and Relationships",
+    level: "A",
+    description: "Table headers must have associated data cells",
+    remediation: "Ensure each <th> has corresponding <td> cells in table."
+  },
+  "label-content-name-mismatch": {
+    criterion: "2.5.3 Label in Name",
+    level: "A",
+    description: "Visible label text must be part of accessible name",
+    remediation: "If button shows 'Submit' text, aria-label should include 'Submit'. Don't contradict visible text."
   }
 };
 
