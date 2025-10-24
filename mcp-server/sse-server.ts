@@ -24,7 +24,8 @@ import path from 'path';
 import { fileServer } from './fileServer.js';
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '8080');
+// Use SSE_PORT to avoid conflict with main app on PORT=5000
+const PORT = parseInt(process.env.SSE_PORT || '8080');
 
 // Enable CORS for OpenAI Agent Builder
 app.use(cors({
