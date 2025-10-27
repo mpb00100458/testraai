@@ -39,8 +39,6 @@ export default function AdminMCPServers() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingServer, setEditingServer] = useState<McpServer | null>(null);
-  const [transport, setTransport] = useState<string>("sse");
-  const [enabled, setEnabled] = useState<boolean>(true);
 
   const { data: servers, isLoading } = useQuery<McpServer[]>({
     queryKey: ["/api/admin/mcp-servers"],
@@ -48,24 +46,27 @@ export default function AdminMCPServers() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("[Admin MCP] Creating server with data:", data);
-      return await apiRequest("POST", "/api/admin/mcp-servers", data);
+      return await apiRequest("/api/admin/mcp-servers", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp-servers"] });
       toast({ title: "MCP server created successfully" });
       setIsDialogOpen(false);
     },
-    onError: (error: any) => {
-      console.error("[Admin MCP] Error creating server:", error);
-      const message = error?.message || "Failed to create MCP server";
-      toast({ title: message, variant: "destructive" });
+    onError: () => {
+      toast({ title: "Failed to create MCP server", variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest("PATCH", `/api/admin/mcp-servers/${id}`, data);
+      return await apiRequest(`/api/admin/mcp-servers/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp-servers"] });
@@ -80,7 +81,9 @@ export default function AdminMCPServers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/admin/mcp-servers/${id}`);
+      return await apiRequest(`/api/admin/mcp-servers/${id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp-servers"] });
@@ -95,11 +98,11 @@ export default function AdminMCPServers() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const data = {
-      name: formData.get("name") as string,
-      description: formData.get("description") as string || undefined,
-      transport: transport,
-      url: formData.get("url") as string,
-      enabled: enabled,
+      name: formData.get("name"),
+      description: formData.get("description"),
+      transport: formData.get("transport"),
+      url: formData.get("url"),
+      enabled: formData.get("enabled") === "true",
     };
 
     if (editingServer) {
@@ -107,13 +110,6 @@ export default function AdminMCPServers() {
     } else {
       createMutation.mutate(data);
     }
-  };
-
-  const handleOpenDialog = () => {
-    setEditingServer(null);
-    setTransport("sse");
-    setEnabled(true);
-    setIsDialogOpen(true);
   };
 
   return (
@@ -128,7 +124,7 @@ export default function AdminMCPServers() {
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={handleOpenDialog} data-testid="button-add-mcp-server">
+              <Button onClick={() => setEditingServer(null)} data-testid="button-add-mcp-server">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Server
               </Button>
@@ -165,7 +161,7 @@ export default function AdminMCPServers() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="transport">Transport Type</Label>
-                    <Select value={transport} onValueChange={setTransport}>
+                    <Select name="transport" defaultValue={editingServer?.transport || "sse"}>
                       <SelectTrigger data-testid="select-mcp-transport">
                         <SelectValue />
                       </SelectTrigger>
@@ -189,7 +185,7 @@ export default function AdminMCPServers() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="enabled">Status</Label>
-                    <Select value={enabled ? "true" : "false"} onValueChange={(v) => setEnabled(v === "true")}>
+                    <Select name="enabled" defaultValue={editingServer?.enabled ? "true" : "false"}>
                       <SelectTrigger data-testid="select-mcp-enabled">
                         <SelectValue />
                       </SelectTrigger>
@@ -247,8 +243,6 @@ export default function AdminMCPServers() {
                       variant="ghost"
                       onClick={() => {
                         setEditingServer(server);
-                        setTransport(server.transport);
-                        setEnabled(server.enabled);
                         setIsDialogOpen(true);
                       }}
                       data-testid={`button-edit-mcp-${server.id}`}

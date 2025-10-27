@@ -1,4 +1,4 @@
-import { Sparkles, Bot, Clock } from "lucide-react";
+import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot, Plug, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -19,14 +19,47 @@ import { LogOut } from "lucide-react";
 
 const navigationItems = [
   {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
     title: "AI Agent",
     url: "/ai-agent",
     icon: Bot,
   },
   {
-    title: "Sessions",
-    url: "/sessions",
-    icon: Clock,
+    title: "Projects",
+    url: "/projects",
+    icon: FolderOpen,
+  },
+  {
+    title: "Issues",
+    url: "/issues",
+    icon: AlertCircle,
+  },
+  {
+    title: "Tools",
+    url: "/tools",
+    icon: Wrench,
+  },
+];
+
+const settingsItems = [
+  {
+    title: "Workspace",
+    url: "/organization",
+    icon: Building2,
+  },
+  {
+    title: "MCP Servers",
+    url: "/mcp-settings",
+    icon: Plug,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
   },
 ];
 
@@ -57,7 +90,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} data-testid={`link-${item.title.toLowerCase()}`}>
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -65,6 +98,34 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Administration</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {settingsItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} data-testid={`link-${item.title.toLowerCase()}`}>
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {user?.systemRole && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin")} data-testid="link-admin">
+                    <Link href="/admin">
+                      <Shield className="h-4 w-4" />
+                      <span>Admin Panel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
