@@ -21,6 +21,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { ChatMessage, ChatConversation } from "@shared/schema";
+import { LiveTestingPanel } from "@/components/LiveTestingPanel";
 
 interface ScanProgress {
   scanRunId: string;
@@ -333,6 +334,18 @@ export default function AIAgent() {
       {/* Chat Messages */}
       <ScrollArea className="flex-1 p-6 bg-gradient-to-b from-background to-muted/20" ref={scrollRef}>
         <div className="max-w-4xl mx-auto space-y-6">
+          {/* Live Testing Panels for Active Scans */}
+          {Object.values(scanProgress)
+            .filter(scan => scan.status === 'running')
+            .map(scan => (
+              <LiveTestingPanel
+                key={scan.estateId}
+                estateId={scan.estateId}
+                estateName={`Scan ${scan.scanRunId.slice(0, 8)}...`}
+              />
+            ))
+          }
+          
           {messages.length === 0 ? (
             <div className="text-center py-16 space-y-6">
               <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600/10 to-indigo-600/10 mx-auto">
