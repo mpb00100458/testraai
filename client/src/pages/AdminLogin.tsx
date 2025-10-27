@@ -41,7 +41,8 @@ export default function AdminLogin() {
       return response.json();
     },
     onSuccess: async (data: any) => {
-      const isAdmin = data.user?.systemRole && ADMIN_ROLES.includes(data.user.systemRole);
+      // The login response is the user object directly, not wrapped in { user: ... }
+      const isAdmin = data.systemRole && ADMIN_ROLES.includes(data.systemRole);
       
       if (!isAdmin) {
         setErrorMessage("Access Denied: Admin privileges required");
@@ -51,7 +52,7 @@ export default function AdminLogin() {
       
       toast({
         title: "Login successful",
-        description: `Welcome back, ${data.user.firstName || "Admin"}!`,
+        description: `Welcome back, ${data.firstName || "Admin"}!`,
       });
       setLocation("/admin");
     },
