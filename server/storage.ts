@@ -420,9 +420,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePageAuditStatus(id: string, isAudited: number, screenshotUrl?: string): Promise<Page> {
+    const updateData: any = { isAudited };
+    if (screenshotUrl !== undefined) {
+      updateData.screenshotUrl = screenshotUrl;
+    }
+    
     const [updated] = await db
       .update(pages)
-      .set({ isAudited, screenshotUrl })
+      .set(updateData)
       .where(eq(pages.id, id))
       .returning();
     return updated;
