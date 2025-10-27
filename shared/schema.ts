@@ -255,23 +255,22 @@ export const insertA11yResultSchema = createInsertSchema(a11yResults).omit({
 export type InsertA11yResult = z.infer<typeof insertA11yResultSchema>;
 export type A11yResult = typeof a11yResults.$inferSelect;
 
-// A11y Rollups table (aggregated accessibility metrics by rule)
+// A11y Rollups table (estate-level accessibility summary statistics)
 export const a11yRollups = pgTable("a11y_rollups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
-  ruleId: varchar("rule_id", { length: 255 }).notNull(),
-  wcagReference: varchar("wcag_reference", { length: 100 }),
-  severity: severityEnum('severity').notNull(),
-  description: text("description").notNull(),
-  helpUrl: text("help_url"),
-  totalOccurrences: integer("total_occurrences").default(0),
-  affectedPages: integer("affected_pages").default(0),
-  lastDetected: timestamp("last_detected"),
+  totalIssues: integer("total_issues").default(0),
+  criticalIssues: integer("critical_issues").default(0),
+  warningIssues: integer("warning_issues").default(0),
+  minorIssues: integer("minor_issues").default(0),
+  passedChecks: integer("passed_checks").default(0),
+  passRate: integer("pass_rate").default(0),
+  averageScore: integer("average_score").default(0),
+  lastScanAt: timestamp("last_scan_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_a11y_rollups_estate").on(table.estateId),
-  index("idx_a11y_rollups_severity").on(table.severity),
 ]);
 
 export const insertA11yRollupSchema = createInsertSchema(a11yRollups).omit({
