@@ -1,4 +1,4 @@
-import { Sparkles, Bot } from "lucide-react";
+import { Sparkles, Bot, Clock, FolderOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -22,6 +22,16 @@ const navigationItems = [
     title: "AI Agent",
     url: "/ai-agent",
     icon: Bot,
+  },
+  {
+    title: "Sessions",
+    url: "/sessions",
+    icon: Clock,
+  },
+  {
+    title: "Projects",
+    url: "/projects",
+    icon: FolderOpen,
   },
 ];
 
@@ -47,7 +57,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>AI Assistant</SidebarGroupLabel>
+          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navigationItems.map((item) => (

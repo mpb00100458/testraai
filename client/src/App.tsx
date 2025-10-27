@@ -12,6 +12,10 @@ import { useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
 import AIAgent from "@/pages/AIAgent";
+import Projects from "@/pages/Projects";
+import ProjectDetail from "@/pages/ProjectDetail";
+import ScanDetail from "@/pages/ScanDetail";
+import Dashboard from "@/pages/Dashboard";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminMCPServers from "@/pages/AdminMCPServers";
@@ -33,6 +37,14 @@ function Router() {
   return (
     <Switch>
       <Route path="/ai-agent" component={AIAgent} />
+      <Route path="/sessions" component={Dashboard} />
+      <Route path="/projects/:id">
+        {(params) => <ProjectDetail projectId={params.id} onBack={() => window.history.back()} />}
+      </Route>
+      <Route path="/projects" component={Projects} />
+      <Route path="/scans/:scanId">
+        {(params) => <ScanDetail scanId={params.scanId} />}
+      </Route>
       <Route path="/">
         {() => {
           setLocation("/ai-agent");
