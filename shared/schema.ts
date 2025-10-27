@@ -207,6 +207,8 @@ export const pages = pgTable("pages", {
   estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
   url: text("url").notNull(),
   title: varchar("title", { length: 500 }),
+  isAudited: integer("is_audited").default(0),
+  screenshotUrl: varchar("screenshot_url"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_pages_estate").on(table.estateId),
