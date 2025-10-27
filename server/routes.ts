@@ -984,9 +984,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get issues for this scan run
       const issues = await storage.getA11yResultsByScanRunId(id);
 
+      // Calculate derived fields that frontend expects
+      const totalIssues = (scanRun.criticalIssues || 0) + (scanRun.warningIssues || 0) + (scanRun.minorIssues || 0);
+      const totalChecks = totalIssues + (scanRun.passedChecks || 0);
+      const passRate = totalChecks > 0 ? Math.round(((scanRun.passedChecks || 0) / totalChecks) * 100) : null;
+      const averageScore = passRate;
+
       res.json({
         ...scanRun,
         issues,
+        totalIssues,
+        pagesAudited: scanRun.pagesScanned,
+        passRate,
+        averageScore,
       });
     } catch (error) {
       console.error("Error fetching scan details:", error);
