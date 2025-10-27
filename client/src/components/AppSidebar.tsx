@@ -1,4 +1,4 @@
-import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot } from "lucide-react";
+import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot, Plug } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -50,6 +50,11 @@ const settingsItems = [
     title: "Workspace",
     url: "/organization",
     icon: Building2,
+  },
+  {
+    title: "MCP Servers",
+    url: "/mcp-settings",
+    icon: Plug,
   },
   {
     title: "Settings",
