@@ -37,48 +37,75 @@ import { Plus, Server, Users, CreditCard, Trash2, Edit, Shield } from "lucide-re
 import type { User, McpServer, Subscription, Invoice, Payment } from "@shared/schema";
 
 export default function Admin() {
-  const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("mcp-servers");
+  const { user } = useAuth();
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-admin-title">Admin Panel</h1>
-          <p className="text-muted-foreground">Platform administration and configuration</p>
-        </div>
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight" data-testid="text-admin-title">Dashboard</h2>
+        <p className="text-muted-foreground mt-2">Welcome to the TestraAI administration panel</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="mcp-servers" data-testid="tab-mcp-servers">
-            <Server className="w-4 h-4 mr-2" />
-            MCP Servers
-          </TabsTrigger>
-          <TabsTrigger value="users" data-testid="tab-users">
-            <Users className="w-4 h-4 mr-2" />
-            User Management
-          </TabsTrigger>
-          <TabsTrigger value="billing" data-testid="tab-billing">
-            <CreditCard className="w-4 h-4 mr-2" />
-            Billing
-          </TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {user.systemRole === "SUPER_ADMIN" && (
+          <Card className="hover-elevate">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Server className="h-5 w-5 text-primary" />
+                MCP Servers
+              </CardTitle>
+              <CardDescription>Manage global MCP server configurations</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+        
+        {(user.systemRole === "SUPER_ADMIN" || user.systemRole === "SUPPORT_ADMIN") && (
+          <Card className="hover-elevate">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                User Management
+              </CardTitle>
+              <CardDescription>Manage user accounts and permissions</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
 
-        <TabsContent value="mcp-servers" className="space-y-4">
-          <MCPServerManagement />
-        </TabsContent>
+        {(user.systemRole === "SUPER_ADMIN" || user.systemRole === "BILLING_ADMIN") && (
+          <Card className="hover-elevate">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Billing
+              </CardTitle>
+              <CardDescription>View subscriptions and payments</CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+      </div>
 
-        <TabsContent value="users" className="space-y-4">
-          <UserManagement />
-        </TabsContent>
-
-        <TabsContent value="billing" className="space-y-4">
-          <BillingManagement />
-        </TabsContent>
-      </Tabs>
+      <div className="text-sm text-muted-foreground">
+        <p>Use the tabs above to navigate between different admin sections.</p>
+        <p className="mt-1">Your role: <strong>{user.systemRole?.replace("_", " ")}</strong></p>
+      </div>
     </div>
   );
+}
+
+function useAuth() {
+  const { data: user } = useQuery<User>({ queryKey: ["/api/user"] });
+  return { user };
 }
 
 function MCPServerManagement() {

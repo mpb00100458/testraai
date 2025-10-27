@@ -23,6 +23,9 @@ import AIAgent from "@/pages/AIAgent";
 import ProjectDetail from "@/pages/ProjectDetail";
 import MCPSettings from "@/pages/MCPSettings";
 import Admin from "@/pages/Admin";
+import AdminLogin from "@/pages/AdminLogin";
+import AdminMCPServers from "@/pages/AdminMCPServers";
+import { AdminLayout } from "@/layouts/AdminLayout";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -71,10 +74,33 @@ function AppContent() {
     "--sidebar-width-icon": "3rem",
   };
 
+  // Check if we're on an admin route
+  const isAdminRoute = location.startsWith('/admin');
+  const isAdminLoginRoute = location === '/admin/login';
+
   if (isLoading || !isAuthenticated) {
     return (
       <>
-        <Router />
+        <Switch>
+          <Route path="/admin/login" component={AdminLogin} />
+          <Route path="/" component={Landing} />
+          <Route component={NotFound} />
+        </Switch>
+        <Toaster />
+      </>
+    );
+  }
+
+  // Admin routes use AdminLayout
+  if (isAdminRoute && !isAdminLoginRoute) {
+    return (
+      <>
+        <AdminLayout>
+          <Switch>
+            <Route path="/admin/mcp-servers" component={AdminMCPServers} />
+            <Route path="/admin" component={Admin} />
+          </Switch>
+        </AdminLayout>
         <Toaster />
       </>
     );
