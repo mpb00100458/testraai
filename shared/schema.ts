@@ -350,6 +350,52 @@ export const a11yRollupsRelations = relations(a11yRollups, ({ one }) => ({
   }),
 }));
 
+// A11y History table (historical accessibility metrics)
+export const a11yHistory = pgTable("a11y_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
+  snapshotDate: timestamp("snapshot_date").notNull().defaultNow(),
+  averageScore: integer("average_score").default(0),
+  totalIssues: integer("total_issues").default(0),
+  criticalIssues: integer("critical_issues").default(0),
+  warningIssues: integer("warning_issues").default(0),
+  minorIssues: integer("minor_issues").default(0),
+  passRate: integer("pass_rate").default(0),
+  pagesAudited: integer("pages_audited").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_a11y_history_estate").on(table.estateId),
+  index("idx_a11y_history_snapshot").on(table.snapshotDate),
+]);
+
+export const insertA11yHistorySchema = createInsertSchema(a11yHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertA11yHistory = z.infer<typeof insertA11yHistorySchema>;
+export type A11yHistory = typeof a11yHistory.$inferSelect;
+
+// Issue Comments table
+export const issueComments = pgTable("issue_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  issueId: varchar("issue_id").notNull(), // References a11y_rollups.id
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  comment: text("comment").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_issue_comments_issue").on(table.issueId),
+  index("idx_issue_comments_user").on(table.userId),
+]);
+
+export const insertIssueCommentSchema = createInsertSchema(issueComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertIssueComment = z.infer<typeof insertIssueCommentSchema>;
+export type IssueComment = typeof issueComments.$inferSelect;
+
 // AI Agent Chat Conversations
 export const chatConversations = pgTable("chat_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
