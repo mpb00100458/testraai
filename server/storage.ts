@@ -13,6 +13,10 @@ import {
   chatConversations,
   chatMessages,
   externalMcpServers,
+  mcpServers,
+  subscriptions,
+  invoices,
+  payments,
   type User,
   type UpsertUser,
   type Organization,
@@ -40,6 +44,14 @@ import {
   type InsertChatMessage,
   type ExternalMcpServer,
   type InsertExternalMcpServer,
+  type McpServer,
+  type InsertMcpServer,
+  type Subscription,
+  type InsertSubscription,
+  type Invoice,
+  type InsertInvoice,
+  type Payment,
+  type InsertPayment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc } from "drizzle-orm";
@@ -142,6 +154,36 @@ export interface IStorage {
   updateExternalMcpServer(id: string, server: Partial<InsertExternalMcpServer>): Promise<ExternalMcpServer>;
   updateExternalMcpServerLastConnected(id: string): Promise<void>;
   deleteExternalMcpServer(id: string): Promise<void>;
+
+  // Admin: Global MCP Server operations
+  getAllMcpServers(): Promise<McpServer[]>;
+  getMcpServer(id: string): Promise<McpServer | undefined>;
+  createMcpServer(server: InsertMcpServer): Promise<McpServer>;
+  updateMcpServer(id: string, server: Partial<InsertMcpServer>): Promise<McpServer>;
+  deleteMcpServer(id: string): Promise<void>;
+
+  // Admin: User management operations
+  getAllUsers(limit?: number, offset?: number): Promise<User[]>;
+  updateUserStatus(userId: string, status: 'active' | 'suspended' | 'banned'): Promise<User>;
+  updateUserSystemRole(userId: string, systemRole: 'SUPER_ADMIN' | 'BILLING_ADMIN' | 'SUPPORT_ADMIN' | null): Promise<User>;
+
+  // Admin: Billing operations
+  getAllSubscriptions(limit?: number, offset?: number): Promise<Subscription[]>;
+  getSubscription(id: string): Promise<Subscription | undefined>;
+  getSubscriptionByUserId(userId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription>;
+  
+  getAllInvoices(limit?: number, offset?: number): Promise<Invoice[]>;
+  getInvoice(id: string): Promise<Invoice | undefined>;
+  getInvoicesByUserId(userId: string): Promise<Invoice[]>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: string, invoice: Partial<InsertInvoice>): Promise<Invoice>;
+  
+  getAllPayments(limit?: number, offset?: number): Promise<Payment[]>;
+  getPayment(id: string): Promise<Payment | undefined>;
+  getPaymentsByUserId(userId: string): Promise<Payment[]>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -655,6 +697,164 @@ export class DatabaseStorage implements IStorage {
 
   async deleteExternalMcpServer(id: string): Promise<void> {
     await db.delete(externalMcpServers).where(eq(externalMcpServers.id, id));
+  }
+
+  // Admin: Global MCP Server operations
+  async getAllMcpServers(): Promise<McpServer[]> {
+    return await db.select().from(mcpServers).orderBy(desc(mcpServers.createdAt));
+  }
+
+  async getMcpServer(id: string): Promise<McpServer | undefined> {
+    const [server] = await db.select().from(mcpServers).where(eq(mcpServers.id, id));
+    return server;
+  }
+
+  async createMcpServer(server: InsertMcpServer): Promise<McpServer> {
+    const [newServer] = await db.insert(mcpServers).values(server).returning();
+    return newServer;
+  }
+
+  async updateMcpServer(id: string, server: Partial<InsertMcpServer>): Promise<McpServer> {
+    const [updated] = await db
+      .update(mcpServers)
+      .set({ ...server, updatedAt: new Date() })
+      .where(eq(mcpServers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteMcpServer(id: string): Promise<void> {
+    await db.delete(mcpServers).where(eq(mcpServers.id, id));
+  }
+
+  // Admin: User management operations
+  async getAllUsers(limit: number = 100, offset: number = 0): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(users.createdAt));
+  }
+
+  async updateUserStatus(userId: string, status: 'active' | 'suspended' | 'banned'): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ status })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  async updateUserSystemRole(userId: string, systemRole: 'SUPER_ADMIN' | 'BILLING_ADMIN' | 'SUPPORT_ADMIN' | null): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ systemRole })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
+  // Admin: Billing operations
+  async getAllSubscriptions(limit: number = 100, offset: number = 0): Promise<Subscription[]> {
+    return await db
+      .select()
+      .from(subscriptions)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(subscriptions.createdAt));
+  }
+
+  async getSubscription(id: string): Promise<Subscription | undefined> {
+    const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.id, id));
+    return subscription;
+  }
+
+  async getSubscriptionByUserId(userId: string): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .orderBy(desc(subscriptions.createdAt))
+      .limit(1);
+    return subscription;
+  }
+
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const [newSubscription] = await db.insert(subscriptions).values(subscription).returning();
+    return newSubscription;
+  }
+
+  async updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription> {
+    const [updated] = await db
+      .update(subscriptions)
+      .set(subscription)
+      .where(eq(subscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAllInvoices(limit: number = 100, offset: number = 0): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice;
+  }
+
+  async getInvoicesByUserId(userId: string): Promise<Invoice[]> {
+    return await db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.userId, userId))
+      .orderBy(desc(invoices.createdAt));
+  }
+
+  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
+    const [newInvoice] = await db.insert(invoices).values(invoice).returning();
+    return newInvoice;
+  }
+
+  async updateInvoice(id: string, invoice: Partial<InsertInvoice>): Promise<Invoice> {
+    const [updated] = await db
+      .update(invoices)
+      .set(invoice)
+      .where(eq(invoices.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAllPayments(limit: number = 100, offset: number = 0): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(payments.createdAt));
+  }
+
+  async getPayment(id: string): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
+  }
+
+  async getPaymentsByUserId(userId: string): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const [newPayment] = await db.insert(payments).values(payment).returning();
+    return newPayment;
   }
 }
 
