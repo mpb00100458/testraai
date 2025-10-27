@@ -33,6 +33,8 @@ export default function AdminLogin() {
     },
   });
 
+  const ADMIN_ROLES = ["SUPER_ADMIN", "BILLING_ADMIN", "SUPPORT_ADMIN"];
+
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
       const response = await apiRequest("/api/login", {
@@ -42,7 +44,9 @@ export default function AdminLogin() {
       return response;
     },
     onSuccess: async (data: any) => {
-      if (!data.user?.systemRole) {
+      const isAdmin = data.user?.systemRole && ADMIN_ROLES.includes(data.user.systemRole);
+      
+      if (!isAdmin) {
         setErrorMessage("Access Denied: Admin privileges required");
         await apiRequest("/api/logout", { method: "POST" });
         return;

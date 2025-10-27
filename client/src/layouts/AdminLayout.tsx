@@ -12,16 +12,20 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+const ADMIN_ROLES = ["SUPER_ADMIN", "BILLING_ADMIN", "SUPPORT_ADMIN"];
+
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
 
+  const isAdmin = user?.systemRole && ADMIN_ROLES.includes(user.systemRole);
+
   useEffect(() => {
-    if (!isLoading && !user?.systemRole) {
+    if (!isLoading && !isAdmin) {
       setLocation("/admin/login");
     }
-  }, [user, isLoading, setLocation]);
+  }, [user, isLoading, isAdmin, setLocation]);
 
   const handleLogout = async () => {
     try {
@@ -44,7 +48,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (!user?.systemRole) {
+  if (!isAdmin) {
     return null;
   }
 

@@ -67,7 +67,7 @@ function Router() {
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const style = {
     "--sidebar-width": "16rem",
@@ -83,6 +83,12 @@ function AppContent() {
       <>
         <Switch>
           <Route path="/admin/login" component={AdminLogin} />
+          <Route path="/admin">
+            {() => {
+              setLocation("/admin/login");
+              return null;
+            }}
+          </Route>
           <Route path="/" component={Landing} />
           <Route component={NotFound} />
         </Switch>
