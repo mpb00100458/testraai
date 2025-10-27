@@ -1843,6 +1843,150 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
     }
   });
 
+  // External MCP Server routes
+  app.get('/api/mcp-servers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const servers = await storage.getExternalMcpServers(userId);
+      res.json(servers);
+    } catch (error) {
+      console.error("Error fetching MCP servers:", error);
+      res.status(500).json({ message: "Failed to fetch MCP servers" });
+    }
+  });
+
+  app.get('/api/mcp-servers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const server = await storage.getExternalMcpServer(id);
+      
+      if (!server) {
+        return res.status(404).json({ message: "MCP server not found" });
+      }
+
+      // Verify ownership
+      if (server.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      res.json(server);
+    } catch (error) {
+      console.error("Error fetching MCP server:", error);
+      res.status(500).json({ message: "Failed to fetch MCP server" });
+    }
+  });
+
+  app.post('/api/mcp-servers', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { name, description, transport, url, headers, enabled } = req.body;
+
+      if (!name || !url) {
+        return res.status(400).json({ message: "Name and URL are required" });
+      }
+
+      const server = await storage.createExternalMcpServer({
+        userId,
+        organizationId: null,
+        name,
+        description: description || null,
+        transport: transport || 'sse',
+        url,
+        headers: headers || null,
+        enabled: enabled !== undefined ? enabled : true,
+      });
+
+      res.status(201).json(server);
+    } catch (error) {
+      console.error("Error creating MCP server:", error);
+      res.status(500).json({ message: "Failed to create MCP server" });
+    }
+  });
+
+  app.patch('/api/mcp-servers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const server = await storage.getExternalMcpServer(id);
+      
+      if (!server) {
+        return res.status(404).json({ message: "MCP server not found" });
+      }
+
+      if (server.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Whitelist allowed fields for security
+      const allowedFields = ['name', 'description', 'transport', 'url', 'headers', 'enabled'];
+      const updates: any = {};
+      
+      for (const field of allowedFields) {
+        if (field in req.body) {
+          updates[field] = req.body[field];
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+
+      const updated = await storage.updateExternalMcpServer(id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating MCP server:", error);
+      res.status(500).json({ message: "Failed to update MCP server" });
+    }
+  });
+
+  app.delete('/api/mcp-servers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const server = await storage.getExternalMcpServer(id);
+      
+      if (!server) {
+        return res.status(404).json({ message: "MCP server not found" });
+      }
+
+      if (server.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.deleteExternalMcpServer(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting MCP server:", error);
+      res.status(500).json({ message: "Failed to delete MCP server" });
+    }
+  });
+
+  app.post('/api/mcp-servers/:id/test', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const server = await storage.getExternalMcpServer(id);
+      
+      if (!server) {
+        return res.status(404).json({ message: "MCP server not found" });
+      }
+
+      if (server.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Test connection to external MCP server
+      const { testMcpServerConnection } = await import('./mcpClient');
+      const result = await testMcpServerConnection(server);
+      
+      if (result.success) {
+        await storage.updateExternalMcpServerLastConnected(id);
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error testing MCP server:", error);
+      res.status(500).json({ message: "Failed to test MCP server connection" });
+    }
+  });
+
   // Generate and download documentation PDF
   app.get('/api/documentation/download', async (req, res) => {
     try {

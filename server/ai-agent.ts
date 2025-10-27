@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
 import { nanoid } from "nanoid";
+import { getToolsFromExternalServers, callExternalTool } from "./mcpClient";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -18,6 +20,12 @@ interface AIAgentResponse {
   };
 }
 
+interface ExternalToolInfo {
+  serverId: string;
+  serverName: string;
+  tool: Tool;
+}
+
 export async function processAIAgentMessage(
   userMessage: string,
   userId: string,
@@ -26,6 +34,41 @@ export async function processAIAgentMessage(
   try {
     // Get conversation history for context
     const messages = await storage.getChatMessages(conversationId);
+    
+    // Fetch external MCP servers and their tools
+    const externalServers = await storage.getExternalMcpServers(userId);
+    const enabledServers = externalServers.filter(s => s.enabled);
+    
+    let externalTools: ExternalToolInfo[] = [];
+    let externalToolsDescription = '';
+    
+    if (enabledServers.length > 0) {
+      console.log(`[AI Agent] Fetching tools from ${enabledServers.length} external MCP servers...`);
+      const toolsByServer = await getToolsFromExternalServers(enabledServers);
+      
+      // Build list of external tools
+      toolsByServer.forEach((tools, serverId) => {
+        const server = enabledServers.find(s => s.id === serverId);
+        if (server) {
+          tools.forEach(tool => {
+            externalTools.push({
+              serverId: server.id,
+              serverName: server.name,
+              tool
+            });
+          });
+        }
+      });
+
+      // Add tools to system prompt
+      if (externalTools.length > 0) {
+        externalToolsDescription = `\n\nExternal Tools Available:\n` +
+          externalTools.map(t => 
+            `- ${t.tool.name} (from ${t.serverName}): ${t.tool.description}`
+          ).join('\n') +
+          `\n\nIf the user asks to use any of these tools, mention that you can help them and ask for the required parameters.`;
+      }
+    }
     
     // Check if message contains a URL to scan
     const urlMatch = userMessage.match(/(https?:\/\/[^\s]+)/);
@@ -41,7 +84,7 @@ Your capabilities:
 2. Show results from previous scans when users ask about them
 3. Explain WCAG guidelines and accessibility best practices
 4. Help prioritize and fix accessibility issues
-5. Provide actionable recommendations
+5. Provide actionable recommendations${externalToolsDescription}
 
 Important: When a user asks about "previous", "last", "earlier" scan results, or says "show me results for [URL]":
 - They want to see EXISTING scan results, not trigger a new scan
@@ -80,14 +123,76 @@ Keep responses concise and helpful.`
       content: userMessage
     });
 
-    // Get AI response
+    // Convert external MCP tools to OpenAI function format and create mapping
+    const toolMapping = new Map<string, ExternalToolInfo>();
+    const openaiTools = externalTools.map(t => {
+      const sanitizedFunctionName = `${t.serverName}__${t.tool.name}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+      toolMapping.set(sanitizedFunctionName, t);
+      
+      return {
+        type: "function" as const,
+        function: {
+          name: sanitizedFunctionName,
+          description: `[From ${t.serverName}] ${t.tool.description}`,
+          parameters: t.tool.inputSchema || { type: "object", properties: {} }
+        }
+      };
+    });
+
+    // Get AI response with function calling support
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: openAIMessages,
       max_completion_tokens: 8192,
+      tools: openaiTools.length > 0 ? openaiTools : undefined,
+      tool_choice: openaiTools.length > 0 ? "auto" : undefined,
     });
 
-    const aiResponse = completion.choices[0]?.message?.content || "I'm sorry, I couldn't process that request.";
+    const responseMessage = completion.choices[0]?.message;
+    let aiResponse = responseMessage?.content || "I'm sorry, I couldn't process that request.";
+
+    // Handle tool calls if present
+    if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
+      console.log(`[AI Agent] AI wants to call ${responseMessage.tool_calls.length} external tools`);
+      
+      const toolResults: string[] = [];
+      
+      for (const toolCall of responseMessage.tool_calls) {
+        if (toolCall.type !== 'function') continue;
+        
+        const functionName = (toolCall as any).function.name;
+        const args = JSON.parse((toolCall as any).function.arguments);
+        
+        // Look up the external tool using the mapping
+        const externalTool = toolMapping.get(functionName);
+        
+        if (externalTool) {
+          const server = enabledServers.find(s => s.id === externalTool.serverId);
+          if (server) {
+            try {
+              console.log(`[AI Agent] Calling external tool ${externalTool.tool.name} on ${server.name}`);
+              const result = await callExternalTool(server, externalTool.tool.name, args);
+              const resultText = JSON.stringify(result, null, 2);
+              toolResults.push(`✅ ${externalTool.tool.name} from ${server.name}:\n${resultText}`);
+            } catch (error) {
+              console.error(`[AI Agent] Error calling external tool:`, error);
+              toolResults.push(`❌ ${externalTool.tool.name} from ${server.name}: Error - ${error instanceof Error ? error.message : String(error)}`);
+            }
+          } else {
+            console.error(`[AI Agent] Server not found for tool ${externalTool.tool.name}`);
+            toolResults.push(`❌ ${externalTool.tool.name}: Server not found`);
+          }
+        } else {
+          console.error(`[AI Agent] Unknown function called: ${functionName}`);
+          toolResults.push(`❌ Unknown tool: ${functionName}`);
+        }
+      }
+      
+      // If tools were called, append results to the response
+      if (toolResults.length > 0) {
+        aiResponse += `\n\n**External Tool Results:**\n${toolResults.join('\n\n')}`;
+      }
+    }
 
     // If user provided a URL, check if they want previous results or a new scan
     if (urlMatch) {

@@ -9,6 +9,7 @@ import {
   text,
   integer,
   pgEnum,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -472,5 +473,48 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
   conversation: one(chatConversations, {
     fields: [chatMessages.conversationId],
     references: [chatConversations.id],
+  }),
+}));
+
+// External MCP Servers
+export const mcpServerTransportEnum = pgEnum('mcp_server_transport', ['stdio', 'sse', 'http']);
+
+export const externalMcpServers = pgTable("external_mcp_servers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  transport: mcpServerTransportEnum('transport').notNull().default('sse'),
+  url: text("url").notNull(), // For SSE/HTTP, or command for stdio
+  headers: jsonb("headers"), // Optional headers for authentication
+  enabled: boolean("enabled").notNull().default(true),
+  lastConnected: timestamp("last_connected"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_external_mcp_servers_user").on(table.userId),
+  index("idx_external_mcp_servers_org").on(table.organizationId),
+]);
+
+export const insertExternalMcpServerSchema = createInsertSchema(externalMcpServers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastConnected: true,
+});
+
+export type InsertExternalMcpServer = z.infer<typeof insertExternalMcpServerSchema>;
+export type ExternalMcpServer = typeof externalMcpServers.$inferSelect;
+
+// Relations
+export const externalMcpServersRelations = relations(externalMcpServers, ({ one }) => ({
+  user: one(users, {
+    fields: [externalMcpServers.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [externalMcpServers.organizationId],
+    references: [organizations.id],
   }),
 }));

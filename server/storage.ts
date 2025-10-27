@@ -12,6 +12,7 @@ import {
   issueComments,
   chatConversations,
   chatMessages,
+  externalMcpServers,
   type User,
   type UpsertUser,
   type Organization,
@@ -37,6 +38,8 @@ import {
   type InsertChatConversation,
   type ChatMessage,
   type InsertChatMessage,
+  type ExternalMcpServer,
+  type InsertExternalMcpServer,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, inArray, desc } from "drizzle-orm";
@@ -131,6 +134,14 @@ export interface IStorage {
   getChatMessages(conversationId: string): Promise<ChatMessage[]>;
   createChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   deleteChatMessages(conversationId: string): Promise<void>;
+  
+  // External MCP Server operations
+  getExternalMcpServers(userId: string): Promise<ExternalMcpServer[]>;
+  getExternalMcpServer(id: string): Promise<ExternalMcpServer | undefined>;
+  createExternalMcpServer(server: InsertExternalMcpServer): Promise<ExternalMcpServer>;
+  updateExternalMcpServer(id: string, server: Partial<InsertExternalMcpServer>): Promise<ExternalMcpServer>;
+  updateExternalMcpServerLastConnected(id: string): Promise<void>;
+  deleteExternalMcpServer(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -602,6 +613,48 @@ export class DatabaseStorage implements IStorage {
 
   async deleteChatMessages(conversationId: string): Promise<void> {
     await db.delete(chatMessages).where(eq(chatMessages.conversationId, conversationId));
+  }
+
+  // External MCP Server operations
+  async getExternalMcpServers(userId: string): Promise<ExternalMcpServer[]> {
+    return await db
+      .select()
+      .from(externalMcpServers)
+      .where(eq(externalMcpServers.userId, userId))
+      .orderBy(desc(externalMcpServers.createdAt));
+  }
+
+  async getExternalMcpServer(id: string): Promise<ExternalMcpServer | undefined> {
+    const [server] = await db
+      .select()
+      .from(externalMcpServers)
+      .where(eq(externalMcpServers.id, id));
+    return server;
+  }
+
+  async createExternalMcpServer(server: InsertExternalMcpServer): Promise<ExternalMcpServer> {
+    const [newServer] = await db.insert(externalMcpServers).values(server).returning();
+    return newServer;
+  }
+
+  async updateExternalMcpServer(id: string, server: Partial<InsertExternalMcpServer>): Promise<ExternalMcpServer> {
+    const [updated] = await db
+      .update(externalMcpServers)
+      .set({ ...server, updatedAt: new Date() })
+      .where(eq(externalMcpServers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateExternalMcpServerLastConnected(id: string): Promise<void> {
+    await db
+      .update(externalMcpServers)
+      .set({ lastConnected: new Date() })
+      .where(eq(externalMcpServers.id, id));
+  }
+
+  async deleteExternalMcpServer(id: string): Promise<void> {
+    await db.delete(externalMcpServers).where(eq(externalMcpServers.id, id));
   }
 }
 
