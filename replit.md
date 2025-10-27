@@ -72,6 +72,44 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - Remove members from workspace
 - Role-based access control (RBAC) with color-coded badges
 
+**Admin Panel Features:**
+The platform includes a comprehensive admin panel for platform administrators with three levels of access control:
+- **SUPER_ADMIN:** Full platform access - MCP servers, users, and billing
+- **BILLING_ADMIN:** Subscription and payment management
+- **SUPPORT_ADMIN:** User account management
+
+Admin Panel sections:
+1. **Global MCP Server Management** (Super Admin only)
+   - Configure Model Context Protocol servers available to all AI agents
+   - Add, edit, enable/disable, and delete global MCP servers
+   - Support for SSE, HTTP, and STDIO transport types
+   - Centralized server configuration vs. per-user external servers
+
+2. **User Management** (Support Admin and above)
+   - View all platform users with pagination
+   - Update user account status (active, suspended, banned)
+   - Assign/modify system administrator roles
+   - Separate system-level admin roles from workspace-level roles
+
+3. **Billing Management** (Billing Admin and above)
+   - View and manage subscriptions with plan details and status
+   - Track invoices (paid, pending, failed)
+   - Monitor payment transactions
+   - Stripe integration ready (requires STRIPE_SECRET_KEY, VITE_STRIPE_PUBLIC_KEY)
+
+Database schema extensions:
+- `users.systemRole` enum: SUPER_ADMIN, BILLING_ADMIN, SUPPORT_ADMIN
+- `users.status` enum: active, suspended, banned
+- `mcp_servers` table: Global admin-configured MCP servers
+- `subscriptions`, `invoices`, `payments` tables: Billing infrastructure
+
+API routes:
+- `/api/admin/mcp-servers` - Global MCP server CRUD (Super Admin)
+- `/api/admin/users` - User management (Support Admin+)
+- `/api/admin/subscriptions` - Subscription management (Billing Admin+)
+- `/api/admin/invoices` - Invoice management (Billing Admin+)
+- `/api/admin/payments` - Payment tracking (Billing Admin+)
+
 ## External Dependencies
 
 ### Authentication Services

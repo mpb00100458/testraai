@@ -22,6 +22,7 @@ import ScanDetail from "@/pages/ScanDetail";
 import AIAgent from "@/pages/AIAgent";
 import ProjectDetail from "@/pages/ProjectDetail";
 import MCPSettings from "@/pages/MCPSettings";
+import Admin from "@/pages/Admin";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/tools" component={Tools} />
       <Route path="/settings" component={Settings} />
       <Route path="/mcp-settings" component={MCPSettings} />
+      <Route path="/admin" component={Admin} />
       <Route path="/scans/:scanId">
         {(params) => <ScanDetail scanId={params.scanId} />}
       </Route>

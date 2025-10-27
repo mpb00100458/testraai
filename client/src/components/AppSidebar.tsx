@@ -1,4 +1,4 @@
-import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot, Plug } from "lucide-react";
+import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot, Plug, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -116,6 +116,16 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {user?.systemRole && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin")} data-testid="link-admin">
+                    <Link href="/admin">
+                      <Shield className="h-4 w-4" />
+                      <span>Admin Panel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
