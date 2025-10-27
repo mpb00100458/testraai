@@ -130,7 +130,8 @@ Keep responses concise and helpful.`
     // Convert external MCP tools to OpenAI function format and create mapping
     const toolMapping = new Map<string, ExternalToolInfo>();
     const openaiTools = externalTools.map(t => {
-      const sanitizedFunctionName = `${t.serverName}__${t.tool.name}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+      // Use server ID instead of name to ensure uniqueness across global + user servers
+      const sanitizedFunctionName = `${t.serverId}__${t.tool.name}`.replace(/[^a-zA-Z0-9_-]/g, '_');
       toolMapping.set(sanitizedFunctionName, t);
       
       return {
