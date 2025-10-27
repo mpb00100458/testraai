@@ -1,47 +1,35 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
-import { Shield, Users, CreditCard, Server, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import type { User } from "@shared/schema";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AdminSidebar } from "@/components/admin-sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const ADMIN_ROLES = ["SUPER_ADMIN", "BILLING_ADMIN", "SUPPORT_ADMIN"];
-
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
-  const { user, isLoading } = useAuth();
-  const { toast } = useToast();
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ["/api/user"],
+  });
 
+  const ADMIN_ROLES = ["SUPER_ADMIN", "BILLING_ADMIN", "SUPPORT_ADMIN"];
   const isAdmin = user?.systemRole && ADMIN_ROLES.includes(user.systemRole);
 
   useEffect(() => {
     if (!isLoading && !isAdmin) {
       setLocation("/admin/login");
     }
-  }, [user, isLoading, isAdmin, setLocation]);
-
-  const handleLogout = async () => {
-    try {
-      await apiRequest("POST", "/api/logout");
-      toast({ title: "Logged out successfully" });
-      setLocation("/admin/login");
-    } catch (error) {
-      toast({ title: "Logout failed", variant: "destructive" });
-    }
-  };
+  }, [isLoading, isAdmin, setLocation]);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center space-y-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
           <p className="text-muted-foreground">Loading admin panel...</p>
         </div>
       </div>
@@ -52,91 +40,27 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return null;
   }
 
-  const getActiveTab = () => {
-    if (location.startsWith("/admin/mcp-servers")) return "mcp-servers";
-    if (location.startsWith("/admin/users")) return "users";
-    if (location.startsWith("/admin/billing")) return "billing";
-    // Default to first available tab based on role
-    if (user.systemRole === "SUPER_ADMIN") return "mcp-servers";
-    if (user.systemRole === "SUPPORT_ADMIN") return "users";
-    if (user.systemRole === "BILLING_ADMIN") return "billing";
-    return "mcp-servers";
-  };
-
-  const handleTabChange = (value: string) => {
-    const routes: Record<string, string> = {
-      "mcp-servers": "/admin/mcp-servers",
-      users: "/admin/users",
-      billing: "/admin/billing",
-    };
-    setLocation(routes[value] || "/admin/mcp-servers");
+  const style = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Admin Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold">TestraAI Admin</h1>
-                <p className="text-xs text-muted-foreground">Platform Administration</p>
-              </div>
-            </div>
-
-            <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="hidden md:block">
-              <TabsList>
-                {user.systemRole === "SUPER_ADMIN" && (
-                  <TabsTrigger value="mcp-servers" data-testid="tab-admin-mcp">
-                    <Server className="h-4 w-4 mr-2" />
-                    MCP Servers
-                  </TabsTrigger>
-                )}
-                {(user.systemRole === "SUPER_ADMIN" || user.systemRole === "SUPPORT_ADMIN") && (
-                  <TabsTrigger value="users" data-testid="tab-admin-users">
-                    <Users className="h-4 w-4 mr-2" />
-                    Users
-                  </TabsTrigger>
-                )}
-                {(user.systemRole === "SUPER_ADMIN" || user.systemRole === "BILLING_ADMIN") && (
-                  <TabsTrigger value="billing" data-testid="tab-admin-billing">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Billing
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </Tabs>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Logged in as:</span>
-              <span className="font-medium">{user.firstName} {user.lastName}</span>
-              <span className="px-2 py-1 text-xs rounded-md bg-primary/10 text-primary font-medium">
-                {user.systemRole?.replace("_", " ")}
-              </span>
-            </div>
+    <SidebarProvider style={style as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AdminSidebar />
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <SidebarTrigger data-testid="button-admin-sidebar-toggle" />
             <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              data-testid="button-admin-logout"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          </header>
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto p-6 max-w-7xl">
+              {children}
+            </div>
+          </main>
         </div>
-      </header>
-
-      {/* Admin Content */}
-      <main className="container py-6 px-4">
-        {children}
-      </main>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 }
