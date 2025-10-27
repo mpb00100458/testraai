@@ -1,10 +1,13 @@
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, ExternalLink, AlertCircle, CheckCircle, XCircle, Loader2, PlayCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Clock, ExternalLink, AlertCircle, CheckCircle, XCircle, Loader2, PlayCircle, Activity } from "lucide-react";
 import { format } from "date-fns";
+import { queryClient } from "@/lib/queryClient";
 import type { ScanRun } from "@shared/schema";
 
 interface ScanRunWithDetails extends ScanRun {
@@ -19,10 +22,25 @@ interface ScanRunWithDetails extends ScanRun {
   };
 }
 
+interface LiveScanProgress {
+  scanRunId: string;
+  estateId: string;
+  status: 'running' | 'completed' | 'failed';
+  pagesDiscovered: number;
+  pagesAudited: number;
+  currentPage?: string;
+  issuesFound: number;
+  estateName?: string;
+  baseUrl?: string;
+}
+
 export default function Sessions() {
   const { data: scanRuns = [], isLoading } = useQuery<ScanRunWithDetails[]>({
     queryKey: ["/api/scan-runs"],
   });
+
+  const [liveScans, setLiveScans] = useState<Record<string, LiveScanProgress>>({});
+  const wsRef = useRef<WebSocket | null>(null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -61,6 +79,94 @@ export default function Sessions() {
     return (scan.criticalIssues || 0) + (scan.warningIssues || 0) + (scan.minorIssues || 0);
   };
 
+  // WebSocket connection for real-time scan updates
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    console.log('[Sessions] Creating WebSocket connection to:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('[Sessions] WebSocket connected successfully!');
+      
+      // Subscribe to any running scans
+      scanRuns.filter(scan => scan.status === 'running' || scan.status === 'pending').forEach(scan => {
+        ws.send(JSON.stringify({ type: 'subscribe', estateId: scan.estateId }));
+      });
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[Sessions] WebSocket message:', data);
+        
+        // Handle scan events
+        if (data.type === 'scan_start' || data.type === 'page_complete' || data.type === 'scan_complete' || data.type === 'scan_error') {
+          const scanRunId = data.data?.scanRunId;
+          const estateId = data.estateId;
+          const eventType = data.type;
+          
+          setLiveScans(prev => {
+            const pagesAudited = eventType === 'scan_complete' 
+              ? (data.data?.totalPages || prev[scanRunId]?.pagesAudited || 0)
+              : (data.data?.pageNumber || prev[scanRunId]?.pagesAudited || 0);
+            
+            const newState = {
+              ...prev,
+              [scanRunId]: {
+                scanRunId,
+                estateId,
+                status: eventType === 'scan_complete' ? 'completed' : eventType === 'scan_error' ? 'failed' : 'running',
+                pagesDiscovered: data.data?.totalPages || prev[scanRunId]?.pagesDiscovered || 0,
+                pagesAudited,
+                currentPage: data.data?.url || prev[scanRunId]?.currentPage,
+                issuesFound: data.data?.totalIssues || prev[scanRunId]?.issuesFound || 0,
+                estateName: data.data?.estateName || prev[scanRunId]?.estateName,
+                baseUrl: data.data?.baseUrl || prev[scanRunId]?.baseUrl,
+              }
+            };
+
+            // Remove from live scans when completed
+            if (eventType === 'scan_complete' || eventType === 'scan_error') {
+              setTimeout(() => {
+                setLiveScans(current => {
+                  const updated = { ...current };
+                  delete updated[scanRunId];
+                  return updated;
+                });
+                // Refresh the scan list to show the completed scan
+                queryClient.invalidateQueries({ queryKey: ["/api/scan-runs"] });
+              }, 2000);
+            }
+
+            return newState;
+          });
+        }
+      } catch (error) {
+        console.error('[Sessions] WebSocket message error:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('[Sessions] WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('[Sessions] WebSocket disconnected');
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  // Get active scans (either from live WebSocket updates or from database)
+  const activeScans = Object.values(liveScans).filter(scan => scan.status === 'running');
+  const completedScans = scanRuns.filter(scan => scan.status === 'completed' || scan.status === 'failed');
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -95,7 +201,79 @@ export default function Sessions() {
         </div>
       </div>
 
-      {scanRuns.length === 0 ? (
+      {/* Active Scans Section */}
+      {activeScans.length > 0 && (
+        <Card className="border-primary">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary animate-pulse" />
+              <CardTitle>Active Scans</CardTitle>
+            </div>
+            <CardDescription>Live accessibility scans in progress</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {activeScans.map((scan) => (
+              <Card key={scan.scanRunId} data-testid={`card-active-scan-${scan.scanRunId}`}>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                          <h3 className="font-semibold text-lg" data-testid={`text-live-estate-${scan.scanRunId}`}>
+                            {scan.estateName || 'Scanning...'}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate max-w-md">
+                          {scan.baseUrl || 'Loading...'}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="ml-2">
+                        <Activity className="h-3 w-3 mr-1 animate-pulse" />
+                        Running
+                      </Badge>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-mono" data-testid={`text-live-progress-${scan.scanRunId}`}>
+                          {scan.pagesAudited} / {scan.pagesDiscovered || '?'} pages
+                        </span>
+                      </div>
+                      <Progress 
+                        value={scan.pagesDiscovered ? (scan.pagesAudited / scan.pagesDiscovered) * 100 : 0} 
+                        className="h-2"
+                      />
+                    </div>
+
+                    {/* Current Page */}
+                    {scan.currentPage && (
+                      <div className="flex items-start gap-2 text-sm">
+                        <span className="text-muted-foreground shrink-0">Testing:</span>
+                        <span className="font-mono text-xs truncate" data-testid={`text-live-current-page-${scan.scanRunId}`}>
+                          {scan.currentPage}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Issues Found */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-sm text-muted-foreground">Issues Found</span>
+                      <Badge variant={scan.issuesFound > 0 ? "destructive" : "outline"} data-testid={`badge-live-issues-${scan.scanRunId}`}>
+                        {scan.issuesFound}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {scanRuns.length === 0 && activeScans.length === 0 ? (
         <Card>
           <CardContent className="py-16">
             <div className="flex flex-col items-center justify-center text-center">
@@ -111,7 +289,7 @@ export default function Sessions() {
         <Card>
           <CardHeader>
             <CardTitle>Scan History</CardTitle>
-            <CardDescription>All accessibility scans performed by the AI Agent</CardDescription>
+            <CardDescription>Completed accessibility scans</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -129,7 +307,7 @@ export default function Sessions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {scanRuns.map((scan) => (
+                  {completedScans.map((scan) => (
                     <TableRow key={scan.id} data-testid={`row-scan-${scan.id}`}>
                       <TableCell>
                         <div className="flex items-center gap-2">
