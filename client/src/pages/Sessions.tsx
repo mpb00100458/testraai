@@ -93,7 +93,10 @@ export default function Sessions() {
       console.log('[Sessions] WebSocket connected successfully!');
       
       // Subscribe to any running scans
-      scanRuns.filter(scan => scan.status === 'running' || scan.status === 'pending').forEach(scan => {
+      const runningScans = scanRuns.filter(scan => scan.status === 'running' || scan.status === 'pending');
+      console.log('[Sessions] Subscribing to running scans:', runningScans.length);
+      runningScans.forEach(scan => {
+        console.log('[Sessions] Subscribing to estate:', scan.estateId);
         ws.send(JSON.stringify({ type: 'subscribe', estateId: scan.estateId }));
       });
     };
@@ -161,10 +164,35 @@ export default function Sessions() {
     return () => {
       ws.close();
     };
-  }, []);
+  }, [scanRuns]);
 
-  // Get active scans (either from live WebSocket updates or from database)
-  const activeScans = Object.values(liveScans).filter(scan => scan.status === 'running');
+  // Get active scans (merge live WebSocket updates with database running scans)
+  const dbRunningScans = scanRuns.filter(scan => scan.status === 'running' || scan.status === 'pending');
+  const liveScansArray = Object.values(liveScans);
+  
+  // Merge: prefer WebSocket data if available, otherwise use database data
+  const activeScansMap = new Map<string, LiveScanProgress>();
+  
+  // Add database running scans first
+  dbRunningScans.forEach(scan => {
+    activeScansMap.set(scan.id, {
+      scanRunId: scan.id,
+      estateId: scan.estateId,
+      status: 'running',
+      pagesDiscovered: scan.totalPages || 0,
+      pagesAudited: scan.pagesScanned || 0,
+      issuesFound: (scan.criticalIssues || 0) + (scan.warningIssues || 0) + (scan.minorIssues || 0),
+      estateName: scan.estate.name,
+      baseUrl: scan.estate.baseUrl,
+    });
+  });
+  
+  // Override with live WebSocket data (more up-to-date)
+  liveScansArray.forEach(scan => {
+    activeScansMap.set(scan.scanRunId, scan);
+  });
+  
+  const activeScans = Array.from(activeScansMap.values()).filter(scan => scan.status === 'running');
   const completedScans = scanRuns.filter(scan => scan.status === 'completed' || scan.status === 'failed');
 
   if (isLoading) {
