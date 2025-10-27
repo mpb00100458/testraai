@@ -29,7 +29,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await apiRequest("/api/logout", { method: "POST" });
+      await apiRequest("POST", "/api/logout");
       toast({ title: "Logged out successfully" });
       setLocation("/admin/login");
     } catch (error) {

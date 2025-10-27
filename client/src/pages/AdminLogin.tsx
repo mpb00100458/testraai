@@ -37,18 +37,15 @@ export default function AdminLogin() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
-      const response = await apiRequest("/api/login", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
-      return response;
+      const response = await apiRequest("POST", "/api/login", data);
+      return response.json();
     },
     onSuccess: async (data: any) => {
       const isAdmin = data.user?.systemRole && ADMIN_ROLES.includes(data.user.systemRole);
       
       if (!isAdmin) {
         setErrorMessage("Access Denied: Admin privileges required");
-        await apiRequest("/api/logout", { method: "POST" });
+        await apiRequest("POST", "/api/logout");
         return;
       }
       
