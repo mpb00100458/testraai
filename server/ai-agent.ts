@@ -35,15 +35,19 @@ export async function processAIAgentMessage(
     // Get conversation history for context
     const messages = await storage.getChatMessages(conversationId);
     
-    // Fetch external MCP servers and their tools
+    // Fetch both global MCP servers (admin-configured) and user external MCP servers
+    const globalServers = await storage.getGlobalMcpServers();
     const externalServers = await storage.getExternalMcpServers(userId);
-    const enabledServers = externalServers.filter(s => s.enabled);
+    
+    // Merge and filter enabled servers
+    const allServers = [...globalServers, ...externalServers];
+    const enabledServers = allServers.filter(s => s.enabled);
     
     let externalTools: ExternalToolInfo[] = [];
     let externalToolsDescription = '';
     
     if (enabledServers.length > 0) {
-      console.log(`[AI Agent] Fetching tools from ${enabledServers.length} external MCP servers...`);
+      console.log(`[AI Agent] Fetching tools from ${enabledServers.length} MCP servers (${globalServers.filter(s => s.enabled).length} global, ${externalServers.filter(s => s.enabled).length} user)...`);
       const toolsByServer = await getToolsFromExternalServers(enabledServers);
       
       // Build list of external tools

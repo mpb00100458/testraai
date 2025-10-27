@@ -157,6 +157,7 @@ export interface IStorage {
 
   // Admin: Global MCP Server operations
   getAllMcpServers(): Promise<McpServer[]>;
+  getGlobalMcpServers(): Promise<McpServer[]>;
   getMcpServer(id: string): Promise<McpServer | undefined>;
   createMcpServer(server: InsertMcpServer): Promise<McpServer>;
   updateMcpServer(id: string, server: Partial<InsertMcpServer>): Promise<McpServer>;
@@ -764,6 +765,14 @@ export class DatabaseStorage implements IStorage {
   // Admin: Global MCP Server operations
   async getAllMcpServers(): Promise<McpServer[]> {
     return await db.select().from(mcpServers).orderBy(desc(mcpServers.createdAt));
+  }
+
+  async getGlobalMcpServers(): Promise<McpServer[]> {
+    return await db
+      .select()
+      .from(mcpServers)
+      .where(eq(mcpServers.enabled, true))
+      .orderBy(desc(mcpServers.createdAt));
   }
 
   async getMcpServer(id: string): Promise<McpServer | undefined> {
