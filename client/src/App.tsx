@@ -11,17 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/Landing";
-import Dashboard from "@/pages/Dashboard";
-import Issues from "@/pages/Issues";
-import Projects from "@/pages/Projects";
-import Organization from "@/pages/Organization";
-import Settings from "@/pages/Settings";
-import Tools from "@/pages/Tools";
-import ScanComparison from "@/pages/ScanComparison";
-import ScanDetail from "@/pages/ScanDetail";
 import AIAgent from "@/pages/AIAgent";
-import ProjectDetail from "@/pages/ProjectDetail";
-import MCPSettings from "@/pages/MCPSettings";
 import Admin from "@/pages/Admin";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminMCPServers from "@/pages/AdminMCPServers";
@@ -29,6 +19,7 @@ import { AdminLayout } from "@/layouts/AdminLayout";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -41,25 +32,13 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/dashboard" component={Dashboard} />
       <Route path="/ai-agent" component={AIAgent} />
-      <Route path="/issues" component={Issues} />
-      <Route path="/projects/:id">
-        {(params) => <ProjectDetail projectId={params.id} onBack={() => window.history.back()} />}
+      <Route path="/">
+        {() => {
+          setLocation("/ai-agent");
+          return null;
+        }}
       </Route>
-      <Route path="/projects" component={Projects} />
-      <Route path="/organization" component={Organization} />
-      <Route path="/tools" component={Tools} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/mcp-settings" component={MCPSettings} />
-      <Route path="/admin" component={Admin} />
-      <Route path="/scans/:scanId">
-        {(params) => <ScanDetail scanId={params.scanId} />}
-      </Route>
-      <Route path="/compare/:scan1Id/:scan2Id">
-        {(params) => <ScanComparison scan1Id={params.scan1Id} scan2Id={params.scan2Id} />}
-      </Route>
-      <Route path="/" component={Dashboard} />
       <Route component={NotFound} />
     </Switch>
   );
