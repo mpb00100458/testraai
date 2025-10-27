@@ -1,4 +1,4 @@
-import { LayoutDashboard, AlertCircle, FolderOpen, Settings, Building2, Wrench, Sparkles, Bot, Plug, Shield } from "lucide-react";
+import { LayoutDashboard, FolderOpen, Settings, Sparkles, Bot, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -33,29 +33,9 @@ const navigationItems = [
     url: "/projects",
     icon: FolderOpen,
   },
-  {
-    title: "Issues",
-    url: "/issues",
-    icon: AlertCircle,
-  },
-  {
-    title: "Tools",
-    url: "/tools",
-    icon: Wrench,
-  },
 ];
 
 const settingsItems = [
-  {
-    title: "Workspace",
-    url: "/organization",
-    icon: Building2,
-  },
-  {
-    title: "MCP Servers",
-    url: "/mcp-settings",
-    icon: Plug,
-  },
   {
     title: "Settings",
     url: "/settings",
