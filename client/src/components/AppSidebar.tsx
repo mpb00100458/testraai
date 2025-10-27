@@ -1,4 +1,4 @@
-import { Sparkles, Bot, Clock, FolderOpen } from "lucide-react";
+import { Sparkles, Bot, Clock } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -27,11 +27,6 @@ const navigationItems = [
     title: "Sessions",
     url: "/sessions",
     icon: Clock,
-  },
-  {
-    title: "Projects",
-    url: "/projects",
-    icon: FolderOpen,
   },
 ];
 

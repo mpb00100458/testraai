@@ -461,6 +461,68 @@ export class DatabaseStorage implements IStorage {
     return runs[0];
   }
 
+  async getAllScanRunsForUser(userId: string): Promise<any[]> {
+    const orgs = await this.getOrganizationsByUserId(userId);
+    const orgIds = orgs.map(org => org.id);
+    
+    if (orgIds.length === 0) return [];
+
+    const result = await db
+      .select({
+        id: scanRuns.id,
+        estateId: scanRuns.estateId,
+        status: scanRuns.status,
+        startedAt: scanRuns.startedAt,
+        completedAt: scanRuns.completedAt,
+        totalPages: scanRuns.totalPages,
+        pagesScanned: scanRuns.pagesScanned,
+        criticalIssues: scanRuns.criticalIssues,
+        warningIssues: scanRuns.warningIssues,
+        minorIssues: scanRuns.minorIssues,
+        passedChecks: scanRuns.passedChecks,
+        videoPath: scanRuns.videoPath,
+        tracePath: scanRuns.tracePath,
+        errorMessage: scanRuns.errorMessage,
+        createdAt: scanRuns.createdAt,
+        estateName: estates.name,
+        estateBaseUrl: estates.baseUrl,
+        projectId: projects.id,
+        projectName: projects.name,
+      })
+      .from(scanRuns)
+      .innerJoin(estates, eq(scanRuns.estateId, estates.id))
+      .innerJoin(projects, eq(estates.projectId, projects.id))
+      .where(inArray(projects.organizationId, orgIds))
+      .orderBy(desc(scanRuns.startedAt));
+
+    return result.map(row => ({
+      id: row.id,
+      estateId: row.estateId,
+      status: row.status,
+      startedAt: row.startedAt,
+      completedAt: row.completedAt,
+      totalPages: row.totalPages,
+      pagesScanned: row.pagesScanned,
+      criticalIssues: row.criticalIssues,
+      warningIssues: row.warningIssues,
+      minorIssues: row.minorIssues,
+      passedChecks: row.passedChecks,
+      videoPath: row.videoPath?.startsWith('/objects/') ? row.videoPath : null,
+      tracePath: row.tracePath?.startsWith('/objects/') ? row.tracePath : null,
+      errorMessage: row.errorMessage,
+      createdAt: row.createdAt,
+      estate: {
+        id: row.estateId,
+        name: row.estateName,
+        baseUrl: row.estateBaseUrl,
+        project: {
+          id: row.projectId,
+          name: row.projectName,
+        },
+      },
+    }));
+  }
+
   async createScanRun(scanRun: InsertScanRun): Promise<ScanRun> {
     const [newScanRun] = await db.insert(scanRuns).values(scanRun).returning();
     return newScanRun;

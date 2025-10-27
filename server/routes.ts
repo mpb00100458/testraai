@@ -954,6 +954,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all scan runs for the authenticated user
+  app.get('/api/scan-runs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const scanRuns = await storage.getAllScanRunsForUser(userId);
+      res.json(scanRuns);
+    } catch (error) {
+      console.error("Error fetching scan runs:", error);
+      res.status(500).json({ message: "Failed to fetch scan runs" });
+    }
+  });
+
   // Get specific scan run details
   app.get('/api/scans/:id', isAuthenticated, async (req: any, res) => {
     try {
