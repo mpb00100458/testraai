@@ -27,6 +27,13 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **Seamless integration** - scans triggered by AI appear in existing Projects/Estates structure
 - **Context-aware responses** using conversation history for better assistance
 - **WCAG guidance** - explains accessibility requirements and provides actionable recommendations
+- **External MCP Server Integration** - extends AI agent capabilities with external Model Context Protocol servers:
+  - Connect to external MCP servers via SSE, HTTP, or STDIO transport
+  - Automatic tool discovery from external servers
+  - OpenAI function calling integration for external tool execution
+  - UI for managing MCP server connections (add, edit, enable/disable, test, delete)
+  - Per-user server configurations with secure header management
+  - Real-time tool availability based on enabled servers
 
 **Real-time Communication:** WebSocket server (ws library) provides authenticated real-time scan progress streaming. Session-based authentication verifies connections, and estate-level authorization ensures multi-tenant data isolation. Events are broadcast to subscribed clients for live visual testing feedback.
 
@@ -48,7 +55,7 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **Download capabilities** for scan videos and Playwright traces via dedicated API endpoints served from object storage.
 
 ### Data Storage
-**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, `chat_conversations`, `chat_messages`, and `sessions`. Drizzle Kit is used for schema migrations.
+**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, `chat_conversations`, `chat_messages`, `external_mcp_servers`, and `sessions`. Drizzle Kit is used for schema migrations.
 
 **Replit Object Storage** (Google Cloud Storage) stores scan artifacts:
 - **Video recordings** - Complete scan session videos (WebM format, 1280x720) at `/objects/scans/{scanRunId}/video.webm`
@@ -104,3 +111,4 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **OpenAI:** AI-powered accessibility analysis via Replit AI Integrations (gpt-4o-mini).
 - **Playwright:** Browser automation for real accessibility testing.
 - **@axe-core/playwright:** WCAG compliance testing.
+- **@modelcontextprotocol/sdk:** MCP client for connecting to external tool servers.
