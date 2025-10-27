@@ -2,8 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
+import { requireAdmin, requireSuperAdmin, requireBillingAdmin, requireSupportAdmin } from "./adminMiddleware";
 import { z } from "zod";
-import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema } from "@shared/schema";
+import { insertOrganizationSchema, insertProjectSchema, insertEstateSchema, insertMcpServerSchema, insertSubscriptionSchema, insertInvoiceSchema, insertPaymentSchema } from "@shared/schema";
 import PDFDocument from "pdfkit";
 import ExcelJS from "exceljs";
 import type { A11yResult } from "@shared/schema";
@@ -1984,6 +1985,250 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
     } catch (error) {
       console.error("Error testing MCP server:", error);
       res.status(500).json({ message: "Failed to test MCP server connection" });
+    }
+  });
+
+  // ==================== ADMIN ROUTES ====================
+  // Global MCP Server Management (Super Admin only)
+  
+  app.get('/api/admin/mcp-servers', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const servers = await storage.getAllMcpServers();
+      res.json(servers);
+    } catch (error) {
+      console.error("Error fetching MCP servers:", error);
+      res.status(500).json({ message: "Failed to fetch MCP servers" });
+    }
+  });
+
+  app.post('/api/admin/mcp-servers', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const validatedData = insertMcpServerSchema.parse(req.body);
+      const server = await storage.createMcpServer(validatedData);
+      res.status(201).json(server);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid server data", errors: error.errors });
+      }
+      console.error("Error creating MCP server:", error);
+      res.status(500).json({ message: "Failed to create MCP server" });
+    }
+  });
+
+  app.patch('/api/admin/mcp-servers/:id', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const server = await storage.updateMcpServer(id, req.body);
+      res.json(server);
+    } catch (error) {
+      console.error("Error updating MCP server:", error);
+      res.status(500).json({ message: "Failed to update MCP server" });
+    }
+  });
+
+  app.delete('/api/admin/mcp-servers/:id', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteMcpServer(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting MCP server:", error);
+      res.status(500).json({ message: "Failed to delete MCP server" });
+    }
+  });
+
+  // User Management (Support Admin and above)
+  
+  app.get('/api/admin/users', isAuthenticated, requireSupportAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const users = await storage.getAllUsers(limit, offset);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/status', isAuthenticated, requireSupportAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!['active', 'suspended', 'banned'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const user = await storage.updateUserStatus(id, status);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/system-role', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { systemRole } = req.body;
+      
+      if (systemRole !== null && !['SUPER_ADMIN', 'BILLING_ADMIN', 'SUPPORT_ADMIN'].includes(systemRole)) {
+        return res.status(400).json({ message: "Invalid system role" });
+      }
+
+      const user = await storage.updateUserSystemRole(id, systemRole);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user system role:", error);
+      res.status(500).json({ message: "Failed to update user system role" });
+    }
+  });
+
+  // Billing Management (Billing Admin and above)
+  
+  // Subscriptions
+  app.get('/api/admin/subscriptions', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const subscriptions = await storage.getAllSubscriptions(limit, offset);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
+  });
+
+  app.get('/api/admin/subscriptions/:id', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const subscription = await storage.getSubscription(id);
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error fetching subscription:", error);
+      res.status(500).json({ message: "Failed to fetch subscription" });
+    }
+  });
+
+  app.post('/api/admin/subscriptions', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const validatedData = insertSubscriptionSchema.parse(req.body);
+      const subscription = await storage.createSubscription(validatedData);
+      res.status(201).json(subscription);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid subscription data", errors: error.errors });
+      }
+      console.error("Error creating subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  app.patch('/api/admin/subscriptions/:id', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const subscription = await storage.updateSubscription(id, req.body);
+      res.json(subscription);
+    } catch (error) {
+      console.error("Error updating subscription:", error);
+      res.status(500).json({ message: "Failed to update subscription" });
+    }
+  });
+
+  // Invoices
+  app.get('/api/admin/invoices', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const invoices = await storage.getAllInvoices(limit, offset);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
+
+  app.get('/api/admin/invoices/:id', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not found" });
+      }
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching invoice:", error);
+      res.status(500).json({ message: "Failed to fetch invoice" });
+    }
+  });
+
+  app.post('/api/admin/invoices', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const validatedData = insertInvoiceSchema.parse(req.body);
+      const invoice = await storage.createInvoice(validatedData);
+      res.status(201).json(invoice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid invoice data", errors: error.errors });
+      }
+      console.error("Error creating invoice:", error);
+      res.status(500).json({ message: "Failed to create invoice" });
+    }
+  });
+
+  app.patch('/api/admin/invoices/:id', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const invoice = await storage.updateInvoice(id, req.body);
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error updating invoice:", error);
+      res.status(500).json({ message: "Failed to update invoice" });
+    }
+  });
+
+  // Payments
+  app.get('/api/admin/payments', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const payments = await storage.getAllPayments(limit, offset);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
+  app.get('/api/admin/payments/:id', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const payment = await storage.getPayment(id);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json(payment);
+    } catch (error) {
+      console.error("Error fetching payment:", error);
+      res.status(500).json({ message: "Failed to fetch payment" });
+    }
+  });
+
+  app.post('/api/admin/payments', isAuthenticated, requireBillingAdmin, async (req: any, res) => {
+    try {
+      const validatedData = insertPaymentSchema.parse(req.body);
+      const payment = await storage.createPayment(validatedData);
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid payment data", errors: error.errors });
+      }
+      console.error("Error creating payment:", error);
+      res.status(500).json({ message: "Failed to create payment" });
     }
   });
 
