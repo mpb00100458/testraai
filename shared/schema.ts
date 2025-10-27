@@ -10,9 +10,20 @@ import {
   integer,
   pgEnum,
   boolean,
+  decimal,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Enums - declare before tables
+// RBAC Role Enum
+export const roleEnum = pgEnum('role', ['OWNER', 'ADMIN', 'DEV', 'VIEWER']);
+
+// System-level Admin Role Enum
+export const systemRoleEnum = pgEnum('system_role', ['SUPER_ADMIN', 'BILLING_ADMIN', 'SUPPORT_ADMIN']);
+
+// User Status Enum
+export const userStatusEnum = pgEnum('user_status', ['active', 'suspended', 'deleted']);
 
 // Session storage table (required for Replit Auth)
 export const sessions = pgTable(
@@ -33,6 +44,8 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  systemRole: systemRoleEnum('system_role'), // System-level admin role
+  status: userStatusEnum('status').notNull().default('active'), // User account status
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -73,9 +86,6 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
-
-// RBAC Role Enum
-export const roleEnum = pgEnum('role', ['OWNER', 'ADMIN', 'DEV', 'VIEWER']);
 
 // Organizations table
 export const organizations = pgTable("organizations", {
@@ -136,54 +146,24 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 
-// Estate Status Enum
-export const estateStatusEnum = pgEnum('estate_status', ['idle', 'crawling', 'auditing', 'completed', 'failed']);
-
 // Scan Run Status Enum
-export const scanRunStatusEnum = pgEnum('scan_run_status', ['running', 'completed', 'failed']);
+export const scanStatusEnum = pgEnum('scan_status', ['pending', 'running', 'completed', 'failed']);
 
-// Estates table (test scope)
+// Estates table (websites/applications to be tested)
 export const estates = pgTable("estates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: 'cascade' }),
   name: varchar("name", { length: 255 }).notNull(),
-  baseUrl: varchar("base_url", { length: 500 }).notNull(),
-  status: estateStatusEnum('status').notNull().default('idle'),
-  crawlBudget: integer("crawl_budget").notNull().default(100),
-  pagesDiscovered: integer("pages_discovered").notNull().default(0),
-  pagesAudited: integer("pages_audited").notNull().default(0),
+  baseUrl: text("base_url").notNull(),
+  description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_estates_project").on(table.projectId),
 ]);
 
-// Scan Runs table (tracks individual scan executions)
-export const scanRuns = pgTable("scan_runs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
-  status: scanRunStatusEnum('status').notNull().default('running'),
-  totalIssues: integer("total_issues").notNull().default(0),
-  criticalIssues: integer("critical_issues").notNull().default(0),
-  warningIssues: integer("warning_issues").notNull().default(0),
-  minorIssues: integer("minor_issues").notNull().default(0),
-  passRate: integer("pass_rate").notNull().default(0),
-  averageScore: integer("average_score").notNull().default(0),
-  pagesAudited: integer("pages_audited").notNull().default(0),
-  videoPath: varchar("video_path", { length: 500 }),
-  tracePath: varchar("trace_path", { length: 500 }),
-  startedAt: timestamp("started_at").defaultNow(),
-  completedAt: timestamp("completed_at"),
-}, (table) => [
-  index("idx_scan_runs_estate").on(table.estateId),
-  index("idx_scan_runs_started").on(table.startedAt),
-]);
-
 export const insertEstateSchema = createInsertSchema(estates).omit({
   id: true,
-  status: true,
-  pagesDiscovered: true,
-  pagesAudited: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -191,23 +171,42 @@ export const insertEstateSchema = createInsertSchema(estates).omit({
 export type InsertEstate = z.infer<typeof insertEstateSchema>;
 export type Estate = typeof estates.$inferSelect;
 
+// Scan Runs table (individual test runs for an estate)
+export const scanRuns = pgTable("scan_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
+  status: scanStatusEnum('status').notNull().default('pending'),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  totalPages: integer("total_pages").default(0),
+  pagesScanned: integer("pages_scanned").default(0),
+  criticalIssues: integer("critical_issues").default(0),
+  warningIssues: integer("warning_issues").default(0),
+  minorIssues: integer("minor_issues").default(0),
+  passedChecks: integer("passed_checks").default(0),
+  videoPath: text("video_path"),
+  tracePath: text("trace_path"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_scan_runs_estate").on(table.estateId),
+  index("idx_scan_runs_status").on(table.status),
+]);
+
 export const insertScanRunSchema = createInsertSchema(scanRuns).omit({
   id: true,
-  startedAt: true,
-  completedAt: true,
+  createdAt: true,
 });
 
 export type InsertScanRun = z.infer<typeof insertScanRunSchema>;
 export type ScanRun = typeof scanRuns.$inferSelect;
 
-// Pages table
+// Pages table (individual pages discovered/tested)
 export const pages = pgTable("pages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
-  url: varchar("url", { length: 3000 }).notNull(),
+  url: text("url").notNull(),
   title: varchar("title", { length: 500 }),
-  isAudited: integer("is_audited").notNull().default(0),
-  screenshotUrl: varchar("screenshot_url", { length: 2000 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_pages_estate").on(table.estateId),
@@ -215,72 +214,62 @@ export const pages = pgTable("pages", {
 
 export const insertPageSchema = createInsertSchema(pages).omit({
   id: true,
-  isAudited: true,
   createdAt: true,
 });
 
 export type InsertPage = z.infer<typeof insertPageSchema>;
 export type Page = typeof pages.$inferSelect;
 
-// Severity Enum
-export const severityEnum = pgEnum('severity', ['critical', 'warning', 'minor', 'pass']);
+// Severity Level Enum
+export const severityEnum = pgEnum('severity', ['critical', 'serious', 'moderate', 'minor', 'pass']);
 
-// Issue Status Enum
-export const issueStatusEnum = pgEnum('issue_status', ['new', 'in_progress', 'resolved', 'ignored']);
-
-// A11y Results table (accessibility issues)
+// A11y Results table (individual accessibility test results)
 export const a11yResults = pgTable("a11y_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  scanRunId: varchar("scan_run_id").references(() => scanRuns.id, { onDelete: 'cascade' }),
+  scanRunId: varchar("scan_run_id").notNull().references(() => scanRuns.id, { onDelete: 'cascade' }),
   pageId: varchar("page_id").notNull().references(() => pages.id, { onDelete: 'cascade' }),
-  issueType: varchar("issue_type", { length: 255 }).notNull(),
+  ruleId: varchar("rule_id", { length: 255 }).notNull(),
+  wcagReference: varchar("wcag_reference", { length: 100 }),
   severity: severityEnum('severity').notNull(),
-  wcagCriteria: varchar("wcag_criteria", { length: 100 }),
-  element: text("element"),
-  elementPosition: text("element_position"),
-  description: text("description"),
-  suggestion: text("suggestion"),
-  codeSnippet: text("code_snippet"),
-  impactScore: integer("impact_score"),
-  isDuplicate: integer("is_duplicate").notNull().default(0),
-  duplicateOfId: varchar("duplicate_of_id"),
-  evidenceUrl: varchar("evidence_url", { length: 1000 }),
-  status: issueStatusEnum('status').notNull().default('new'),
-  assignedTo: varchar("assigned_to").references(() => users.id, { onDelete: 'set null' }),
-  aiSuggestion: text("ai_suggestion"),
+  impact: varchar("impact", { length: 50 }),
+  description: text("description").notNull(),
+  helpUrl: text("help_url"),
+  elementSelector: text("element_selector"),
+  html: text("html"),
+  failureSummary: text("failure_summary"),
+  occurrenceCount: integer("occurrence_count").default(1),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("idx_a11y_results_scan_run").on(table.scanRunId),
+  index("idx_a11y_results_scan").on(table.scanRunId),
   index("idx_a11y_results_page").on(table.pageId),
   index("idx_a11y_results_severity").on(table.severity),
-  index("idx_a11y_results_status").on(table.status),
-  index("idx_a11y_results_assigned").on(table.assignedTo),
 ]);
 
 export const insertA11yResultSchema = createInsertSchema(a11yResults).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
 });
 
 export type InsertA11yResult = z.infer<typeof insertA11yResultSchema>;
 export type A11yResult = typeof a11yResults.$inferSelect;
 
-// A11y Rollups table (aggregated stats)
+// A11y Rollups table (aggregated accessibility metrics by rule)
 export const a11yRollups = pgTable("a11y_rollups", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
-  totalIssues: integer("total_issues").notNull().default(0),
-  criticalIssues: integer("critical_issues").notNull().default(0),
-  warningIssues: integer("warning_issues").notNull().default(0),
-  minorIssues: integer("minor_issues").notNull().default(0),
-  passRate: integer("pass_rate").notNull().default(0),
-  averageScore: integer("average_score").notNull().default(0),
+  ruleId: varchar("rule_id", { length: 255 }).notNull(),
+  wcagReference: varchar("wcag_reference", { length: 100 }),
+  severity: severityEnum('severity').notNull(),
+  description: text("description").notNull(),
+  helpUrl: text("help_url"),
+  totalOccurrences: integer("total_occurrences").default(0),
+  affectedPages: integer("affected_pages").default(0),
+  lastDetected: timestamp("last_detected"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_a11y_rollups_estate").on(table.estateId),
+  index("idx_a11y_rollups_severity").on(table.severity),
 ]);
 
 export const insertA11yRollupSchema = createInsertSchema(a11yRollups).omit({
@@ -292,59 +281,10 @@ export const insertA11yRollupSchema = createInsertSchema(a11yRollups).omit({
 export type InsertA11yRollup = z.infer<typeof insertA11yRollupSchema>;
 export type A11yRollup = typeof a11yRollups.$inferSelect;
 
-// A11y History table (historical snapshots for trend analysis)
-export const a11yHistory = pgTable("a11y_history", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  estateId: varchar("estate_id").notNull().references(() => estates.id, { onDelete: 'cascade' }),
-  totalIssues: integer("total_issues").notNull().default(0),
-  criticalIssues: integer("critical_issues").notNull().default(0),
-  warningIssues: integer("warning_issues").notNull().default(0),
-  minorIssues: integer("minor_issues").notNull().default(0),
-  passRate: integer("pass_rate").notNull().default(0),
-  averageScore: integer("average_score").notNull().default(0),
-  pagesAudited: integer("pages_audited").notNull().default(0),
-  snapshotDate: timestamp("snapshot_date").defaultNow(),
-}, (table) => [
-  index("idx_a11y_history_estate").on(table.estateId),
-  index("idx_a11y_history_date").on(table.snapshotDate),
-]);
-
-export const insertA11yHistorySchema = createInsertSchema(a11yHistory).omit({
-  id: true,
-  snapshotDate: true,
-});
-
-export type InsertA11yHistory = z.infer<typeof insertA11yHistorySchema>;
-export type A11yHistory = typeof a11yHistory.$inferSelect;
-
-// Issue Comments table (collaboration on issues)
-export const issueComments = pgTable("issue_comments", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  issueId: varchar("issue_id").notNull().references(() => a11yResults.id, { onDelete: 'cascade' }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  comment: text("comment").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  index("idx_issue_comments_issue").on(table.issueId),
-  index("idx_issue_comments_user").on(table.userId),
-]);
-
-export const insertIssueCommentSchema = createInsertSchema(issueComments).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertIssueComment = z.infer<typeof insertIssueCommentSchema>;
-export type IssueComment = typeof issueComments.$inferSelect;
-
 // Relations
 export const organizationsRelations = relations(organizations, ({ many }) => ({
   memberships: many(memberships),
   projects: many(projects),
-}));
-
-export const usersRelations = relations(users, ({ many }) => ({
-  memberships: many(memberships),
 }));
 
 export const membershipsRelations = relations(memberships, ({ one }) => ({
@@ -476,7 +416,7 @@ export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
   }),
 }));
 
-// External MCP Servers
+// External MCP Servers (User-owned - deprecated in favor of global MCP servers)
 export const mcpServerTransportEnum = pgEnum('mcp_server_transport', ['stdio', 'sse', 'http']);
 
 export const externalMcpServers = pgTable("external_mcp_servers", {
@@ -516,5 +456,173 @@ export const externalMcpServersRelations = relations(externalMcpServers, ({ one 
   organization: one(organizations, {
     fields: [externalMcpServers.organizationId],
     references: [organizations.id],
+  }),
+}));
+
+// ========================================
+// ADMIN PANEL TABLES
+// ========================================
+
+// Global MCP Servers (Admin-managed, available to all users)
+export const mcpServers = pgTable("mcp_servers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  transport: mcpServerTransportEnum('transport').notNull().default('sse'),
+  url: text("url").notNull(),
+  headers: jsonb("headers"),
+  enabled: boolean("enabled").notNull().default(true),
+  lastConnected: timestamp("last_connected"),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_mcp_servers_enabled").on(table.enabled),
+]);
+
+export const insertMcpServerSchema = createInsertSchema(mcpServers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastConnected: true,
+});
+
+export type InsertMcpServer = z.infer<typeof insertMcpServerSchema>;
+export type McpServer = typeof mcpServers.$inferSelect;
+
+// Subscription Status Enum
+export const subscriptionStatusEnum = pgEnum('subscription_status', [
+  'active',
+  'past_due',
+  'canceled',
+  'incomplete',
+  'incomplete_expired',
+  'trialing',
+  'unpaid'
+]);
+
+// Subscriptions table (organization billing)
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique().notNull(),
+  stripeCustomerId: varchar("stripe_customer_id").notNull(),
+  stripePriceId: varchar("stripe_price_id").notNull(),
+  status: subscriptionStatusEnum('status').notNull(),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  canceledAt: timestamp("canceled_at"),
+  trialStart: timestamp("trial_start"),
+  trialEnd: timestamp("trial_end"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_subscriptions_org").on(table.organizationId),
+  index("idx_subscriptions_stripe").on(table.stripeSubscriptionId),
+  index("idx_subscriptions_status").on(table.status),
+]);
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Invoices table
+export const invoiceStatusEnum = pgEnum('invoice_status', [
+  'draft',
+  'open',
+  'paid',
+  'uncollectible',
+  'void'
+]);
+
+export const invoices = pgTable("invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id, { onDelete: 'set null' }),
+  stripeInvoiceId: varchar("stripe_invoice_id").unique().notNull(),
+  stripeCustomerId: varchar("stripe_customer_id").notNull(),
+  status: invoiceStatusEnum('status').notNull(),
+  amountDue: decimal("amount_due", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 10, scale: 2 }).notNull().default('0'),
+  currency: varchar("currency", { length: 3 }).notNull().default('usd'),
+  hostedInvoiceUrl: text("hosted_invoice_url"),
+  invoicePdf: text("invoice_pdf"),
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_invoices_subscription").on(table.subscriptionId),
+  index("idx_invoices_stripe").on(table.stripeInvoiceId),
+  index("idx_invoices_status").on(table.status),
+]);
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+
+// Payments table
+export const paymentStatusEnum = pgEnum('payment_status', [
+  'succeeded',
+  'pending',
+  'failed',
+  'canceled',
+  'refunded'
+]);
+
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").references(() => invoices.id, { onDelete: 'set null' }),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id").unique().notNull(),
+  status: paymentStatusEnum('status').notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default('usd'),
+  paymentMethod: varchar("payment_method", { length: 100 }),
+  failureReason: text("failure_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_payments_invoice").on(table.invoiceId),
+  index("idx_payments_stripe").on(table.stripePaymentIntentId),
+  index("idx_payments_status").on(table.status),
+]);
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
+// Billing Relations
+export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [subscriptions.organizationId],
+    references: [organizations.id],
+  }),
+  invoices: many(invoices),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one, many }) => ({
+  subscription: one(subscriptions, {
+    fields: [invoices.subscriptionId],
+    references: [subscriptions.id],
+  }),
+  payments: many(payments),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [payments.invoiceId],
+    references: [invoices.id],
   }),
 }));
