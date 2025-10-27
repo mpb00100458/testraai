@@ -55,7 +55,18 @@ The backend is a **Node.js Express.js** application written in **TypeScript**. I
 - **Download capabilities** for scan videos and Playwright traces via dedicated API endpoints served from object storage.
 
 ### Data Storage
-**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `a11y_results`, `a11y_rollups`, `chat_conversations`, `chat_messages`, `external_mcp_servers`, and `sessions`. Drizzle Kit is used for schema migrations.
+**PostgreSQL** (via Neon serverless) is the primary database, managed by **Drizzle ORM** for type-safe operations. The schema supports **multi-tenancy** with workspace-based role access control (displayed as "Workspace" in UI, stored as "organizations" in database) and a hierarchical structure for organizations, projects, estates, pages, and accessibility results. Key tables include `users`, `organizations` (workspaces), `memberships` (workspace members), `projects`, `estates`, `pages`, `scan_runs`, `a11y_results`, `a11y_rollups`, `a11y_history`, `chat_conversations`, `chat_messages`, `external_mcp_servers`, and `sessions`. Drizzle Kit is used for schema migrations.
+
+**Database Schema Migration (Oct 2025):**
+- Synchronized database schema to match Drizzle ORM definitions to fix AI Agent scan functionality
+- Preserved 30,991 legacy accessibility records by renaming old tables to `*_legacy` (a11y_results_legacy, scan_runs_legacy, estates_legacy)
+- Created new tables with updated schema:
+  - `scan_runs`: Added columns for video_path, trace_path, passed_checks, error_message, created_at
+  - `a11y_results`: Restructured to use rule_id, wcag_reference, element_selector, html, failure_summary (new schema)
+  - `a11y_history`: Added created_at and passed_checks columns
+  - `a11y_rollups`: Added passed_checks and last_scan_at columns
+  - `estates`: Added description column
+- New scan system uses refreshed schema while legacy data remains accessible in *_legacy tables
 
 **Replit Object Storage** (Google Cloud Storage) stores scan artifacts:
 - **Video recordings** - Complete scan session videos (WebM format, 1280x720) at `/objects/scans/{scanRunId}/video.webm`
