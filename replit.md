@@ -78,6 +78,14 @@ The platform includes a comprehensive admin panel for platform administrators wi
 - **BILLING_ADMIN:** Subscription and payment management
 - **SUPPORT_ADMIN:** User account management
 
+**Admin Portal Architecture:**
+- **Separate login flow** at `/admin/login` with dedicated AdminLogin component
+- **Strict role validation** - only SUPER_ADMIN, BILLING_ADMIN, SUPPORT_ADMIN roles allowed
+- **AdminLayout wrapper** provides separate navigation and styling for admin routes
+- **Dedicated routing** - `/admin/*` routes use AdminLayout, separate from main app sidebar
+- **Automatic redirects** - unauthenticated users redirected to `/admin/login`, non-admins redirected to main app
+- **Security enforcement** - role checks on login and in AdminLayout prevent unauthorized access
+
 Admin Panel sections:
 1. **Global MCP Server Management** (Super Admin only)
    - Configure Model Context Protocol servers available to all AI agents
