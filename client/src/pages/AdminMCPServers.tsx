@@ -48,27 +48,24 @@ export default function AdminMCPServers() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/admin/mcp-servers", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      console.log("[Admin MCP] Creating server with data:", data);
+      return await apiRequest("POST", "/api/admin/mcp-servers", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp-servers"] });
       toast({ title: "MCP server created successfully" });
       setIsDialogOpen(false);
     },
-    onError: () => {
-      toast({ title: "Failed to create MCP server", variant: "destructive" });
+    onError: (error: any) => {
+      console.error("[Admin MCP] Error creating server:", error);
+      const message = error?.message || "Failed to create MCP server";
+      toast({ title: message, variant: "destructive" });
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return await apiRequest(`/api/admin/mcp-servers/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("PATCH", `/api/admin/mcp-servers/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp-servers"] });
@@ -83,9 +80,7 @@ export default function AdminMCPServers() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/admin/mcp-servers/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/admin/mcp-servers/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/mcp-servers"] });

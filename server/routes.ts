@@ -2015,14 +2015,18 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
 
   app.post('/api/admin/mcp-servers', isAuthenticated, requireSuperAdmin, async (req: any, res) => {
     try {
+      console.log("[Admin MCP] Received create request with body:", req.body);
       const validatedData = insertMcpServerSchema.parse(req.body);
+      console.log("[Admin MCP] Validated data:", validatedData);
       const server = await storage.createMcpServer(validatedData);
+      console.log("[Admin MCP] Server created successfully:", server.id);
       res.status(201).json(server);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("[Admin MCP] Validation error:", error.errors);
         return res.status(400).json({ message: "Invalid server data", errors: error.errors });
       }
-      console.error("Error creating MCP server:", error);
+      console.error("[Admin MCP] Error creating MCP server:", error);
       res.status(500).json({ message: "Failed to create MCP server" });
     }
   });
