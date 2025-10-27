@@ -104,6 +104,12 @@ function AppContent() {
         <AdminLayout>
           <Switch>
             <Route path="/admin/mcp-servers" component={AdminMCPServers} />
+            <Route path="/admin/users">
+              {() => <div className="p-6"><h2 className="text-2xl font-bold">User Management</h2><p className="text-muted-foreground mt-2">Coming soon</p></div>}
+            </Route>
+            <Route path="/admin/billing">
+              {() => <div className="p-6"><h2 className="text-2xl font-bold">Billing Management</h2><p className="text-muted-foreground mt-2">Coming soon</p></div>}
+            </Route>
             <Route path="/admin" component={Admin} />
           </Switch>
         </AdminLayout>

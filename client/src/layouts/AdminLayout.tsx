@@ -53,21 +53,23 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   const getActiveTab = () => {
-    if (location === "/admin") return "dashboard";
     if (location.startsWith("/admin/mcp-servers")) return "mcp-servers";
     if (location.startsWith("/admin/users")) return "users";
     if (location.startsWith("/admin/billing")) return "billing";
-    return "dashboard";
+    // Default to first available tab based on role
+    if (user.systemRole === "SUPER_ADMIN") return "mcp-servers";
+    if (user.systemRole === "SUPPORT_ADMIN") return "users";
+    if (user.systemRole === "BILLING_ADMIN") return "billing";
+    return "mcp-servers";
   };
 
   const handleTabChange = (value: string) => {
     const routes: Record<string, string> = {
-      dashboard: "/admin",
       "mcp-servers": "/admin/mcp-servers",
       users: "/admin/users",
       billing: "/admin/billing",
     };
-    setLocation(routes[value] || "/admin");
+    setLocation(routes[value] || "/admin/mcp-servers");
   };
 
   return (
@@ -88,9 +90,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
             <Tabs value={getActiveTab()} onValueChange={handleTabChange} className="hidden md:block">
               <TabsList>
-                <TabsTrigger value="dashboard" data-testid="tab-admin-dashboard">
-                  Dashboard
-                </TabsTrigger>
                 {user.systemRole === "SUPER_ADMIN" && (
                   <TabsTrigger value="mcp-servers" data-testid="tab-admin-mcp">
                     <Server className="h-4 w-4 mr-2" />

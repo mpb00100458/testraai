@@ -53,51 +53,55 @@ export default function Admin() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight" data-testid="text-admin-title">Dashboard</h2>
-        <p className="text-muted-foreground mt-2">Welcome to the TestraAI administration panel</p>
+        <h2 className="text-3xl font-bold tracking-tight" data-testid="text-admin-title">Admin Panel</h2>
+        <p className="text-muted-foreground mt-2">Platform administration and configuration</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {user.systemRole === "SUPER_ADMIN" && (
-          <Card className="hover-elevate">
+          <Card className="hover-elevate cursor-pointer" onClick={() => window.location.href = '/admin/mcp-servers'}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Server className="h-5 w-5 text-primary" />
                 MCP Servers
               </CardTitle>
-              <CardDescription>Manage global MCP server configurations</CardDescription>
+              <CardDescription>Configure Model Context Protocol servers for AI agents</CardDescription>
             </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Manage global server configurations, transport types, and tool availability</p>
+            </CardContent>
           </Card>
         )}
         
         {(user.systemRole === "SUPER_ADMIN" || user.systemRole === "SUPPORT_ADMIN") && (
-          <Card className="hover-elevate">
+          <Card className="hover-elevate cursor-pointer" onClick={() => window.location.href = '/admin/users'}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
                 User Management
               </CardTitle>
-              <CardDescription>Manage user accounts and permissions</CardDescription>
+              <CardDescription>Manage user accounts, roles, and access control</CardDescription>
             </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">View users, update account status, and assign administrator roles</p>
+            </CardContent>
           </Card>
         )}
 
         {(user.systemRole === "SUPER_ADMIN" || user.systemRole === "BILLING_ADMIN") && (
-          <Card className="hover-elevate">
+          <Card className="hover-elevate cursor-pointer" onClick={() => window.location.href = '/admin/billing'}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-primary" />
-                Billing
+                Billing Management
               </CardTitle>
-              <CardDescription>View subscriptions and payments</CardDescription>
+              <CardDescription>Monitor subscriptions, invoices, and payments</CardDescription>
             </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Track subscription plans, payment history, and billing status</p>
+            </CardContent>
           </Card>
         )}
-      </div>
-
-      <div className="text-sm text-muted-foreground">
-        <p>Use the tabs above to navigate between different admin sections.</p>
-        <p className="mt-1">Your role: <strong>{user.systemRole?.replace("_", " ")}</strong></p>
       </div>
     </div>
   );
