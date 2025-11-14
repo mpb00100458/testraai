@@ -32,6 +32,64 @@ export async function processAIAgentMessage(
   conversationId: string
 ): Promise<AIAgentResponse> {
   try {
+    // Check if OpenAI API key is configured
+    const hasValidApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY &&
+                           !process.env.AI_INTEGRATIONS_OPENAI_API_KEY.includes('your-openai-api-key');
+
+    // Demo mode: If no valid API key, provide helpful response
+    if (!hasValidApiKey) {
+      console.log('[AI Agent] Running in DEMO mode - No valid OpenAI API key configured');
+
+      // Check if user is requesting a scan
+      const scanUrlMatch = userMessage.match(/(?:scan|test|check|audit)\s+(?:https?:\/\/)?([^\s]+)/i);
+
+      if (scanUrlMatch) {
+        return {
+          content: `⚠️ **Demo Mode - OpenAI API Key Required**
+
+I can see you want to scan a website, but the AI Agent requires an OpenAI API key to function.
+
+**To enable the AI Agent:**
+
+1. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Add it to your \`.env\` file:
+   \`\`\`
+   AI_INTEGRATIONS_OPENAI_API_KEY=sk-proj-your-actual-key-here
+   \`\`\`
+3. Restart the server: \`npm run dev\`
+
+**Cost:** The AI Agent uses GPT-4o-mini which costs ~$0.0001-$0.0005 per scan (less than a penny). New accounts get $5 in free credits!
+
+**Alternative:** You can still use TestraAI's manual scanning features without the AI Agent. Check the documentation for more details.
+
+📖 See \`SETUP_OPENAI.md\` for detailed setup instructions.`,
+          messageType: 'text'
+        };
+      }
+
+      return {
+        content: `👋 **Welcome to Helena Cruz (Demo Mode)**
+
+The AI Agent is currently running in demo mode because no OpenAI API key is configured.
+
+**What I can help you with (when configured):**
+- 🔍 Scan websites for accessibility issues
+- 📊 Generate WCAG compliance reports
+- 🤖 Natural language testing commands
+- 📈 Track accessibility improvements
+
+**To enable full functionality:**
+1. Get an OpenAI API key from https://platform.openai.com/api-keys
+2. Add it to your \`.env\` file
+3. Restart the server
+
+Try saying: "Scan https://example.com" (after setup)
+
+📖 See \`SETUP_OPENAI.md\` for detailed instructions.`,
+        messageType: 'text'
+      };
+    }
+
     // Get conversation history for context
     const messages = await storage.getChatMessages(conversationId);
     
@@ -71,13 +129,17 @@ export async function processAIAgentMessage(
     }
     
     // Check if message contains a URL to scan
-    const urlMatch = userMessage.match(/(https?:\/\/[^\s]+)/);
+    // Match URLs with or without protocol (http://, https://, or just domain.com)
+    const urlMatch = userMessage.match(/((?:https?:\/\/)?[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(?:\/[^\s]*)?)/);
+
+    console.log('[AI Agent] Processing message:', userMessage);
+    console.log('[AI Agent] URL match result:', urlMatch);
     
     // Build OpenAI messages
     const openAIMessages: any[] = [
       {
         role: "system",
-        content: `You are an AI accessibility testing assistant for TestraAI. You help users scan websites for WCAG 2.1 A/AA compliance issues.
+        content: `You are Helena Cruz, an AI accessibility testing assistant. You help users scan websites for WCAG 2.1 A/AA compliance issues.
 
 Your capabilities:
 1. Scan websites for accessibility issues when users provide URLs
@@ -196,13 +258,22 @@ Keep responses concise and helpful.`
 
     // If user provided a URL, check if they want previous results or a new scan
     if (urlMatch) {
-      const url = urlMatch[1];
-      
+      let url = urlMatch[1];
+
+      // Ensure URL has a protocol (default to https://)
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+      }
+
       // Detect if user is asking about PREVIOUS/EXISTING results
       const askingForPrevious = /\b(previous|last|earlier|existing|show\s+(me\s+)?(the\s+)?results?|what\s+(were|are)\s+the\s+results?|show\s+me\s+the\s+(scan|test|report))\b/i.test(userMessage);
-      
+
       // Detect if user wants a NEW scan
       const wantNewScan = /\b(scan|test|check|new\s+scan|re-?scan|analyze|audit|run\s+(a\s+)?scan)\b/i.test(userMessage);
+
+      console.log(`[AI Agent] URL detected: ${url}`);
+      console.log(`[AI Agent] askingForPrevious: ${askingForPrevious}`);
+      console.log(`[AI Agent] wantNewScan: ${wantNewScan}`);
       
       try {
         // Get user's organizations
@@ -237,10 +308,12 @@ Keep responses concise and helpful.`
           if (existingEstate) break;
         }
 
+        console.log(`[AI Agent] Found existing estate: ${existingEstate?.id}, existing scan: ${existingScan?.id}`);
+
         // If user is asking for previous results and we have them, return them
         if (askingForPrevious && existingScan && existingEstate) {
-          console.log(`[AI Agent] Showing previous scan results for ${url}`);
-          
+          console.log(`[AI Agent] ✅ Showing previous scan results for ${url}`);
+
           return {
             content: `${aiResponse}\n\n📊 Here are the results from the previous scan of ${url}:`,
             messageType: 'scan_result',
@@ -254,6 +327,7 @@ Keep responses concise and helpful.`
 
         // If user wants a new scan OR no previous results exist, trigger a new scan
         if (wantNewScan || !existingScan) {
+          console.log(`[AI Agent] ✅ Starting NEW scan for ${url} (wantNewScan: ${wantNewScan}, !existingScan: ${!existingScan})`);
           // Get or create organization
           let orgId = orgs[0]?.id;
           
@@ -282,7 +356,6 @@ Keep responses concise and helpful.`
             projectId: aiProject.id,
             baseUrl: url,
             name: `Scan: ${new URL(url).hostname}`,
-            crawlBudget: 50,
           });
 
           console.log(`[AI Agent] Triggering scan for estate ${estate.id}`);

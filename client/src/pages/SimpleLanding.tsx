@@ -83,7 +83,7 @@ export default function SimpleLanding() {
       navigate("/dashboard");
       toast({
         title: "Account created!",
-        description: "Welcome to TestraAI",
+        description: "Welcome to Agentium",
       });
     },
     onError: (error: Error) => {
@@ -105,8 +105,8 @@ export default function SimpleLanding() {
               <CardHeader className="space-y-1 text-center pb-6">
                 <div className="flex items-center justify-center gap-2 mb-4">
                   <Sparkles className="h-8 w-8 text-blue-600" />
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    TestraAI
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                    Agentium
                   </h1>
                 </div>
                 <CardTitle className="text-2xl">

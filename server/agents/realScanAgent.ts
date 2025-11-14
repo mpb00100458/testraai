@@ -222,9 +222,9 @@ export class RealScanAgent {
             await storage.createA11yResult({
               pageId: page.id,
               scanRunId: scanRun.id,
-              issueType: violation.id,
+              ruleId: violation.id,
               severity,
-              wcagCriteria: violation.tags
+              wcagReference: violation.tags
                 .filter((tag: string) => tag.startsWith('wcag'))
                 .map((tag: string) => {
                   const clean = tag.replace('wcag', '');
@@ -232,9 +232,12 @@ export class RealScanAgent {
                   return clean.replace(/^(\d)(\d)(\d+)$/, '$1.$2.$3');
                 })
                 .join(', ') || 'N/A',
-              element: node.html,
+              impact: violation.impact,
+              html: node.html,
               description: violation.description,
-              suggestion: violation.help,
+              helpUrl: violation.helpUrl,
+              elementSelector: node.target?.join(', ') || null,
+              failureSummary: node.failureSummary || null,
             });
 
             totalIssues++;
@@ -250,9 +253,9 @@ export class RealScanAgent {
           await storage.createA11yResult({
             pageId: page.id,
             scanRunId: scanRun.id,
-            issueType: pass.id,
+            ruleId: pass.id,
             severity: 'pass',
-            wcagCriteria: pass.tags
+            wcagReference: pass.tags
               .filter((tag: string) => tag.startsWith('wcag'))
               .map((tag: string) => {
                 const clean = tag.replace('wcag', '');
@@ -261,6 +264,7 @@ export class RealScanAgent {
               })
               .join(', ') || 'N/A',
             description: pass.description,
+            helpUrl: pass.helpUrl || null,
           });
         }
 
@@ -361,10 +365,25 @@ export class RealScanAgent {
         
         if (messagesWithEstate.length > 0) {
           const conversationId = messagesWithEstate[0].conversationId;
-          
+
+          // Build download links (simplified text)
+          const downloadLinks = [];
+
+          // Always show video link if video was created
+          if (videoPath) {
+            downloadLinks.push(`[Video](/api/scans/${scanRun.id}/video)`);
+          }
+
+          downloadLinks.push(`[Excel](/api/estates/${estate.id}/report/excel?scanRunId=${scanRun.id})`);
+          downloadLinks.push(`[JSON](/api/scans/${scanRun.id}/export/json)`);
+
+          const downloadSection = downloadLinks.length > 0
+            ? `\n\n**📥 Download:** ${downloadLinks.join(' | ')}`
+            : '';
+
           // Add completion message
-          const completionMessage = `✅ **Scan Complete!**\n\nFinished scanning ${estate.baseUrl}:\n- **${crawledPages.length}** pages audited\n- **${totalIssues}** issues found (${criticalCount} critical, ${warningCount} warnings, ${minorCount} minor)\n- **Pass rate:** ${passRate}%`;
-          
+          const completionMessage = `✅ **Scan Complete!**\n\nFinished scanning ${estate.baseUrl}:\n- **${crawledPages.length}** pages audited\n- **${totalIssues}** issues found (${criticalCount} critical, ${warningCount} warnings, ${minorCount} minor)\n- **Pass rate:** ${passRate}%${downloadSection}`;
+
           await storage.createChatMessage({
             conversationId,
             role: 'assistant',
@@ -375,7 +394,7 @@ export class RealScanAgent {
               scanRunId: scanRun.id,
             }
           });
-          
+
           console.log(`[AI Agent] Added scan completion message to conversation ${conversationId}`);
         }
       } catch (msgError) {
@@ -536,14 +555,26 @@ export class RealScanAgent {
           // Wait for dynamic content to load (PRD requirement)
           await page.waitForTimeout(1000);
 
-          // Run comprehensive accessibility checks with axe-core (PRD: WCAG 2.1 A/AA)
+          // Run comprehensive accessibility checks with axe-core
+          // Supports: WCAG 2.0/2.1/2.2 (A/AA/AAA), Section 508, and all categories
           const axeResults = await new AxeBuilder({ page })
-            .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+            .withTags([
+              // WCAG 2.0 standards
+              'wcag2a', 'wcag2aa', 'wcag2aaa',
+              // WCAG 2.1 standards
+              'wcag21a', 'wcag21aa', 'wcag21aaa',
+              // WCAG 2.2 standards
+              'wcag22a', 'wcag22aa', 'wcag22aaa',
+              // Section 508
+              'section508',
+              // Categories for detailed filtering
+              'cat.aria', 'cat.color', 'cat.forms', 'cat.keyboard',
+              'cat.language', 'cat.name-role-value', 'cat.parsing',
+              'cat.semantics', 'cat.sensory-and-visual-cues',
+              'cat.structure', 'cat.tables', 'cat.text-alternatives',
+              'cat.time-and-media'
+            ])
             .options({
-              runOnly: {
-                type: 'tag',
-                values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
-              },
               resultTypes: ['violations', 'passes', 'incomplete'],
             })
             .analyze();
@@ -585,8 +616,15 @@ export class RealScanAgent {
             timestamp: new Date().toISOString(),
           });
 
-          // Emit issues found for this page
+          // Emit issues found for this page with element details
           for (const violation of violations) {
+            // Send first 3 nodes as examples for the inspector
+            const elementExamples = violation.nodes.slice(0, 3).map(node => ({
+              html: node.html,
+              selector: node.target?.join(', ') || 'unknown',
+              failureSummary: node.failureSummary || '',
+            }));
+
             wsManager.emitIssueFound(estateId, {
               url: currentUrl,
               issue: {
@@ -594,6 +632,8 @@ export class RealScanAgent {
                 severity: this.mapImpactToSeverity(violation.impact),
                 description: violation.description,
                 nodesCount: violation.nodes.length,
+                elements: elementExamples,
+                helpUrl: violation.helpUrl,
               },
             });
           }
@@ -667,19 +707,65 @@ export class RealScanAgent {
       if (videoRecordingEnabled && fs.existsSync(videoDir)) {
         // Wait for video to be saved
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Find the LARGEST video file (the full scan recording, not individual page videos)
-        const videoFiles = fs.readdirSync(videoDir);
+
+        // Playwright creates one video file per page navigation
+        // We need to concatenate all videos into one
+        const videoFiles = fs.readdirSync(videoDir).filter(f => f.endsWith('.webm'));
         if (videoFiles.length > 0) {
-          // Sort by file size descending to get the largest video
-          const videoFilesWithSize = videoFiles.map(file => {
-            const filePath = path.join(videoDir, file);
-            const stats = fs.statSync(filePath);
-            return { file, size: stats.size, path: filePath };
-          }).sort((a, b) => b.size - a.size);
-          
-          finalVideoPath = videoFilesWithSize[0].path;
-          console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
+          if (videoFiles.length === 1) {
+            // Single video file - this is the complete recording
+            finalVideoPath = path.join(videoDir, videoFiles[0]);
+            const stats = fs.statSync(finalVideoPath);
+            console.log(`Video recording saved: ${finalVideoPath} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`);
+          } else {
+            // Multiple video files - concatenate them into one
+            console.log(`Found ${videoFiles.length} video files, concatenating into single video...`);
+
+            // Sort video files by creation time to maintain page order
+            const videoFilesWithTime = videoFiles.map(file => {
+              const filePath = path.join(videoDir, file);
+              const stats = fs.statSync(filePath);
+              return { file, time: stats.birthtimeMs, path: filePath };
+            }).sort((a, b) => a.time - b.time);
+
+            // Create a file list for ffmpeg concat
+            const concatListPath = path.join(videoDir, 'concat_list.txt');
+            const concatList = videoFilesWithTime.map(v => `file '${v.file}'`).join('\n');
+            fs.writeFileSync(concatListPath, concatList);
+
+            // Output path for concatenated video
+            const concatenatedPath = path.join(videoDir, 'full_scan.webm');
+
+            try {
+              // Use ffmpeg to concatenate videos
+              const { execSync } = await import('child_process');
+              execSync(
+                `ffmpeg -f concat -safe 0 -i concat_list.txt -c copy full_scan.webm`,
+                { cwd: videoDir, stdio: 'pipe' }
+              );
+
+              finalVideoPath = concatenatedPath;
+              const stats = fs.statSync(finalVideoPath);
+              console.log(`✅ Concatenated ${videoFiles.length} videos into one: ${finalVideoPath} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`);
+
+              // Clean up individual video files and concat list
+              videoFilesWithTime.forEach(v => fs.unlinkSync(v.path));
+              fs.unlinkSync(concatListPath);
+            } catch (ffmpegError) {
+              console.warn(`⚠️  Failed to concatenate videos:`, ffmpegError instanceof Error ? ffmpegError.message : String(ffmpegError));
+              console.log(`Falling back to largest video file...`);
+
+              // Fallback: use the largest video file
+              const videoFilesWithSize = videoFiles.map(file => {
+                const filePath = path.join(videoDir, file);
+                const stats = fs.statSync(filePath);
+                return { file, size: stats.size, path: filePath };
+              }).sort((a, b) => b.size - a.size);
+
+              finalVideoPath = videoFilesWithSize[0].path;
+              console.log(`Video recording saved: ${finalVideoPath} (${(videoFilesWithSize[0].size / 1024 / 1024).toFixed(2)}MB)`);
+            }
+          }
         }
       } else if (!videoRecordingEnabled) {
         console.log('[Scan Agent] Video recording was disabled - no video to process');

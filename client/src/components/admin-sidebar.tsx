@@ -83,7 +83,7 @@ export function AdminSidebar() {
             <Shield className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold truncate">TestraAI Admin</h1>
+            <h1 className="text-base font-bold truncate">Agentium Admin</h1>
             <p className="text-xs text-muted-foreground truncate">Platform Administration</p>
           </div>
         </div>

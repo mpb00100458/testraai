@@ -28,23 +28,23 @@
   --sidebar: 240 5% 98%;
   --sidebar-foreground: 240 10% 10%;
   --sidebar-border: 240 6% 90%;
-  --sidebar-primary: 258 90% 66%;
+  --sidebar-primary: 217 91% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 240 5% 96%;
   --sidebar-accent-foreground: 240 10% 10%;
-  --sidebar-ring: 258 90% 66%;
+  --sidebar-ring: 217 91% 60%;
 
   /* Light popover */
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 10%;
   --popover-border: 240 6% 90%;
 
-  /* Gradient purple primary */
-  --primary: 258 90% 66%;
+  /* Blue primary */
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
 
-  /* Indigo secondary */
-  --secondary: 243 75% 59%;
+  /* Light blue secondary */
+  --secondary: 199 89% 48%;
   --secondary-foreground: 0 0% 100%;
 
   /* Muted gray */
@@ -60,7 +60,7 @@
   --destructive-foreground: 0 0% 100%;
 
   --input: 240 6% 90%;
-  --ring: 258 90% 66%;
+  --ring: 217 91% 60%;
 
   /* Success/Warning/Critical with better light theme colors */
   --success: 142 71% 45%;
@@ -68,12 +68,12 @@
   --warning: 38 90% 60%;
   --warning-foreground: 0 0% 100%;
 
-  /* Chart colors for light theme - Harmonious purple-to-blue gradient */
-  --chart-1: 258 90% 66%;      /* Purple - primary brand */
-  --chart-2: 250 85% 62%;      /* Blue-purple */
-  --chart-3: 235 75% 58%;      /* Medium blue */
+  /* Chart colors for light theme - Blue gradient */
+  --chart-1: 217 91% 60%;      /* Primary blue */
+  --chart-2: 199 89% 48%;      /* Cyan blue */
+  --chart-3: 204 94% 94%;      /* Light blue */
   --chart-4: 210 80% 56%;      /* Sky blue */
-  --chart-5: 190 85% 54%;      /* Cyan-blue */
+  --chart-5: 190 85% 54%;      /* Teal blue */
 
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
@@ -145,23 +145,23 @@
   --sidebar: 245 15% 8%;
   --sidebar-foreground: 0 0% 98%;
   --sidebar-border: 245 8% 18%;
-  --sidebar-primary: 258 90% 66%;
+  --sidebar-primary: 217 91% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 245 10% 16%;
   --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 258 90% 66%;
+  --sidebar-ring: 217 91% 60%;
 
   /* Popover with glass effect */
   --popover: 245 10% 16%;
   --popover-foreground: 0 0% 98%;
   --popover-border: 245 8% 22%;
 
-  /* Vivid purple primary */
-  --primary: 258 90% 66%;
+  /* Vivid blue primary */
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
 
-  /* Indigo secondary */
-  --secondary: 243 75% 59%;
+  /* Cyan secondary */
+  --secondary: 199 89% 48%;
   --secondary-foreground: 0 0% 100%;
 
   /* Muted states */
@@ -177,10 +177,10 @@
   --destructive-foreground: 0 0% 100%;
 
   --input: 245 8% 20%;
-  --ring: 258 90% 66%;
+  --ring: 217 91% 60%;
 
   /* Chart colors - semantic status */
-  --chart-1: 258 90% 66%;
+  --chart-1: 217 91% 60%;
   --chart-2: 142 71% 45%;
   --chart-3: 38 90% 60%;
   --chart-4: 0 72% 65%;
@@ -268,11 +268,10 @@
     inset: -1px;
     border-radius: 0.75rem;
     padding: 1px;
-    background: linear-gradient(135deg, 
-      hsl(280, 85%, 70%) 0%,
-      hsl(258, 90%, 66%) 25%,
-      hsl(243, 75%, 59%) 50%,
-      hsl(200, 85%, 60%) 100%
+    background: linear-gradient(135deg,
+      hsl(217, 91%, 60%) 0%,
+      hsl(199, 89%, 48%) 50%,
+      hsl(190, 85%, 54%) 100%
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
@@ -282,18 +281,18 @@
   }
 
   .gradient-bg {
-    background: linear-gradient(135deg, 
-      hsl(280, 85%, 70%) 0%,
-      hsl(258, 90%, 66%) 50%,
-      hsl(243, 75%, 59%) 100%
+    background: linear-gradient(135deg,
+      hsl(217, 91%, 60%) 0%,
+      hsl(199, 89%, 48%) 50%,
+      hsl(190, 85%, 54%) 100%
     );
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, 
-      hsl(280, 85%, 70%) 0%,
-      hsl(258, 90%, 66%) 50%,
-      hsl(243, 75%, 59%) 100%
+    background: linear-gradient(135deg,
+      hsl(217, 91%, 60%) 0%,
+      hsl(199, 89%, 48%) 50%,
+      hsl(190, 85%, 54%) 100%
     );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -301,9 +300,9 @@
   }
 
   .gradient-glow {
-    box-shadow: 
-      0 0 20px rgba(168, 85, 247, 0.3),
-      0 0 40px rgba(139, 92, 246, 0.2);
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.3),
+      0 0 40px rgba(37, 99, 235, 0.2);
   }
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */

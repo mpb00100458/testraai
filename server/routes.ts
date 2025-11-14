@@ -47,6 +47,54 @@ function calculateIssueTypeChanges(issues1: A11yResult[], issues2: A11yResult[])
   return changes;
 }
 
+// Helper function to map WCAG reference to applicable standards
+function mapWcagReferenceToStandards(wcagReference: string | null): string {
+  if (!wcagReference || wcagReference === 'N/A') {
+    return 'N/A';
+  }
+
+  const standards: string[] = [];
+
+  // Extract criterion numbers (e.g., "2a, 1.4.1" or "1.1.1, 2.4.4")
+  const parts = wcagReference.split(',').map(c => c.trim());
+
+  for (const part of parts) {
+    // Skip non-numeric criteria like "2a", "21aa", etc.
+    // Only process criteria in format X.Y.Z
+    const match = part.match(/^(\d+)\.(\d+)\.(\d+)$/);
+    if (!match) continue;
+
+    const criterion = part;
+
+    // Determine which WCAG versions include this criterion
+    // WCAG 2.0 includes criteria 1.x.x through 4.1.x
+    // WCAG 2.1 adds new criteria (mostly 1.3.x, 1.4.x, 2.1.x, 2.5.x, 4.1.3)
+    // WCAG 2.2 adds new criteria (2.4.11, 2.4.12, 2.4.13, 2.5.7, 2.5.8, 3.2.6, 3.3.7, 3.3.8, 3.3.9)
+
+    // All criteria are in WCAG 2.0 unless they're 2.1 or 2.2 specific
+    const wcag21NewCriteria = [
+      '1.3.4', '1.3.5', '1.3.6', '1.4.10', '1.4.11', '1.4.12', '1.4.13',
+      '2.1.4', '2.5.1', '2.5.2', '2.5.3', '2.5.4', '2.5.5', '2.5.6', '4.1.3'
+    ];
+
+    const wcag22NewCriteria = [
+      '2.4.11', '2.4.12', '2.4.13', '2.5.7', '2.5.8', '3.2.6', '3.3.7', '3.3.8', '3.3.9'
+    ];
+
+    if (wcag22NewCriteria.includes(criterion)) {
+      standards.push('WCAG 2.2');
+    } else if (wcag21NewCriteria.includes(criterion)) {
+      standards.push('WCAG 2.1', 'WCAG 2.2');
+    } else {
+      standards.push('WCAG 2.0', 'WCAG 2.1', 'WCAG 2.2');
+    }
+  }
+
+  // Remove duplicates and return
+  const uniqueStandards = [...new Set(standards)];
+  return uniqueStandards.length > 0 ? uniqueStandards.join(', ') : 'N/A';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Mount MCP routes for OpenAI Agent Builder integration
   app.use('/mcp', mcpRoutes);
@@ -742,6 +790,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       summarySheet.addRow({ metric: 'Warning Issues', value: rollup?.warningIssues || 0 });
       summarySheet.addRow({ metric: 'Minor Issues', value: rollup?.minorIssues || 0 });
 
+      // Add download links section
+      if (scanRun) {
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        summarySheet.addRow({ metric: '', value: '' }); // Empty row for spacing
+        summarySheet.addRow({ metric: 'Download Links', value: '' }).font = { bold: true };
+
+        if (scanRun.videoPath) {
+          const videoRow = summarySheet.addRow({
+            metric: 'Video Recording',
+            value: `${baseUrl}/api/scans/${scanRun.id}/video`
+          });
+          videoRow.getCell('value').font = { color: { argb: 'FF0000FF' }, underline: true };
+        }
+
+        if (scanRun.tracePath) {
+          const traceRow = summarySheet.addRow({
+            metric: 'Playwright Trace',
+            value: `${baseUrl}/api/scans/${scanRun.id}/trace`
+          });
+          traceRow.getCell('value').font = { color: { argb: 'FF0000FF' }, underline: true };
+        }
+
+        const jsonRow = summarySheet.addRow({
+          metric: 'JSON Export',
+          value: `${baseUrl}/api/scans/${scanRun.id}/export/json`
+        });
+        jsonRow.getCell('value').font = { color: { argb: 'FF0000FF' }, underline: true };
+      }
+
       // All Issues worksheet
       const issuesSheet = workbook.addWorksheet('All Issues');
       issuesSheet.columns = [
@@ -749,6 +826,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { header: 'Severity', key: 'severity', width: 15 },
         { header: 'Issue Type', key: 'issueType', width: 30 },
         { header: 'WCAG Criteria', key: 'wcagCriteria', width: 20 },
+        { header: 'WCAG Standards', key: 'wcagStandards', width: 40 },
+        { header: 'Impact', key: 'impact', width: 15 },
         { header: 'Description', key: 'description', width: 60 },
         { header: 'Element', key: 'element', width: 40 },
         { header: 'Suggestion', key: 'suggestion', width: 60 },
@@ -760,33 +839,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       issuesSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
       issuesSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1976D2' } };
 
-      // Add issues data
+      // Group issues by page and rule to avoid duplicates
+      const groupedIssues = new Map<string, {
+        issue: typeof issues[0];
+        page: any;
+        count: number;
+        elements: string[];
+      }>();
+
       for (const issue of issues) {
         if (issue.severity === 'pass') continue;
-        
+
         const page = await storage.getPage(issue.pageId);
+        const key = `${issue.pageId}-${issue.ruleId}`;
+
+        if (groupedIssues.has(key)) {
+          const existing = groupedIssues.get(key)!;
+          existing.count++;
+          if (issue.elementSelector && !existing.elements.includes(issue.elementSelector)) {
+            existing.elements.push(issue.elementSelector);
+          }
+        } else {
+          groupedIssues.set(key, {
+            issue,
+            page,
+            count: 1,
+            elements: issue.elementSelector ? [issue.elementSelector] : []
+          });
+        }
+      }
+
+      // Add grouped issues data
+      for (const { issue, page, count, elements } of groupedIssues.values()) {
+        // Map WCAG reference to standards
+        const wcagStandards = mapWcagReferenceToStandards(issue.wcagReference);
+
         const row = issuesSheet.addRow({
           pageUrl: page?.url || 'Unknown',
           severity: issue.severity,
-          issueType: issue.issueType,
-          wcagCriteria: issue.wcagCriteria || 'N/A',
+          issueType: issue.ruleId || 'N/A',
+          wcagCriteria: issue.wcagReference || 'N/A',
+          wcagStandards: wcagStandards,
+          impact: issue.impact || 'N/A',
           description: issue.description || '',
-          element: issue.element || '',
-          suggestion: issue.suggestion || '',
-          codeSnippet: issue.codeSnippet || '',
-          impactScore: issue.impactScore || ''
+          element: count > 1 ? `${count} occurrences` : (issue.elementSelector || ''),
+          suggestion: issue.failureSummary || '',
+          codeSnippet: elements.length > 0 ? elements.slice(0, 3).join('; ') : (issue.html || ''),
+          impactScore: issue.impact || ''
         });
 
         // Color-code severity
-        const severityColor = 
+        const severityColor =
           issue.severity === 'critical' ? 'FFD32F2F' :
           issue.severity === 'warning' ? 'FFF57C00' :
           issue.severity === 'minor' ? 'FF2196F3' : 'FF4CAF50';
-        
-        row.getCell('severity').fill = { 
-          type: 'pattern', 
-          pattern: 'solid', 
-          fgColor: { argb: severityColor } 
+
+        row.getCell('severity').fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: severityColor }
         };
         row.getCell('severity').font = { color: { argb: 'FFFFFFFF' }, bold: true };
       }
@@ -940,17 +1051,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const scans = await storage.getScanRunsByEstateId(id);
-      
+
       // Disable caching to ensure fresh data
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.setHeader('Surrogate-Control', 'no-store');
-      
+
       res.json(scans);
     } catch (error) {
       console.error("Error fetching scan history:", error);
       res.status(500).json({ message: "Failed to fetch scan history" });
+    }
+  });
+
+  // Get all scan sessions for the current user
+  app.get('/api/sessions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+
+      // Get all organizations the user belongs to
+      const orgs = await storage.getOrganizationsByUserId(userId);
+
+      if (!orgs || orgs.length === 0) {
+        return res.json([]);
+      }
+
+      // Get all projects from all organizations
+      const allProjects = await Promise.all(
+        orgs.map(org => storage.getProjectsByOrgId(org.id))
+      );
+      const projects = allProjects.flat();
+
+      if (projects.length === 0) {
+        return res.json([]);
+      }
+
+      // Get all estates from all projects
+      const allEstates = await Promise.all(
+        projects.map(project => storage.getEstatesByProjectId(project.id))
+      );
+      const estates = allEstates.flat();
+
+      if (estates.length === 0) {
+        return res.json([]);
+      }
+
+      // Get all scan runs from all estates
+      const allScanRuns = await Promise.all(
+        estates.map(estate => storage.getScanRunsByEstateId(estate.id))
+      );
+      const scanRuns = allScanRuns.flat();
+
+      // Attach estate information to each scan run
+      const scanRunsWithEstate = scanRuns.map(scanRun => {
+        const estate = estates.find(e => e.id === scanRun.estateId);
+        return {
+          ...scanRun,
+          estate: estate || null,
+        };
+      }).filter(sr => sr.estate !== null);
+
+      // Sort by creation date (newest first)
+      scanRunsWithEstate.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      res.json(scanRunsWithEstate);
+    } catch (error) {
+      console.error("Error fetching sessions:", error);
+      res.status(500).json({ message: "Failed to fetch sessions" });
     }
   });
 
@@ -1070,12 +1242,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Video not found for this scan" });
       }
 
-      // Check if this is an object storage path or old local path
+      // Check if this is an object storage path or local path
       if (scanRun.videoPath.startsWith('/objects/')) {
-        // New: Download from object storage
+        // Download from object storage
         const { ObjectStorageService, ObjectNotFoundError } = await import('./objectStorage');
         const objectStorageService = new ObjectStorageService();
-        
+
         try {
           const objectFile = await objectStorageService.getObjectEntityFile(scanRun.videoPath);
           res.setHeader('Content-Disposition', `attachment; filename="scan-${id}.webm"`);
@@ -1087,10 +1259,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw error;
         }
       } else {
-        // Old: Local filesystem path (no longer available after restarts)
-        return res.status(404).json({ 
-          message: "Video not available. This scan was created before persistent storage was enabled. Please run a new scan to generate videos with persistent storage." 
-        });
+        // Local filesystem path - serve the file directly
+        const fs = await import('fs');
+        const path = await import('path');
+
+        if (!fs.existsSync(scanRun.videoPath)) {
+          return res.status(404).json({
+            message: "Video file not found. The file may have been deleted or moved."
+          });
+        }
+
+        const filename = path.basename(scanRun.videoPath);
+        res.setHeader('Content-Type', 'video/webm');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        const fileStream = fs.createReadStream(scanRun.videoPath);
+        fileStream.pipe(res);
       }
     } catch (error) {
       console.error("Error downloading video:", error);
@@ -1146,10 +1330,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw error;
         }
       } else {
-        // Old: Local filesystem path (no longer available after restarts)
-        return res.status(404).json({ 
-          message: "Trace not available. This scan was created before persistent storage was enabled. Please run a new scan to generate traces with persistent storage." 
-        });
+        // Local filesystem path - serve the file directly
+        const fs = await import('fs');
+        const path = await import('path');
+
+        if (!fs.existsSync(scanRun.tracePath)) {
+          return res.status(404).json({
+            message: "Trace file not found. The file may have been deleted or moved."
+          });
+        }
+
+        const filename = path.basename(scanRun.tracePath);
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        const fileStream = fs.createReadStream(scanRun.tracePath);
+        fileStream.pipe(res);
       }
     } catch (error) {
       console.error("Error downloading trace:", error);
@@ -1187,6 +1383,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get issues for this scan
       const issues = await storage.getA11yResultsByScanRunId(id);
 
+      // Build download URLs
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const downloadLinks = {
+        video: scanRun.videoPath ? `${baseUrl}/api/scans/${id}/video` : null,
+        trace: scanRun.tracePath ? `${baseUrl}/api/scans/${id}/trace` : null,
+        json: `${baseUrl}/api/scans/${id}/export/json`,
+      };
+
       // Create export data
       const exportData = {
         scan: scanRun,
@@ -1195,6 +1399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: estate.name,
           url: estate.baseUrl
         },
+        downloadLinks: downloadLinks,
         issues: issues,
         exportedAt: new Date().toISOString()
       };
@@ -1706,6 +1911,8 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
         { header: 'Severity', key: 'severity', width: 12 },
         { header: 'Issue Type', key: 'issueType', width: 30 },
         { header: 'WCAG Criteria', key: 'wcagCriteria', width: 15 },
+        { header: 'WCAG Standards', key: 'wcagStandards', width: 40 },
+        { header: 'Impact', key: 'impact', width: 12 },
         { header: 'Impact Score', key: 'impactScore', width: 12 },
         { header: 'Element', key: 'element', width: 30 },
         { header: 'Description', key: 'description', width: 50 },
@@ -1713,21 +1920,57 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
         { header: 'Code Snippet', key: 'codeSnippet', width: 40 },
       ];
 
+      // Group issues by page and rule to avoid duplicates
+      const groupedIssuesMap = new Map<string, {
+        issue: typeof issues[0];
+        page: any;
+        estate: any;
+        count: number;
+        elements: string[];
+      }>();
+
       issues.forEach(issue => {
+        if (issue.severity === 'pass') return;
+
         const page = pages.find(p => p.id === issue.pageId);
         const estate = estates.find(e => e.id === page?.estateId);
-        
+        const key = `${issue.pageId}-${issue.ruleId}`;
+
+        if (groupedIssuesMap.has(key)) {
+          const existing = groupedIssuesMap.get(key)!;
+          existing.count++;
+          if (issue.elementSelector && !existing.elements.includes(issue.elementSelector)) {
+            existing.elements.push(issue.elementSelector);
+          }
+        } else {
+          groupedIssuesMap.set(key, {
+            issue,
+            page,
+            estate,
+            count: 1,
+            elements: issue.elementSelector ? [issue.elementSelector] : []
+          });
+        }
+      });
+
+      // Add grouped issues data
+      for (const { issue, page, estate, count, elements } of groupedIssuesMap.values()) {
+        // Map WCAG reference to standards
+        const wcagStandards = mapWcagReferenceToStandards(issue.wcagReference);
+
         const row = detailSheet.addRow({
           estateUrl: estate?.baseUrl || 'N/A',
           pageUrl: page?.url || 'N/A',
           severity: issue.severity,
-          issueType: issue.issueType,
-          wcagCriteria: issue.wcagCriteria || 'N/A',
-          impactScore: issue.impactScore || 'N/A',
-          element: issue.element || 'N/A',
+          issueType: issue.ruleId || 'N/A',
+          wcagCriteria: issue.wcagReference || 'N/A',
+          wcagStandards: wcagStandards,
+          impact: issue.impact || 'N/A',
+          impactScore: issue.impact || 'N/A',
+          element: count > 1 ? `${count} occurrences` : (issue.elementSelector || 'N/A'),
           description: issue.description || 'N/A',
-          suggestion: issue.suggestion || 'N/A',
-          codeSnippet: issue.codeSnippet || 'N/A',
+          suggestion: issue.failureSummary || 'N/A',
+          codeSnippet: elements.length > 0 ? elements.slice(0, 3).join('; ') : (issue.html || 'N/A'),
         });
 
         // Color code severity
@@ -1737,7 +1980,7 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
           minor: 'FF3B82F6',
           pass: 'FF10B981',
         };
-        
+
         if (severityColors[issue.severity]) {
           row.getCell('severity').fill = {
             type: 'pattern',
@@ -1746,7 +1989,7 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
           };
           row.getCell('severity').font = { color: { argb: 'FFFFFFFF' } };
         }
-      });
+      }
 
       // Style detail header
       detailSheet.getRow(1).font = { bold: true };
@@ -1824,13 +2067,26 @@ Provide a concise, practical solution (2-3 sentences) that a developer can imple
       const { processAIAgentMessage } = await import('./ai-agent');
       const aiResponse = await processAIAgentMessage(message, userId, conversationId);
 
+      console.log('[AI Agent Route] AI Response:', {
+        messageType: aiResponse.messageType,
+        hasMetadata: !!aiResponse.metadata,
+        metadata: aiResponse.metadata,
+      });
+
       // Save AI response
-      await storage.createChatMessage({
+      const savedMessage = await storage.createChatMessage({
         conversationId,
         role: 'assistant',
         content: aiResponse.content,
         messageType: aiResponse.messageType || 'text',
         metadata: aiResponse.metadata || null,
+      });
+
+      console.log('[AI Agent Route] Saved message:', {
+        id: savedMessage.id,
+        messageType: savedMessage.messageType,
+        hasMetadata: !!savedMessage.metadata,
+        metadata: savedMessage.metadata,
       });
 
       res.json({ 

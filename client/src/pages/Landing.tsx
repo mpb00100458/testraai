@@ -118,7 +118,7 @@ export default function Landing() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       navigate("/dashboard");
       toast({
-        title: "Welcome to TestraAI!",
+        title: "Welcome to Agentium!",
         description: "Account created successfully",
       });
     },
@@ -140,12 +140,12 @@ export default function Landing() {
       <div className="flex items-center justify-center p-8 bg-white dark:bg-gray-950">
         <div className="w-full max-w-md space-y-8">
           <div className="flex items-center justify-center gap-3 mb-12">
-            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-blue-700 text-white">
               <Sparkles className="h-7 w-7" />
             </div>
             <div className="flex flex-col">
-              <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                TestraAI
+              <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+                Agentium
               </span>
               <span className="text-sm text-muted-foreground">Accessibility Compliance Platform</span>
             </div>

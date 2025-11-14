@@ -110,11 +110,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8 p-8">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-lg text-muted-foreground">Real-time accessibility insights across your web estate</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="space-y-8 p-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Dashboard</h1>
+          <p className="text-lg text-muted-foreground">Real-time accessibility insights across your web estate</p>
+        </div>
 
       {isLoading ? (
         <>
@@ -364,6 +365,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

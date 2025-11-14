@@ -223,7 +223,7 @@ export type InsertPage = z.infer<typeof insertPageSchema>;
 export type Page = typeof pages.$inferSelect;
 
 // Severity Level Enum
-export const severityEnum = pgEnum('severity', ['critical', 'serious', 'moderate', 'minor', 'pass']);
+export const severityEnum = pgEnum('severity', ['critical', 'serious', 'moderate', 'minor', 'pass', 'warning']);
 
 // A11y Results table (individual accessibility test results)
 export const a11yResults = pgTable("a11y_results", {

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import { Search, ArrowLeft, AlertCircle, Calendar, TrendingUp, Video, FileCode } from "lucide-react";
+import { Search, ArrowLeft, AlertCircle, Calendar, TrendingUp, Video, FileCode, FileSpreadsheet, FileJson } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
@@ -269,36 +269,52 @@ export default function ScanDetail({ scanId }: ScanDetailProps) {
                 </div>
               </div>
               
-              {/* Download buttons for video and trace */}
-              {(scanData.videoPath || scanData.tracePath) && (
-                <div className="mt-6 pt-6 border-t border-border">
-                  <h3 className="text-sm font-medium mb-3">Scan Artifacts</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {scanData.videoPath && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/api/scans/${scanData.id}/video`, '_blank')}
-                        data-testid={`button-download-video-${scanData.id}`}
-                      >
-                        <Video className="h-4 w-4 mr-2" />
-                        Download Video
-                      </Button>
-                    )}
-                    {scanData.tracePath && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/api/scans/${scanData.id}/trace`, '_blank')}
-                        data-testid={`button-download-trace-${scanData.id}`}
-                      >
-                        <FileCode className="h-4 w-4 mr-2" />
-                        Download Trace
-                      </Button>
-                    )}
-                  </div>
+              {/* Download buttons for video, trace, excel, and json */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <h3 className="text-sm font-medium mb-3">Scan Artifacts</h3>
+                <div className="flex flex-wrap gap-3">
+                  {scanData.videoPath && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/api/scans/${scanData.id}/video`, '_blank')}
+                      data-testid={`button-download-video-${scanData.id}`}
+                    >
+                      <Video className="h-4 w-4 mr-2" />
+                      Download Video
+                    </Button>
+                  )}
+                  {scanData.tracePath && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/api/scans/${scanData.id}/trace`, '_blank')}
+                      data-testid={`button-download-trace-${scanData.id}`}
+                    >
+                      <FileCode className="h-4 w-4 mr-2" />
+                      Download Trace
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/api/estates/${scanData.estateId}/report/excel?scanRunId=${scanData.id}`, '_blank')}
+                    data-testid={`button-download-excel-${scanData.id}`}
+                  >
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Download Excel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/api/scans/${scanData.id}/export/json`, '_blank')}
+                    data-testid={`button-download-json-${scanData.id}`}
+                  >
+                    <FileJson className="h-4 w-4 mr-2" />
+                    Download JSON
+                  </Button>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
 

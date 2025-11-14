@@ -22,7 +22,7 @@
     "playwright",
     "testing"
   ],
-  "author": "TestraAI",
+  "author": "Agentium",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",

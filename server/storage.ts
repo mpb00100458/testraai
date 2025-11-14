@@ -440,29 +440,15 @@ export class DatabaseStorage implements IStorage {
   // Scan Run operations
   async getScanRun(id: string): Promise<ScanRun | undefined> {
     const [scanRun] = await db.select().from(scanRuns).where(eq(scanRuns.id, id));
-    if (!scanRun) return undefined;
-    
-    // Filter out old local paths - only return object storage paths
-    return {
-      ...scanRun,
-      videoPath: scanRun.videoPath?.startsWith('/objects/') ? scanRun.videoPath : null,
-      tracePath: scanRun.tracePath?.startsWith('/objects/') ? scanRun.tracePath : null,
-    };
+    return scanRun;
   }
 
   async getScanRunsByEstateId(estateId: string): Promise<ScanRun[]> {
-    const scans = await db
+    return await db
       .select()
       .from(scanRuns)
       .where(eq(scanRuns.estateId, estateId))
       .orderBy(desc(scanRuns.startedAt));
-    
-    // Filter out old local paths - only return object storage paths
-    return scans.map(scan => ({
-      ...scan,
-      videoPath: scan.videoPath?.startsWith('/objects/') ? scan.videoPath : null,
-      tracePath: scan.tracePath?.startsWith('/objects/') ? scan.tracePath : null,
-    }));
   }
 
   async getLatestScanRun(estateId: string): Promise<ScanRun | undefined> {

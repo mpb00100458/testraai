@@ -4,9 +4,14 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "NODE_ENV=development tsx --env-file=.env server/index.ts",
+    "_comment_admin": "Admin panel scripts (currently disabled - uncomment to enable)",
+    "_dev:admin": "cd admin && npm run dev",
+    "_dev:all": "concurrently \"npm run dev\" \"npm run dev:admin\"",
+    "_build:admin": "cd admin && npm run build",
+    "_build:all": "npm run build && npm run build:admin",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start": "NODE_ENV=production node --env-file=.env dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push"
   },
@@ -48,13 +53,14 @@
     "@types/cors": "^2.8.19",
     "@types/memoizee": "^0.4.12",
     "@types/pdfkit": "^0.17.3",
+    "axe-core": "^4.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
-    "drizzle-orm": "^0.39.1",
+    "drizzle-orm": "^0.39.3",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "exceljs": "^4.4.0",
@@ -72,12 +78,15 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pdfkit": "^0.17.2",
+    "pg": "^8.16.3",
     "playwright": "^1.56.0",
+    "puppeteer": "^24.27.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.55.0",
     "react-icons": "^5.4.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
     "tailwind-merge": "^2.6.0",
@@ -106,6 +115,7 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
@@ -116,5 +126,20 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
-  }
+  },
+  "description": "",
+  "main": "postcss.config.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mpb00100458/testraai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/mpb00100458/testraai/issues"
+  },
+  "homepage": "https://github.com/mpb00100458/testraai#readme"
 }

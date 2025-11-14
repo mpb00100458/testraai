@@ -26,7 +26,7 @@ echo ""
 # Test 4: Live URL Health Check
 echo "✅ TEST 4: Live Published URL"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-curl -s https://testraai.replit.app/mcp/health | jq .
+curl -s https://agentium.replit.app/mcp/health | jq .
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -39,5 +39,5 @@ echo "  2. scan_website_accessibility"
 echo "  3. get_wcag_guidance"
 echo ""
 echo "🔗 OpenAI Agent Builder URL:"
-echo "   https://testraai.replit.app/mcp/sse"
+echo "   https://agentium.replit.app/mcp/sse"
 echo ""

@@ -155,6 +155,227 @@ const TOOLS: Tool[] = [
       },
       required: ["scanResults"],
     },
+  },
+  {
+    name: "browser_snapshot",
+    description: "Capture the page's accessibility tree - provides AI with structured understanding of all interactive elements, their roles, and names. Far more useful than a screenshot for understanding page structure and accessibility.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page to snapshot",
+        },
+        includeHidden: {
+          type: "boolean",
+          description: "Include hidden elements in the accessibility tree (default: false)",
+          default: false
+        }
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser_navigate",
+    description: "Navigate the browser to a specified URL. Essential for multi-step workflows and testing user journeys.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL to navigate to",
+        },
+        waitUntil: {
+          type: "string",
+          enum: ["load", "domcontentloaded", "networkidle"],
+          description: "When to consider navigation complete (default: networkidle)",
+          default: "networkidle"
+        }
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser_click",
+    description: "Click on a specified element on the page. Enables testing of interactive workflows like login, forms, and navigation.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page (must navigate first)",
+        },
+        selector: {
+          type: "string",
+          description: "CSS selector for the element to click (e.g., 'button.submit', '#login-btn')",
+        },
+        waitForNavigation: {
+          type: "boolean",
+          description: "Wait for navigation after click (default: false)",
+          default: false
+        }
+      },
+      required: ["url", "selector"],
+    },
+  },
+  {
+    name: "browser_type",
+    description: "Type text into an input field. Essential for testing forms and interactive elements.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page",
+        },
+        selector: {
+          type: "string",
+          description: "CSS selector for the input field",
+        },
+        text: {
+          type: "string",
+          description: "Text to type into the field",
+        }
+      },
+      required: ["url", "selector", "text"],
+    },
+  },
+  {
+    name: "browser_take_screenshot",
+    description: "Take a screenshot of the page with optional element highlighting. Perfect for visual reporting and identifying UI violations.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page to screenshot",
+        },
+        fullPage: {
+          type: "boolean",
+          description: "Capture full scrollable page (default: true)",
+          default: true
+        },
+        highlightSelector: {
+          type: "string",
+          description: "CSS selector of element to highlight in screenshot (optional)",
+        },
+        annotate: {
+          type: "boolean",
+          description: "Add accessibility violation annotations to screenshot (default: false)",
+          default: false
+        }
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser_console_messages",
+    description: "Capture console messages (errors, warnings, logs) from the page. Useful for debugging JavaScript errors that may affect accessibility.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page to monitor",
+        },
+        types: {
+          type: "array",
+          items: { type: "string", enum: ["error", "warning", "log", "info"] },
+          description: "Types of console messages to capture (default: all)",
+        }
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser_network_requests",
+    description: "Inspect network requests made by the page. Useful for identifying failed resource loads that may impact accessibility.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page to monitor",
+        },
+        filterType: {
+          type: "string",
+          enum: ["all", "document", "stylesheet", "image", "script", "xhr", "fetch"],
+          description: "Filter requests by type (default: all)",
+          default: "all"
+        }
+      },
+      required: ["url"],
+    },
+  },
+  {
+    name: "browser_screen_click",
+    description: "Click at specific screen coordinates. Vision mode for interacting with custom canvas elements or when standard selectors fail.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the page",
+        },
+        x: {
+          type: "number",
+          description: "X coordinate to click",
+        },
+        y: {
+          type: "number",
+          description: "Y coordinate to click",
+        }
+      },
+      required: ["url", "x", "y"],
+    },
+  },
+  {
+    name: "scan_page",
+    description: "Perform comprehensive accessibility scan with support for all WCAG standards (2.0/2.1/2.2 A/AA/AAA), Section 508, and category-based filtering. This is the core scanning tool with maximum flexibility.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL to scan",
+        },
+        standards: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: [
+              "wcag2a", "wcag2aa", "wcag2aaa",
+              "wcag21a", "wcag21aa", "wcag21aaa",
+              "wcag22a", "wcag22aa", "wcag22aaa",
+              "section508"
+            ]
+          },
+          description: "WCAG standards to test against (default: wcag2aa, wcag21aa)",
+          default: ["wcag2aa", "wcag21aa"]
+        },
+        categories: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: [
+              "cat.aria", "cat.color", "cat.forms", "cat.keyboard",
+              "cat.language", "cat.name-role-value", "cat.parsing",
+              "cat.semantics", "cat.sensory-and-visual-cues",
+              "cat.structure", "cat.tables", "cat.text-alternatives",
+              "cat.time-and-media"
+            ]
+          },
+          description: "Specific categories to test (optional, filters results)",
+        },
+        outputFormat: {
+          type: "string",
+          enum: ["text", "json", "excel", "markdown", "all"],
+          description: "Output format (default: text)",
+          default: "text"
+        }
+      },
+      required: ["url"],
+    },
   }
 ];
 
@@ -562,7 +783,34 @@ class AccessibilityMCPServer {
           
           case "generate_accessibility_report":
             return await this.generateAccessibilityReport(args as any);
-          
+
+          case "browser_snapshot":
+            return await this.browserSnapshot(args as any);
+
+          case "browser_navigate":
+            return await this.browserNavigate(args as any);
+
+          case "browser_click":
+            return await this.browserClick(args as any);
+
+          case "browser_type":
+            return await this.browserType(args as any);
+
+          case "browser_take_screenshot":
+            return await this.browserTakeScreenshot(args as any);
+
+          case "browser_console_messages":
+            return await this.browserConsoleMessages(args as any);
+
+          case "browser_network_requests":
+            return await this.browserNetworkRequests(args as any);
+
+          case "browser_screen_click":
+            return await this.browserScreenClick(args as any);
+
+          case "scan_page":
+            return await this.scanPage(args as any);
+
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1239,7 +1487,7 @@ ${violations.length > 0 ? `\n## Recommendation\nAddress these issues to ensure t
 
     try {
       const results = JSON.parse(scanResults);
-      
+
       const report = `# Accessibility Report Summary
 
 ## Executive Summary
@@ -1276,6 +1524,423 @@ ${results.violations === 0 ? '✅ **PASSED** - No automated violations detected'
       };
     } catch (error) {
       throw new Error(`Invalid scan results JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async browserSnapshot(args: { url: string; includeHidden?: boolean }) {
+    const { url, includeHidden = false } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+
+      // Get accessibility tree snapshot
+      const snapshot = await page.accessibility.snapshot({ interestingOnly: !includeHidden });
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `# Accessibility Tree Snapshot\n\n**URL:** ${url}\n**Include Hidden:** ${includeHidden}\n\n\`\`\`json\n${JSON.stringify(snapshot, null, 2)}\n\`\`\``,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserNavigate(args: { url: string; waitUntil?: string }) {
+    const { url, waitUntil = 'networkidle' } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: waitUntil as any, timeout: 30000 });
+      const title = await page.title();
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Navigated to ${url}\nPage title: ${title}`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserClick(args: { url: string; selector: string; waitForNavigation?: boolean }) {
+    const { url, selector, waitForNavigation = false } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+
+      const elementExists = await page.locator(selector).count() > 0;
+      if (!elementExists) {
+        await browser.close();
+        return {
+          content: [{ type: "text", text: `❌ Element not found: "${selector}"` }],
+        };
+      }
+
+      if (waitForNavigation) {
+        await Promise.all([
+          page.waitForNavigation({ timeout: 10000 }),
+          page.click(selector)
+        ]);
+      } else {
+        await page.click(selector);
+      }
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Clicked element: ${selector}`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserType(args: { url: string; selector: string; text: string }) {
+    const { url, selector, text } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.fill(selector, text);
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Typed "${text}" into ${selector}`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserTakeScreenshot(args: { url: string; fullPage?: boolean; highlightSelector?: string; annotate?: boolean }) {
+    const { url, fullPage = true, highlightSelector, annotate = false } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+
+      // Highlight element if selector provided
+      if (highlightSelector) {
+        await page.evaluate((selector) => {
+          const element = document.querySelector(selector);
+          if (element) {
+            (element as HTMLElement).style.outline = '3px solid red';
+          }
+        }, highlightSelector);
+      }
+
+      // Annotate violations if requested
+      if (annotate) {
+        const axeResults = await new AxeBuilder({ page }).analyze();
+        const violationsData = axeResults.violations.map((v: any, index: number) => ({
+          index: index + 1,
+          nodes: v.nodes.map((n: any) => ({ target: n.target[0] }))
+        }));
+
+        await page.evaluate((violations: any[]) => {
+          violations.forEach((v) => {
+            v.nodes.forEach((node: any) => {
+              const element = document.querySelector(node.target);
+              if (element) {
+                const badge = document.createElement('div');
+                badge.textContent = `${v.index}`;
+                badge.style.cssText = 'position:absolute;background:red;color:white;padding:4px 8px;border-radius:50%;font-weight:bold;z-index:10000;';
+                const rect = element.getBoundingClientRect();
+                badge.style.top = `${rect.top + window.scrollY}px`;
+                badge.style.left = `${rect.left + window.scrollX}px`;
+                document.body.appendChild(badge);
+              }
+            });
+          });
+        }, violationsData);
+      }
+
+      const screenshotsDir = await ensureScreenshotsDir();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const screenshotPath = path.join(screenshotsDir, `screenshot-${timestamp}.png`);
+
+      await page.screenshot({ path: screenshotPath, fullPage });
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Screenshot saved: ${screenshotPath}${highlightSelector ? `\nHighlighted: ${highlightSelector}` : ''}${annotate ? '\nAnnotated with violation markers' : ''}`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserConsoleMessages(args: { url: string; types?: string[] }) {
+    const { url, types } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    const messages: any[] = [];
+
+    try {
+      page.on('console', (msg) => {
+        const msgType = msg.type();
+        if (!types || types.includes(msgType)) {
+          messages.push({
+            type: msgType,
+            text: msg.text(),
+            location: msg.location()
+          });
+        }
+      });
+
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.waitForTimeout(2000); // Wait for console messages
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `# Console Messages\n\n**URL:** ${url}\n**Messages:** ${messages.length}\n\n${messages.map(m => `[${m.type.toUpperCase()}] ${m.text}\n  Location: ${m.location.url}:${m.location.lineNumber}`).join('\n\n')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserNetworkRequests(args: { url: string; filterType?: string }) {
+    const { url, filterType = 'all' } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+    const requests: any[] = [];
+
+    try {
+      page.on('request', (request) => {
+        const resourceType = request.resourceType();
+        if (filterType === 'all' || resourceType === filterType) {
+          requests.push({
+            url: request.url(),
+            method: request.method(),
+            resourceType,
+          });
+        }
+      });
+
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `# Network Requests\n\n**URL:** ${url}\n**Filter:** ${filterType}\n**Total Requests:** ${requests.length}\n\n${requests.slice(0, 50).map(r => `[${r.method}] ${r.resourceType}: ${r.url}`).join('\n')}${requests.length > 50 ? `\n\n... and ${requests.length - 50} more` : ''}`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async browserScreenClick(args: { url: string; x: number; y: number }) {
+    const { url, x, y } = args;
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.mouse.click(x, y);
+
+      await browser.close();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Clicked at coordinates (${x}, ${y})`,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
+    }
+  }
+
+  private async scanPage(args: {
+    url: string;
+    standards?: string[];
+    categories?: string[];
+    outputFormat?: string;
+  }) {
+    const {
+      url,
+      standards = ['wcag2aa', 'wcag21aa'],
+      categories,
+      outputFormat = 'text'
+    } = args;
+
+    console.error(`[MCP] Scanning ${url} with comprehensive standards...`);
+    console.error(`[MCP] Standards: ${standards.join(', ')}`);
+    if (categories) {
+      console.error(`[MCP] Categories: ${categories.join(', ')}`);
+    }
+
+    const browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    try {
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+
+      // Build axe configuration
+      const axeBuilder = new AxeBuilder({ page });
+
+      // Combine standards and categories
+      const allTags = [...standards];
+      if (categories && categories.length > 0) {
+        allTags.push(...categories);
+      }
+
+      axeBuilder.withTags(allTags);
+
+      const axeResults = await axeBuilder.analyze();
+
+      const violations = axeResults.violations.map((v: any) => ({
+        id: v.id,
+        impact: v.impact || 'moderate',
+        description: v.description,
+        help: v.help,
+        helpUrl: v.helpUrl,
+        tags: v.tags,
+        nodes: v.nodes.length,
+        nodeDetails: v.nodes.map((n: any) => ({
+          html: n.html,
+          target: n.target,
+          failureSummary: n.failureSummary
+        }))
+      }));
+
+      const passes = axeResults.passes.length;
+      const incomplete = axeResults.incomplete.length;
+
+      await browser.close();
+
+      const summary = {
+        url,
+        standards,
+        categories: categories || [],
+        timestamp: new Date().toISOString(),
+        violations: violations.length,
+        passes,
+        incomplete,
+        critical: violations.filter(v => v.impact === 'critical').length,
+        serious: violations.filter(v => v.impact === 'serious').length,
+        moderate: violations.filter(v => v.impact === 'moderate').length,
+        minor: violations.filter(v => v.impact === 'minor').length,
+      };
+
+      if (outputFormat === 'json') {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ summary, violations }, null, 2),
+            },
+          ],
+        };
+      }
+
+      // Text format
+      const report = `# Comprehensive Accessibility Scan
+
+**URL:** ${url}
+**Standards:** ${standards.join(', ')}
+${categories ? `**Categories:** ${categories.join(', ')}` : ''}
+**Scanned:** ${new Date().toISOString()}
+
+## Summary
+- ✅ **Passed Checks:** ${passes}
+- ❌ **Violations:** ${violations.length}
+  - 🔴 Critical: ${summary.critical}
+  - 🟠 Serious: ${summary.serious}
+  - 🟡 Moderate: ${summary.moderate}
+  - 🔵 Minor: ${summary.minor}
+- ⚠️ **Incomplete:** ${incomplete}
+
+## Violations
+
+${violations.length === 0 ? '✅ No violations found!' : violations.map((v, i) => `
+### ${i + 1}. ${v.help}
+
+**Impact:** ${v.impact?.toUpperCase() || 'UNKNOWN'}
+**Rule ID:** ${v.id}
+**Affected Elements:** ${v.nodes}
+**Tags:** ${v.tags.join(', ')}
+
+**Description:** ${v.description}
+
+**Fix:** ${v.helpUrl}
+
+**Example HTML:**
+\`\`\`html
+${v.nodeDetails[0]?.html || 'N/A'}
+\`\`\`
+`).join('\n---\n')}
+`;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: report,
+          },
+        ],
+      };
+    } catch (error) {
+      await browser.close();
+      throw error;
     }
   }
 
