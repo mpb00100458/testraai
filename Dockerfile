@@ -34,8 +34,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including dev dependencies needed for build)
+RUN npm ci
 
 # Install Playwright browsers
 RUN npx playwright install chromium --with-deps
@@ -45,6 +45,9 @@ COPY . .
 
 # Build the application
 RUN npm run build
+
+# Remove dev dependencies after build to reduce size
+RUN npm prune --production
 
 # Stage 2: Production image
 FROM node:20-slim
