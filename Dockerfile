@@ -43,8 +43,17 @@ RUN npx playwright install chromium --with-deps
 # Copy application code
 COPY . .
 
-# Build the application
+# Build the client (frontend)
 RUN npm run build
+
+# Build the server for production using the production entry point
+# This entry point doesn't import vite at all
+RUN npx esbuild server/index.ts \
+    --platform=node \
+    --packages=external \
+    --bundle \
+    --format=esm \
+    --outfile=dist/server.js
 
 # Remove dev dependencies after build to reduce size
 RUN npm prune --production
@@ -103,5 +112,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
 
 # Start the application
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/server.js"]
 
