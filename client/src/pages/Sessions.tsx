@@ -4,7 +4,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SeverityBadge } from "@/components/SeverityBadge";
 import { Activity, ExternalLink, Clock, Globe, CheckCircle, XCircle, Loader2, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -106,24 +105,21 @@ export default function Sessions() {
     });
   };
 
-  const getIssueSeverityBreakdown = (scanRun: ScanRunWithEstate) => {
+  const getTotalIssues = (scanRun: ScanRunWithEstate) => {
+    const totalIssues = (scanRun.criticalCount || 0) + (scanRun.warningCount || 0) + (scanRun.minorCount || 0);
+
+    if (totalIssues === 0 && scanRun.status === 'completed') {
+      return (
+        <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+          No Issues
+        </Badge>
+      );
+    }
+
     return (
-      <div className="flex gap-2">
-        {scanRun.criticalCount ? (
-          <SeverityBadge severity="critical" count={scanRun.criticalCount} />
-        ) : null}
-        {scanRun.warningCount ? (
-          <SeverityBadge severity="warning" count={scanRun.warningCount} />
-        ) : null}
-        {scanRun.minorCount ? (
-          <SeverityBadge severity="minor" count={scanRun.minorCount} />
-        ) : null}
-        {!scanRun.criticalCount && !scanRun.warningCount && !scanRun.minorCount && scanRun.status === 'completed' ? (
-          <Badge className="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
-            No Issues
-          </Badge>
-        ) : null}
-      </div>
+      <Badge variant="outline" className="font-medium">
+        {totalIssues} {totalIssues === 1 ? 'Issue' : 'Issues'}
+      </Badge>
     );
   };
 
@@ -193,7 +189,7 @@ export default function Sessions() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {getIssueSeverityBreakdown(scanRun)}
+                        {getTotalIssues(scanRun)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">

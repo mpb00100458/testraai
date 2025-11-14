@@ -1052,13 +1052,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const scans = await storage.getScanRunsByEstateId(id);
 
+      // Map database fields to frontend fields for compatibility
+      const scansWithPagesAudited = scans.map(scan => ({
+        ...scan,
+        pagesAudited: scan.pagesScanned,
+        totalIssues: (scan.criticalIssues || 0) + (scan.warningIssues || 0) + (scan.minorIssues || 0),
+        criticalCount: scan.criticalIssues,
+        warningCount: scan.warningIssues,
+        minorCount: scan.minorIssues,
+      }));
+
       // Disable caching to ensure fresh data
       res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
       res.setHeader('Surrogate-Control', 'no-store');
 
-      res.json(scans);
+      res.json(scansWithPagesAudited);
     } catch (error) {
       console.error("Error fetching scan history:", error);
       res.status(500).json({ message: "Failed to fetch scan history" });
@@ -1103,11 +1113,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       const scanRuns = allScanRuns.flat();
 
-      // Attach estate information to each scan run
+      // Attach estate information to each scan run and map database fields to frontend fields
       const scanRunsWithEstate = scanRuns.map(scanRun => {
         const estate = estates.find(e => e.id === scanRun.estateId);
         return {
           ...scanRun,
+          pagesAudited: scanRun.pagesScanned,
+          totalIssues: (scanRun.criticalIssues || 0) + (scanRun.warningIssues || 0) + (scanRun.minorIssues || 0),
+          criticalCount: scanRun.criticalIssues,
+          warningCount: scanRun.warningIssues,
+          minorCount: scanRun.minorIssues,
           estate: estate || null,
         };
       }).filter(sr => sr.estate !== null);

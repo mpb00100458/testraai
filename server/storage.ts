@@ -479,9 +479,30 @@ export class DatabaseStorage implements IStorage {
     averageScore?: number;
     pagesAudited?: number;
   }): Promise<ScanRun> {
+    // Map pagesAudited to the database columns pagesScanned and totalPages
+    const updateData: any = {
+      criticalIssues: stats.criticalIssues,
+      warningIssues: stats.warningIssues,
+      minorIssues: stats.minorIssues,
+      passedChecks: stats.passRate,
+    };
+
+    // Map pagesAudited to both pagesScanned and totalPages
+    if (stats.pagesAudited !== undefined) {
+      updateData.pagesScanned = stats.pagesAudited;
+      updateData.totalPages = stats.pagesAudited;
+    }
+
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
     const [updated] = await db
       .update(scanRuns)
-      .set(stats)
+      .set(updateData)
       .where(eq(scanRuns.id, id))
       .returning();
     return updated;
