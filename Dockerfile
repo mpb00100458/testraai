@@ -69,7 +69,7 @@ RUN apt-get update && apt-get install -y \
     libnspr4 \
     libnss3 \
     libwayland-client0 \
-    libxcomposite0 \
+    libxcomposite1 \
     libxdamage1 \
     libxfixes3 \
     libxkbcommon0 \
