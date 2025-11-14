@@ -48,7 +48,7 @@ RUN npm run build
 
 # Build the server for production using the production entry point
 # This entry point doesn't import vite at all
-RUN npx esbuild server/index.ts \
+RUN npx esbuild server/index.production.ts \
     --platform=node \
     --packages=external \
     --bundle \
