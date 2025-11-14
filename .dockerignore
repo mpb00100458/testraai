@@ -1,0 +1,61 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Development files
+.env
+.env.local
+.env.development
+*.log
+
+# Build artifacts
+dist
+build
+.vite
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage
+.nyc_output
+*.test.js
+*.spec.js
+
+# Documentation
+*.md
+docs/
+admin/
+
+# Accessibility reports (will be stored in Cloud Storage)
+accessibility-reports/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+

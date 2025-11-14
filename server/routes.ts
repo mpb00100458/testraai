@@ -99,6 +99,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount MCP routes for OpenAI Agent Builder integration
   app.use('/mcp', mcpRoutes);
 
+  // Health check endpoint (for GCP Cloud Run)
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'helena-cruz-accessibility'
+    });
+  });
+
   // Auth middleware
   await setupAuth(app);
 
