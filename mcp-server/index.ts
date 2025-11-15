@@ -1393,24 +1393,78 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
           });
           
           if (visitedUrls.size < maxPages) {
+            console.error(`⏳ [CRAWL] Discovering links on page...`);
+
+            // Wait for any dynamic content to load
+            await page.waitForTimeout(2000);
+
+            // Get all links from the page
             const links = await page.$$eval('a[href]', (anchors) =>
               anchors.map((a) => (a as HTMLAnchorElement).href)
             );
-            
+
+            console.error(`🔍 [CRAWL] Found ${links.length} total links on page`);
+
+            let newLinksAdded = 0;
             for (const link of links) {
               try {
                 const linkUrl = new URL(link);
-                if (linkUrl.origin === baseUrl.origin && !linkUrl.hash && !visitedUrls.has(link) && !toVisit.includes(link)) {
+
+                // Normalize URL (remove trailing slash, hash, query params for comparison)
+                const normalizedLink = linkUrl.origin + linkUrl.pathname.replace(/\/$/, '');
+                const normalizedBase = baseUrl.origin + baseUrl.pathname.replace(/\/$/, '');
+
+                // Check if link is from same domain and not already visited/queued
+                const isSameDomain = linkUrl.origin === baseUrl.origin;
+                const isNotHash = !linkUrl.hash || linkUrl.pathname !== baseUrl.pathname;
+                const notVisited = !visitedUrls.has(link) && !visitedUrls.has(normalizedLink);
+                const notQueued = !toVisit.includes(link) && !toVisit.includes(normalizedLink);
+
+                // Exclude common non-page URLs
+                const isNotFile = !linkUrl.pathname.match(/\.(pdf|jpg|jpeg|png|gif|svg|css|js|zip|doc|docx|xls|xlsx)$/i);
+                const isNotMailto = !link.startsWith('mailto:');
+                const isNotTel = !link.startsWith('tel:');
+
+                if (isSameDomain && isNotHash && notVisited && notQueued && isNotFile && isNotMailto && isNotTel) {
                   toVisit.push(link);
+                  newLinksAdded++;
+                  console.error(`   ➕ Added to queue: ${link}`);
                 }
-              } catch (e) {}
+              } catch (e) {
+                // Invalid URL, skip
+              }
             }
+
+            console.error(`✅ [CRAWL] Added ${newLinksAdded} new links to queue (${toVisit.length} total in queue)`);
           }
         } catch (pageError) {
           console.error(`[MCP] ⚠️  Error scanning ${currentUrl}:`, pageError);
         }
       }
-      
+
+      // Crawl summary
+      console.error(`\n${'='.repeat(80)}`);
+      console.error(`📊 [CRAWL COMPLETE]`);
+      console.error(`${'='.repeat(80)}`);
+      console.error(`📄 Pages scanned: ${visitedUrls.size} / ${maxPages}`);
+      console.error(`🔗 Pages in queue (not scanned): ${toVisit.length}`);
+      if (toVisit.length > 0) {
+        console.error(`\n⚠️  [NOTE] Crawl stopped because:`);
+        if (visitedUrls.size >= maxPages) {
+          console.error(`   - Reached max pages limit (${maxPages})`);
+        } else {
+          console.error(`   - No more pages to scan`);
+        }
+        if (toVisit.length > 0 && visitedUrls.size < maxPages) {
+          console.error(`\n💡 [TIP] There are ${toVisit.length} URLs in queue but not scanned.`);
+          console.error(`   This might be because:`);
+          console.error(`   - The site uses JavaScript navigation`);
+          console.error(`   - Links require authentication`);
+          console.error(`   - Links are loaded dynamically`);
+        }
+      }
+      console.error(`${'='.repeat(80)}\n`);
+
       let videoPath: string | undefined;
       if (recordVideo) {
         const videoTempPath = await page.video()?.path();
