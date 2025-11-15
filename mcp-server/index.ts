@@ -25,7 +25,7 @@ import { fileServer } from './fileServer.js';
 const TOOLS: Tool[] = [
   {
     name: "scan_url_accessibility",
-    description: "Scan a URL for WCAG 2.1 A/AA accessibility violations using Playwright and axe-core. Returns detailed violation reports with severity, impact, and remediation guidance. Supports multiple output formats (text, Excel, JSON, or all). NEW: Visual feedback with live browser window, video recording, and screenshots!",
+    description: "Scan a URL for comprehensive WCAG 2.0/2.1/2.2 (A/AA/AAA) + Section 508 accessibility violations using Playwright and axe-core. Tests against ALL WCAG standards and categories including ARIA, color contrast, forms, keyboard navigation, and more. Returns detailed violation reports with severity, impact, and remediation guidance. Supports multiple output formats (text, Excel, JSON, Markdown, or all). NEW: Visual feedback with live browser window, video recording, and screenshots!",
     inputSchema: {
       type: "object",
       properties: {
@@ -36,7 +36,7 @@ const TOOLS: Tool[] = [
         wcagLevel: {
           type: "string",
           enum: ["A", "AA", "AAA"],
-          description: "WCAG conformance level to test (default: AA)",
+          description: "WCAG conformance level to test (default: AA) - Note: Scans ALL levels but this helps filter results",
           default: "AA"
         },
         outputFormat: {
@@ -71,7 +71,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "scan_website_accessibility",
-    description: "Scan multiple pages of a website for WCAG violations. Crawls up to maxPages, records video of entire scan session, captures screenshots, and generates comprehensive multi-page reports. Perfect for full website audits!",
+    description: "Scan multiple pages of a website for comprehensive WCAG 2.0/2.1/2.2 (A/AA/AAA) + Section 508 violations. Tests against ALL WCAG standards and categories including ARIA, color contrast, forms, keyboard navigation, semantic structure, and more. Crawls up to maxPages, records video of entire scan session, captures screenshots, and generates comprehensive multi-page reports with aggregated statistics. Perfect for full website audits!",
     inputSchema: {
       type: "object",
       properties: {
@@ -87,7 +87,7 @@ const TOOLS: Tool[] = [
         wcagLevel: {
           type: "string",
           enum: ["A", "AA", "AAA"],
-          description: "WCAG conformance level to test (default: AA)",
+          description: "WCAG conformance level to test (default: AA) - Note: Scans ALL levels but this helps filter results",
           default: "AA"
         },
         outputFormat: {
@@ -889,9 +889,30 @@ class AccessibilityMCPServer {
         console.error(`[MCP] 📸 Screenshot saved: ${beforePath}`);
       }
       
-      // Run accessibility analysis
+      // Run comprehensive accessibility analysis with ALL WCAG standards
+      // Supports: WCAG 2.0/2.1/2.2 (A/AA/AAA), Section 508, and all categories
       const axeResults = await new AxeBuilder({ page })
-        .withTags([`wcag2${wcagLevel.toLowerCase()}`, 'wcag21aa', 'best-practice'])
+        .withTags([
+          // WCAG 2.0 standards
+          'wcag2a', 'wcag2aa', 'wcag2aaa',
+          // WCAG 2.1 standards
+          'wcag21a', 'wcag21aa', 'wcag21aaa',
+          // WCAG 2.2 standards
+          'wcag22a', 'wcag22aa', 'wcag22aaa',
+          // Section 508
+          'section508',
+          // Categories for detailed filtering
+          'cat.aria', 'cat.color', 'cat.forms', 'cat.keyboard',
+          'cat.language', 'cat.name-role-value', 'cat.parsing',
+          'cat.semantics', 'cat.sensory-and-visual-cues',
+          'cat.structure', 'cat.tables', 'cat.text-alternatives',
+          'cat.time-and-media',
+          // Best practices
+          'best-practice'
+        ])
+        .options({
+          resultTypes: ['violations', 'passes', 'incomplete'],
+        })
         .analyze();
 
       // Capture "after" screenshot if requested
@@ -1171,8 +1192,30 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
             console.error(`[MCP] 📸 Screenshot: ${screenshotPath}`);
           }
           
+          // Run comprehensive accessibility analysis with ALL WCAG standards
+          // Supports: WCAG 2.0/2.1/2.2 (A/AA/AAA), Section 508, and all categories
           const axeResults = await new AxeBuilder({ page })
-            .withTags([`wcag2${wcagLevel.toLowerCase()}`, 'wcag21aa'])
+            .withTags([
+              // WCAG 2.0 standards
+              'wcag2a', 'wcag2aa', 'wcag2aaa',
+              // WCAG 2.1 standards
+              'wcag21a', 'wcag21aa', 'wcag21aaa',
+              // WCAG 2.2 standards
+              'wcag22a', 'wcag22aa', 'wcag22aaa',
+              // Section 508
+              'section508',
+              // Categories for detailed filtering
+              'cat.aria', 'cat.color', 'cat.forms', 'cat.keyboard',
+              'cat.language', 'cat.name-role-value', 'cat.parsing',
+              'cat.semantics', 'cat.sensory-and-visual-cues',
+              'cat.structure', 'cat.tables', 'cat.text-alternatives',
+              'cat.time-and-media',
+              // Best practices
+              'best-practice'
+            ])
+            .options({
+              resultTypes: ['violations', 'passes', 'incomplete'],
+            })
             .analyze();
           
           allResults.push({

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "accessibility-testing": {
+      "command": "node",
+      "args": [
+        "/Users/pranaym/Documents/TestraAI/mcp-server/dist/index.js"
+      ]
+    }
+  }
+}
+
