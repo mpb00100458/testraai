@@ -1398,10 +1398,23 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
             // Wait for any dynamic content to load
             await page.waitForTimeout(2000);
 
-            // Get all links from the page
-            const links = await page.$$eval('a[href]', (anchors) =>
-              anchors.map((a) => (a as HTMLAnchorElement).href)
-            );
+            // Get all links from the page - IMPORTANT: Resolve relative URLs in browser context
+            const links = await page.$$eval('a[href]', (anchors: Element[], base: string) => {
+              return anchors
+                .map((a: Element) => {
+                  try {
+                    const href = a.getAttribute('href');
+                    if (!href) return null;
+
+                    // Resolve relative URLs (e.g., /about -> https://example.com/about)
+                    const url = new URL(href, base);
+                    return url.href;
+                  } catch {
+                    return null;
+                  }
+                })
+                .filter(Boolean) as string[];
+            }, currentUrl);
 
             console.error(`🔍 [CRAWL] Found ${links.length} total links on page`);
 
@@ -1410,22 +1423,8 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
               try {
                 const linkUrl = new URL(link);
 
-                // Normalize URL (remove trailing slash, hash, query params for comparison)
-                const normalizedLink = linkUrl.origin + linkUrl.pathname.replace(/\/$/, '');
-                const normalizedBase = baseUrl.origin + baseUrl.pathname.replace(/\/$/, '');
-
-                // Check if link is from same domain and not already visited/queued
-                const isSameDomain = linkUrl.origin === baseUrl.origin;
-                const isNotHash = !linkUrl.hash || linkUrl.pathname !== baseUrl.pathname;
-                const notVisited = !visitedUrls.has(link) && !visitedUrls.has(normalizedLink);
-                const notQueued = !toVisit.includes(link) && !toVisit.includes(normalizedLink);
-
-                // Exclude common non-page URLs
-                const isNotFile = !linkUrl.pathname.match(/\.(pdf|jpg|jpeg|png|gif|svg|css|js|zip|doc|docx|xls|xlsx)$/i);
-                const isNotMailto = !link.startsWith('mailto:');
-                const isNotTel = !link.startsWith('tel:');
-
-                if (isSameDomain && isNotHash && notVisited && notQueued && isNotFile && isNotMailto && isNotTel) {
+                // Only crawl same domain (use hostname comparison like webapp)
+                if (linkUrl.hostname === baseUrl.hostname && !visitedUrls.has(link) && !toVisit.includes(link)) {
                   toVisit.push(link);
                   newLinksAdded++;
                   console.error(`   ➕ Added to queue: ${link}`);
