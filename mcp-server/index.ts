@@ -288,6 +288,41 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "list_downloadable_reports",
+    description: "List all available downloadable reports, videos, and screenshots from previous scans. Shows download URLs for immediate access.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileType: {
+          type: "string",
+          enum: ["all", "reports", "videos", "screenshots"],
+          description: "Type of files to list (default: all)",
+          default: "all"
+        },
+        limit: {
+          type: "number",
+          description: "Maximum number of files to show per type (default: 10)",
+          default: 10
+        }
+      },
+      required: [],
+    },
+  },
+  {
+    name: "open_report_file",
+    description: "Open a downloaded report file in the default application (Excel, browser, etc.). Useful for immediately viewing scan results.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Full path to the file to open (from scan results)",
+        }
+      },
+      required: ["filePath"],
+    },
+  },
+  {
     name: "browser_network_requests",
     description: "Inspect network requests made by the page. Useful for identifying failed resource loads that may impact accessibility.",
     inputSchema: {
@@ -811,6 +846,12 @@ class AccessibilityMCPServer {
           case "scan_page":
             return await this.scanPage(args as any);
 
+          case "list_downloadable_reports":
+            return await this.listDownloadableReports(args as any);
+
+          case "open_report_file":
+            return await this.openReportFile(args as any);
+
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -1058,15 +1099,25 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
 
           // Add file paths to response with download URLs
           if (generatedFiles.length > 0) {
-            responseText += `\n\n---\n\n## 📁 Generated Report Files\n\n`;
+            responseText += `\n\n---\n\n## 📁 INSTANT DOWNLOADS - Report Files Ready!\n\n`;
+            responseText += `✅ **All files generated and ready for download!**\n\n`;
+
             generatedFiles.forEach((filepath, idx) => {
               const filename = filepath.split('/').pop()!;
+              const ext = path.extname(filename).slice(1).toUpperCase();
               const downloadUrl = fileServer.getDownloadUrl('reports', filename);
-              responseText += `${idx + 1}. **${filename}**\n`;
-              responseText += `   📥 Download: ${downloadUrl}\n`;
-              responseText += `   📁 Path: \`${filepath}\`\n\n`;
+
+              const icon = ext === 'XLSX' ? '📊' : ext === 'JSON' ? '📄' : '📝';
+
+              responseText += `### ${icon} ${idx + 1}. ${filename}\n`;
+              responseText += `- **Format:** ${ext}\n`;
+              responseText += `- **📥 DOWNLOAD NOW:** [${downloadUrl}](${downloadUrl})\n`;
+              responseText += `- **📁 File Path:** \`${filepath}\`\n`;
+              responseText += `- **💻 Quick Open:** Use \`open_report_file\` tool\n\n`;
             });
-            responseText += `\nAll reports saved to: \`${generatedFiles[0].split('/').slice(0, -1).join('/')}/\`\n`;
+
+            responseText += `\n**📂 All Reports Directory:** \`${generatedFiles[0].split('/').slice(0, -1).join('/')}/\`\n`;
+            responseText += `\n💡 **Tip:** Click the download links above or copy the file paths to open immediately!\n`;
           }
         } catch (exportError) {
           console.error('[MCP] ⚠️  Error generating file exports:', exportError);
@@ -1987,10 +2038,165 @@ ${v.nodeDetails[0]?.html || 'N/A'}
     }
   }
 
+  private async listDownloadableReports(args: {
+    fileType?: string;
+    limit?: number;
+  }) {
+    const { fileType = 'all', limit = 10 } = args;
+
+    try {
+      const { readdir, stat } = await import('fs/promises');
+      const reportsDir = path.join(process.env.HOME || '/home/runner', 'mcp-accessibility-reports');
+
+      let report = `# 📁 Available Downloadable Files\n\n`;
+      report += `**File Server:** http://localhost:3456\n`;
+      report += `**Reports Directory:** \`${reportsDir}\`\n\n`;
+
+      const fileTypes = fileType === 'all'
+        ? ['excel', 'json', 'markdown', 'videos', 'screenshots']
+        : [fileType === 'reports' ? 'excel' : fileType];
+
+      let totalFiles = 0;
+
+      for (const type of fileTypes) {
+        const dirPath = path.join(reportsDir, type);
+
+        try {
+          const files = await readdir(dirPath);
+          const sortedFiles = files
+            .filter(f => !f.startsWith('.'))
+            .sort((a, b) => b.localeCompare(a)) // Most recent first
+            .slice(0, limit);
+
+          if (sortedFiles.length === 0) continue;
+
+          totalFiles += sortedFiles.length;
+
+          const icon = type === 'videos' ? '🎥' :
+                      type === 'screenshots' ? '📸' :
+                      type === 'excel' ? '📊' :
+                      type === 'json' ? '📄' : '📝';
+
+          report += `## ${icon} ${type.charAt(0).toUpperCase() + type.slice(1)}\n\n`;
+
+          for (const file of sortedFiles) {
+            const filePath = path.join(dirPath, file);
+            const stats = await stat(filePath);
+            const sizeKB = Math.round(stats.size / 1024);
+            const modified = stats.mtime.toLocaleString();
+
+            const downloadType = type === 'excel' || type === 'json' || type === 'markdown' ? 'reports' : type;
+            const downloadUrl = fileServer.getDownloadUrl(downloadType as any, file);
+
+            report += `### ${file}\n`;
+            report += `- **Size:** ${sizeKB} KB\n`;
+            report += `- **Modified:** ${modified}\n`;
+            report += `- **📥 Download:** [${downloadUrl}](${downloadUrl})\n`;
+            report += `- **📁 Path:** \`${filePath}\`\n`;
+            report += `- **💻 Open:** Use \`open_report_file\` tool with path above\n\n`;
+          }
+        } catch (err) {
+          // Directory doesn't exist or is empty
+          continue;
+        }
+      }
+
+      if (totalFiles === 0) {
+        report += `\n⚠️ No files found. Run a scan to generate reports!\n\n`;
+        report += `**Try:** \`scan_url_accessibility\` with \`outputFormat: "all"\`\n`;
+      } else {
+        report += `\n---\n\n`;
+        report += `**Total Files:** ${totalFiles}\n\n`;
+        report += `💡 **Quick Actions:**\n`;
+        report += `- Click download links to get files\n`;
+        report += `- Use \`open_report_file\` to open in default app\n`;
+        report += `- Visit http://localhost:3456 in browser for file server\n`;
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: report,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error listing files: ${errorMessage}`,
+          },
+        ],
+      };
+    }
+  }
+
+  private async openReportFile(args: { filePath: string }) {
+    const { filePath } = args;
+
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      // Check if file exists
+      const { existsSync } = await import('fs');
+      if (!existsSync(filePath)) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `❌ File not found: ${filePath}\n\nUse \`list_downloadable_reports\` to see available files.`,
+            },
+          ],
+        };
+      }
+
+      // Determine OS and open command
+      const platform = process.platform;
+      let command: string;
+
+      if (platform === 'darwin') {
+        command = `open "${filePath}"`;
+      } else if (platform === 'win32') {
+        command = `start "" "${filePath}"`;
+      } else {
+        command = `xdg-open "${filePath}"`;
+      }
+
+      await execAsync(command);
+
+      const fileName = filePath.split('/').pop();
+      const fileType = path.extname(filePath).slice(1).toUpperCase();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ **Opened:** ${fileName}\n\n**File Type:** ${fileType}\n**Path:** \`${filePath}\`\n\n💡 The file should now be open in your default application!`,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error opening file: ${errorMessage}\n\n**Path:** \`${filePath}\`\n\nYou can manually open the file from the path above.`,
+          },
+        ],
+      };
+    }
+  }
+
   async run() {
     // Start file server for downloads
     await fileServer.start();
-    
+
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error("Accessibility Testing MCP Server running on stdio");
