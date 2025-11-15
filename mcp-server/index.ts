@@ -889,49 +889,80 @@ class AccessibilityMCPServer {
       captureScreenshots = false
     } = args;
 
-    console.error(`[MCP] Scanning ${url} for WCAG ${wcagLevel} violations...`);
-    console.error(`[MCP] Output format: ${outputFormat}, Save to file: ${saveToFile}`);
-    console.error(`[MCP] Visual: headless=${headless}, video=${recordVideo}, screenshots=${captureScreenshots}`);
+    // Live Activity Log - Start
+    console.error(`\n${'='.repeat(80)}`);
+    console.error(`🚀 [SCAN STARTED] ${new Date().toLocaleTimeString()}`);
+    console.error(`${'='.repeat(80)}`);
+    console.error(`📍 URL: ${url}`);
+    console.error(`📊 WCAG Level: ${wcagLevel}`);
+    console.error(`📁 Output Format: ${outputFormat}`);
+    console.error(`💾 Save to File: ${saveToFile}`);
+    console.error(`👁️  Headless Mode: ${headless}`);
+    console.error(`🎥 Video Recording: ${recordVideo}`);
+    console.error(`📸 Screenshots: ${captureScreenshots}`);
+    console.error(`${'='.repeat(80)}\n`);
 
     // Prepare video recording if requested
     let videoDir: string | undefined;
     if (recordVideo) {
+      console.error(`⏳ [SETUP] Preparing video recording directory...`);
       videoDir = await ensureVideosDir();
+      console.error(`✅ [SETUP] Video directory ready: ${videoDir}`);
     }
 
-    const browser = await chromium.launch({ 
+    console.error(`⏳ [BROWSER] Launching browser (headless: ${headless})...`);
+    const browser = await chromium.launch({
       headless,
       slowMo: headless ? 0 : 300  // Slow down visible browser for better viewing
     });
-    
+    console.error(`✅ [BROWSER] Browser launched successfully`);
+
     const contextOptions: any = {};
     if (recordVideo) {
       contextOptions.recordVideo = {
         dir: videoDir,
         size: { width: 1280, height: 720 }
       };
+      console.error(`🎥 [VIDEO] Recording enabled (1280x720)`);
     }
-    
+
+    console.error(`⏳ [BROWSER] Creating browser context...`);
     const context = await browser.newContext(contextOptions);
     const page = await context.newPage();
+    console.error(`✅ [BROWSER] Browser context created`);
 
     try {
       // Navigate to page
+      console.error(`\n⏳ [NAVIGATION] Navigating to ${url}...`);
+      const startNav = Date.now();
       await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
-      
+      const navTime = ((Date.now() - startNav) / 1000).toFixed(2);
+      console.error(`✅ [NAVIGATION] Page loaded successfully (${navTime}s)`);
+
       // Capture "before" screenshot if requested
       let screenshotPaths: string[] = [];
       if (captureScreenshots) {
+        console.error(`\n⏳ [SCREENSHOT] Capturing "before" screenshot...`);
         const screenshotsDir = await ensureScreenshotsDir();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
         const beforePath = path.join(screenshotsDir, `scan-${timestamp}-before.png`);
         await page.screenshot({ path: beforePath, fullPage: true });
         screenshotPaths.push(beforePath);
-        console.error(`[MCP] 📸 Screenshot saved: ${beforePath}`);
+        console.error(`✅ [SCREENSHOT] Before screenshot saved: ${beforePath.split('/').pop()}`);
       }
-      
+
       // Run comprehensive accessibility analysis with ALL WCAG standards
       // Supports: WCAG 2.0/2.1/2.2 (A/AA/AAA), Section 508, and all categories
+      console.error(`\n⏳ [ANALYSIS] Running comprehensive accessibility analysis...`);
+      console.error(`📋 [ANALYSIS] Testing against:`);
+      console.error(`   - WCAG 2.0 (A, AA, AAA)`);
+      console.error(`   - WCAG 2.1 (A, AA, AAA)`);
+      console.error(`   - WCAG 2.2 (A, AA, AAA)`);
+      console.error(`   - Section 508`);
+      console.error(`   - All 13 accessibility categories`);
+      console.error(`   - Best practices`);
+
+      const startAnalysis = Date.now();
       const axeResults = await new AxeBuilder({ page })
         .withTags([
           // WCAG 2.0 standards
@@ -956,18 +987,26 @@ class AccessibilityMCPServer {
         })
         .analyze();
 
+      const analysisTime = ((Date.now() - startAnalysis) / 1000).toFixed(2);
+      console.error(`✅ [ANALYSIS] Analysis complete (${analysisTime}s)`);
+
       // Capture "after" screenshot if requested
       if (captureScreenshots) {
+        console.error(`⏳ [SCREENSHOT] Capturing "after" screenshot...`);
         const screenshotsDir = await ensureScreenshotsDir();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
         const afterPath = path.join(screenshotsDir, `scan-${timestamp}-after.png`);
         await page.screenshot({ path: afterPath, fullPage: true });
         screenshotPaths.push(afterPath);
-        console.error(`[MCP] 📸 Screenshot saved: ${afterPath}`);
+        console.error(`✅ [SCREENSHOT] After screenshot saved: ${afterPath.split('/').pop()}`);
       }
 
       const violations = axeResults.violations;
       const passes = axeResults.passes;
+
+      console.error(`\n📊 [RESULTS] Scan results:`);
+      console.error(`   ✅ Passed: ${passes.length} checks`);
+      console.error(`   ❌ Violations: ${violations.length} issues found`);
 
       const summary = {
         url,
@@ -981,7 +1020,13 @@ class AccessibilityMCPServer {
         minor: violations.filter((v: any) => v.impact === 'minor').length,
       };
 
+      console.error(`   🔴 Critical: ${summary.critical}`);
+      console.error(`   🟠 Serious: ${summary.serious}`);
+      console.error(`   🟡 Moderate: ${summary.moderate}`);
+      console.error(`   🔵 Minor: ${summary.minor}`);
+
       // Prepare ALL violations for export (not just first 10)
+      console.error(`\n⏳ [PROCESSING] Preparing violation details...`);
       const allViolations = violations.map((v: any) => ({
         id: v.id,
         impact: v.impact,
@@ -1044,20 +1089,24 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
       // Handle video recording
       let videoPath: string | undefined;
       if (recordVideo) {
+        console.error(`\n⏳ [VIDEO] Finalizing video recording...`);
         const videoTempPath = await page.video()?.path();
         await page.close();
         await context.close();
-        
+
         if (videoTempPath) {
           // Rename video with proper timestamp
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
           videoPath = path.join(videoDir!, `scan-${timestamp}.webm`);
           await rename(videoTempPath, videoPath);
-          console.error(`[MCP] 🎥 Video saved: ${videoPath}`);
+          const videoSize = (await import('fs/promises')).stat(videoPath).then(s => (s.size / 1024 / 1024).toFixed(2));
+          console.error(`✅ [VIDEO] Video saved: ${videoPath.split('/').pop()} (${await videoSize} MB)`);
         }
       }
 
+      console.error(`\n⏳ [CLEANUP] Closing browser...`);
       await browser.close();
+      console.error(`✅ [CLEANUP] Browser closed`);
 
       // Generate file exports if requested
       const exportData: ExportData = {
@@ -1078,24 +1127,33 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
       }
 
       if (saveToFile) {
+        console.error(`\n⏳ [EXPORT] Generating report files (${outputFormat})...`);
         try {
           if (outputFormat === 'excel' || outputFormat === 'all') {
+            console.error(`   ⏳ Generating Excel report...`);
             const excelPath = await generateExcelReport(exportData);
             generatedFiles.push(excelPath);
-            console.error(`[MCP] ✅ Excel report saved: ${excelPath}`);
+            const excelSize = (await import('fs/promises')).stat(excelPath).then(s => (s.size / 1024).toFixed(0));
+            console.error(`   ✅ Excel: ${excelPath.split('/').pop()} (${await excelSize} KB)`);
           }
 
           if (outputFormat === 'json' || outputFormat === 'all') {
+            console.error(`   ⏳ Generating JSON report...`);
             const jsonPath = await generateJsonReport(exportData);
             generatedFiles.push(jsonPath);
-            console.error(`[MCP] ✅ JSON report saved: ${jsonPath}`);
+            const jsonSize = (await import('fs/promises')).stat(jsonPath).then(s => (s.size / 1024).toFixed(0));
+            console.error(`   ✅ JSON: ${jsonPath.split('/').pop()} (${await jsonSize} KB)`);
           }
 
           if (outputFormat === 'markdown' || outputFormat === 'all') {
+            console.error(`   ⏳ Generating Markdown report...`);
             const mdPath = await generateMarkdownReport(exportData, report);
             generatedFiles.push(mdPath);
-            console.error(`[MCP] ✅ Markdown report saved: ${mdPath}`);
+            const mdSize = (await import('fs/promises')).stat(mdPath).then(s => (s.size / 1024).toFixed(0));
+            console.error(`   ✅ Markdown: ${mdPath.split('/').pop()} (${await mdSize} KB)`);
           }
+
+          console.error(`✅ [EXPORT] All report files generated successfully`);
 
           // Add file paths to response with download URLs
           if (generatedFiles.length > 0) {
@@ -1157,6 +1215,18 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
         responseText += `\n💡 **Tip:** Click the download links above or open them in your browser!\n`;
       }
 
+      // Final activity log summary
+      const totalTime = ((Date.now() - new Date(summary.timestamp).getTime()) / 1000).toFixed(2);
+      console.error(`\n${'='.repeat(80)}`);
+      console.error(`✅ [SCAN COMPLETE] ${new Date().toLocaleTimeString()}`);
+      console.error(`${'='.repeat(80)}`);
+      console.error(`⏱️  Total Time: ${totalTime}s`);
+      console.error(`📊 Results: ${summary.violations} violations, ${summary.passes} passes`);
+      console.error(`📁 Files Generated: ${generatedFiles.length} report(s)`);
+      if (videoPath) console.error(`🎥 Video: ${videoPath.split('/').pop()}`);
+      if (screenshotPaths.length > 0) console.error(`📸 Screenshots: ${screenshotPaths.length}`);
+      console.error(`${'='.repeat(80)}\n`);
+
       return {
         content: [
           {
@@ -1194,19 +1264,37 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
       captureScreenshots = true
     } = args;
 
-    console.error(`[MCP] 🌐 Scanning website: ${url} (max ${maxPages} pages)`);
-    console.error(`[MCP] WCAG Level: ${wcagLevel}, Video: ${recordVideo}, Screenshots: ${captureScreenshots}`);
+    // Live Activity Log - Website Scan Start
+    console.error(`\n${'='.repeat(80)}`);
+    console.error(`🌐 [WEBSITE SCAN STARTED] ${new Date().toLocaleTimeString()}`);
+    console.error(`${'='.repeat(80)}`);
+    console.error(`📍 Starting URL: ${url}`);
+    console.error(`📄 Max Pages: ${maxPages}`);
+    console.error(`📊 WCAG Level: ${wcagLevel}`);
+    console.error(`🎥 Video Recording: ${recordVideo}`);
+    console.error(`📸 Screenshots: ${captureScreenshots}`);
+    console.error(`${'='.repeat(80)}\n`);
 
     let videoDir: string | undefined;
     let screenshotsDir: string | undefined;
-    
-    if (recordVideo) videoDir = await ensureVideosDir();
-    if (captureScreenshots) screenshotsDir = await ensureScreenshotsDir();
 
-    const browser = await chromium.launch({ 
+    if (recordVideo) {
+      console.error(`⏳ [SETUP] Preparing video recording directory...`);
+      videoDir = await ensureVideosDir();
+      console.error(`✅ [SETUP] Video directory ready`);
+    }
+    if (captureScreenshots) {
+      console.error(`⏳ [SETUP] Preparing screenshots directory...`);
+      screenshotsDir = await ensureScreenshotsDir();
+      console.error(`✅ [SETUP] Screenshots directory ready`);
+    }
+
+    console.error(`\n⏳ [BROWSER] Launching browser for multi-page scan...`);
+    const browser = await chromium.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-dev-shm-usage']
     });
+    console.error(`✅ [BROWSER] Browser launched successfully`);
     
     const contextOptions: any = { viewport: { width: 1280, height: 720 } };
     if (recordVideo) {
@@ -1225,26 +1313,38 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
     const baseUrl = new URL(url);
     
     try {
+      console.error(`\n⏳ [CRAWL] Starting website crawl...`);
+
       while (toVisit.length > 0 && visitedUrls.size < maxPages) {
         const currentUrl = toVisit.shift()!;
         if (visitedUrls.has(currentUrl)) continue;
-        
+
         visitedUrls.add(currentUrl);
-        console.error(`[MCP] 📄 Scanning page ${visitedUrls.size}/${maxPages}: ${currentUrl}`);
-        
+
+        console.error(`\n${'─'.repeat(80)}`);
+        console.error(`📄 [PAGE ${visitedUrls.size}/${maxPages}] ${currentUrl}`);
+        console.error(`${'─'.repeat(80)}`);
+
         try {
+          console.error(`⏳ [NAVIGATION] Loading page...`);
+          const navStart = Date.now();
           await page.goto(currentUrl, { waitUntil: 'networkidle', timeout: 30000 });
-          
+          const navTime = ((Date.now() - navStart) / 1000).toFixed(2);
+          console.error(`✅ [NAVIGATION] Page loaded (${navTime}s)`);
+
           if (captureScreenshots && screenshotsDir) {
+            console.error(`⏳ [SCREENSHOT] Capturing page screenshot...`);
             const timestamp = Date.now();
             const pageNum = visitedUrls.size;
             const screenshotPath = path.join(screenshotsDir, `page-${pageNum}-${timestamp}.png`);
             await page.screenshot({ path: screenshotPath, fullPage: true });
-            console.error(`[MCP] 📸 Screenshot: ${screenshotPath}`);
+            console.error(`✅ [SCREENSHOT] Saved: ${screenshotPath.split('/').pop()}`);
           }
-          
+
           // Run comprehensive accessibility analysis with ALL WCAG standards
           // Supports: WCAG 2.0/2.1/2.2 (A/AA/AAA), Section 508, and all categories
+          console.error(`⏳ [ANALYSIS] Running accessibility analysis...`);
+          const analysisStart = Date.now();
           const axeResults = await new AxeBuilder({ page })
             .withTags([
               // WCAG 2.0 standards
@@ -1268,7 +1368,11 @@ ${violations.length > 10 ? `\n*Note: Showing 10 of ${violations.length} total vi
               resultTypes: ['violations', 'passes', 'incomplete'],
             })
             .analyze();
-          
+
+          const analysisTime = ((Date.now() - analysisStart) / 1000).toFixed(2);
+          console.error(`✅ [ANALYSIS] Complete (${analysisTime}s)`);
+          console.error(`📊 [RESULTS] Violations: ${axeResults.violations.length}, Passes: ${axeResults.passes.length}`);
+
           allResults.push({
             url: currentUrl,
             pageNumber: visitedUrls.size,
